@@ -399,7 +399,8 @@
         document.fonts.load('500 30px "Geist Mono"').catch(() => {}),
       ]).then(() => document.fonts.ready)
     : Promise.resolve();
-  fontsLoaded.then(() => { repaint(); fontsReady = true; });
+  let introStarted = false;
+  fontsLoaded.then(() => { if (!introStarted) repaint(); fontsReady = true; });
   setTimeout(() => (fontsReady = true), 4500);
 
   const geo = roundedBox(SIZE, RADIUS);
@@ -658,7 +659,7 @@
 
   function impact(v) {
     if (reduce) return;
-    shake = Math.max(shake, clamp(v * 0.0035, 0, 0.03));
+    // the weight is in the physics; the camera stays still (a shake read as stutter)
   }
 
   /* ---------- floating motions ---------- */
@@ -745,13 +746,19 @@
     return (faceCache[i] = c.toDataURL("image/jpeg", 0.88));
   }
 
-  let io, settleTimer;
+  let io, settleTimer, layoutCleanup = null;
+  function stopLayout() { if (layoutCleanup) { layoutCleanup(); layoutCleanup = null; } }
   function openPage(html, kind, tag) {
+    stopLayout();
     overlay = kind;
     clearTimeout(settleTimer);
     heroBg.classList.remove("on", "settle"); // the project opens on clean black
     pageInner.innerHTML = html;
     hydrateMedia(pageInner);
+    const lp = kind === "project" ? P[S.active] : null;
+    const L = lp && lp.layout && window.LAYOUTS && window.LAYOUTS[lp.layout];
+    page.classList.toggle("has-layout", !!L);
+    if (L) layoutCleanup = L.init(page, pageInner, { project: lp });
     pageTag.textContent = tag || "";
     page.classList.add("open");
     page.setAttribute("aria-hidden", "false");
@@ -762,13 +769,14 @@
       if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
     }), { root: page, threshold: 0.12 });
     pageInner.querySelectorAll(".r").forEach((el, k) => {
-      el.style.transitionDelay = k < 5 ? `${0.25 + k * 0.12}s` : "0s";
+      if (k < 5) el.style.transitionDelay = `${0.25 + k * 0.12}s`;
       io.observe(el);
     });
     setTimeout(() => $("#backBtn").focus({ preventScroll: true }), 300);
   }
 
   function closePage() {
+    setTimeout(stopLayout, 800); // after the fade
     page.classList.remove("open");
     page.setAttribute("aria-hidden", "true");
     [...menu.children].forEach((b) => b.classList.toggle("is-active", b.dataset.open === "projects"));
@@ -845,7 +853,7 @@
     $("#lbNext").style.visibility = many;
   }
   function lbOpenAt(img) {
-    lbList = [...pageInner.querySelectorAll(".shot.has-media img")];
+    lbList = [...pageInner.querySelectorAll(".shot.has-media img, [data-zoom] img")];
     if (!lbList.length) return;
     lb.classList.add("open");
     lb.setAttribute("aria-hidden", "false");
@@ -857,7 +865,7 @@
     lb.setAttribute("aria-hidden", "true");
   }
   pageInner.addEventListener("click", (e) => {
-    const fig = e.target.closest(".shot.has-media");
+    const fig = e.target.closest(".shot.has-media, [data-zoom]");
     if (fig && fig.querySelector("img")) lbOpenAt(fig.querySelector("img"));
   });
   $("#lbClose").addEventListener("click", lbClose);
@@ -877,6 +885,11 @@
   function projectHTML(i) {
     const p = P[i];
     const ni = (i + 1) % P.length;
+    const L = p.layout && window.LAYOUTS && window.LAYOUTS[p.layout];
+    if (L) {
+      return L.render(p, i, { esc, pad }) +
+        `<button class="next r" data-next="${ni}"><span>Next — ${pad(ni)}</span><strong>${esc(P[ni].title)}</strong></button>`;
+    }
     return `
       <header class="ph">
         <div class="ph-code r"><b>PROJECT ${pad(i)}</b><span>/</span><span>${esc(p.category)}</span></div>
@@ -1251,14 +1264,14 @@
     { t: 0.0, v: [5.8, 1.2, -0.2, 0.12, 0.08, -0.05] },   // off-frame right
     { t: 0.66, v: [0.05, 0.02, 0.0, 0.01, 0.0, 0.0] },    // glides in and decelerates
     { t: 0.82, v: [0, 0, 0, 0, 0, 0] },                   // a beat
-    { t: 0.97, v: [0.28, 0.18, -0.05, 0.08, -0.04, 0.02] }, // short wind-up
-    { t: 1.14, v: [-1.05, -0.16, 0.14, -0.1, 0.05, -0.02] }, // the toss
-    { t: 1.3, v: [-0.92, 0.0, 0.08, -0.06, 0.02, -0.01] }, // follow-through, no bounce
+    { t: 0.97, v: [0.22, -0.3, -0.04, 0.1, -0.05, 0.02] }, // wind-up: dips, wrist cocks back
+    { t: 1.16, v: [-0.55, 0.62, 0.08, -0.16, 0.06, -0.02] }, // the toss: up and forward
+    { t: 1.32, v: [-0.48, 0.78, 0.04, -0.1, 0.03, -0.01] }, // follow-through, rising
     { t: 2.0, v: [6.2, 1.4, -0.2, 0.1, 0.06, 0.03] },     // withdraws to the right
   ];
   const CH = 6;
   const XR_END = 2.1;
-  const RELEASE_AT = 1.08;
+  const RELEASE_AT = 1.09;
   const OPEN_AT = 1.03;
 
   function sampleKeys(t, out) {
@@ -1322,10 +1335,13 @@
     const a = dieAnchor.getWorldPosition(new V3());
     placeHand(t);
     const b = dieAnchor.getWorldPosition(new V3());
-    const v = b.clone().sub(a).divideScalar(0.03).multiplyScalar(0.62);
-    v.y = Math.max(v.y, 0) * 0.4 + 2.0; // an arc out of the fingers
-    v.z = clamp(v.z, -0.4, 0.4);
-    launch(b, v, new V3(rand(-2, 2), rand(-2, 2), rand(7, 9)));
+    // ballistic: pick the launch so the die rises ~1 unit and lands near the centre
+    const vy = 5.6;
+    const drop = b.y - REST_Y;                       // height above resting centre
+    const T = (vy + Math.sqrt(vy * vy + 2 * -GRAV * drop)) / -GRAV; // time to touch down
+    const landX = rand(0.5, 0.9), landZ = rand(-0.2, 0.25);
+    const v = new V3((landX - b.x) / T, vy, (landZ - b.z) / T);
+    launch(b, v, new V3(rand(-2.5, 2.5), rand(-2, 2), rand(5.5, 7.5))); // tumbling, rolling to the left
   }
 
   function updateXray(now) {
@@ -1353,7 +1369,22 @@
     try { return localStorage.getItem(SEEN_KEY) === "1"; } catch (e) { return false; }
   })();
 
+  // deep link: ?project=1 opens that project directly (shareable, and handy for testing)
+  const DEEP = (() => { const n = parseInt(new URLSearchParams(location.search).get("project"), 10); return n >= 1 && n <= P.length ? n - 1 : null; })();
+
   function introThrow() {
+    if (DEEP != null) {
+      pivot.visible = true;
+      S.active = DEEP;
+      S.q.copy(FACES[PROJECT_FACE[DEEP]].q);
+      S.mode = "project";
+      S.camZ = 3.3;
+      introDone = true;
+      body.classList.add("name-landed", "ui-in", "intro-done");
+      setIndex(DEEP);
+      openPage(projectHTML(DEEP), "project", `FACE ${pad(DEEP)} / 06`);
+      return;
+    }
     if (reduce) {
       // no theatre: the die simply drops in
       pivot.visible = true;
@@ -1390,6 +1421,7 @@
     loaderLine.style.transform = `scaleX(${loadShown})`;
     if (loadShown >= 1) {
       S.mode = "waiting";
+      introStarted = true;
       loader.classList.add("done");
       setTimeout(introThrow, reduce ? 0 : RETURNING ? 450 : 900);
     }
@@ -1404,7 +1436,7 @@
     addEventListener("pointermove", (e) => {
       CUR.tx = e.clientX; CUR.ty = e.clientY;
       if (!CUR.seen) { CUR.x = CUR.tx; CUR.y = CUR.ty; CUR.seen = true; }
-      CUR.link = !!(e.target.closest && e.target.closest("a, button, .shot.has-media"));
+      CUR.link = !!(e.target.closest && e.target.closest("a, button, .shot.has-media, [data-zoom]"));
     }, { passive: true });
     document.addEventListener("pointerleave", () => cursorEl.classList.add("is-hidden"));
     document.addEventListener("pointerenter", () => cursorEl.classList.remove("is-hidden"));

@@ -43,12 +43,48 @@ window.PROJECTS = [
     motif: "grid",
     short: "Music designed around intention, not endless choice.",
     intro: "Play like you’ve already made it.",
-    sections: [
-      { heading: "Challenge", text: "Qué había que resolver y para quién." },
-      { heading: "System", text: "Arquitectura de información, componentes y tokens." },
-      { heading: "Result", text: "Pantallas clave y su impacto." },
-    ],
+    sections: [],
     images: [],
+    // SIDE A tiene su propia página: la lees como si escucharas una sesión.
+    // Archivos en projects/01-side-a/screens y projects/01-side-a/covers
+    layout: "sidea",
+    sidea: {
+      statement: "Music designed around intention, not endless choice.",
+      story:
+        "SIDE A no es otra app de streaming. Es un ritual: sesiones largas de house, seleccionadas y sin voces, para trabajar como si ya lo hubieras conseguido. Una sola decisión: darle al play.",
+      chapters: [
+        { kicker: "Home", title: "Una decisión por pantalla.", text: "La sesión destacada ocupa el centro. El resto espera debajo, sin competir por tu atención.", screen: "01-desktop-home.jpg", caption: "Home. Una sesión destacada y una fila para lo que venga después." },
+        { kicker: "Session", title: "Sin ruido.", text: "Número, título, artista, duración. La tracklist como una contraportada.", screen: "02-desktop-session.jpg", caption: "Session. Doce pistas, 58:42, y la opción de tocar hasta una hora concreta." },
+        { kicker: "Saved", title: "Tu colección.", text: "Rejilla para mirar. Lista para decidir.", screens: ["03-desktop-saved-grid.jpg", "04-desktop-saved-list.jpg"], caption: "Saved. Rejilla y lista de las sesiones guardadas." },
+      ],
+      focus: {
+        until: "18:00",
+        seconds: 8076, // 02:14:36
+        line: "Empires are built in hours like these.",
+        sub: "Same time tomorrow.",
+        screens: ["05-desktop-focus.jpg", "06-desktop-built.jpg"],
+        caption: "Focus. Eliges hasta cuándo; SIDE A llena el tiempo y desaparece.",
+      },
+      mobile: ["07-mobile-home.jpg", "08-mobile-session.jpg", "09-mobile-saved.jpg"],
+      outro: "You have an empire to build.\nLet this play.",
+      tracks: [
+        ["Soft Focus", "Nora Vale"], ["Open Window", "Eli Monroe"], ["Low Profile", "Nora Vale"],
+        ["Half Light", "Noah Reed"], ["Slow Geometry", "Nora Vale"], ["Room Service", "Kael June"],
+        ["Still Moving", "The Quiet Form"], ["Silver Line", "Luca Venn"], ["Late Checkout", "The Quiet Form"],
+      ],
+      covers: [
+        { file: "quiet-ambition.jpg", title: "Quiet Ambition", line: "You have an empire to build. Let this play.", genre: "Deep house · No vocals", time: "58:42" },
+        { file: "after-hours.jpg", title: "After Hours", line: "Late-night house for the ideas that keep you up.", genre: "Downtempo · Minimal vocals", time: "49:36" },
+        { file: "stay-in-motion.jpg", title: "Stay in Motion", line: "This is what being ten steps ahead sounds like.", genre: "Disco house · No vocals", time: "1:05:26" },
+        { file: "slow-sunday.jpg", title: "Slow Sunday", line: "Take your time. Make it look effortless.", genre: "Downtempo · No vocals", time: "52:17" },
+        { file: "the-choice-is-yours.jpg", title: "The Choice Is Yours", line: "House music for the life you’re building in private.", genre: "Melodic house · No vocals", time: "1:03:18" },
+        { file: "tokyo-after-dark.jpg", title: "Tokyo After Dark", line: "Tokyo after midnight. Everything feels possible.", genre: "Deep house · UK garage", time: "1:02:47" },
+        { file: "private-departure.jpg", title: "Private Departure", line: "House music for people who were born for more.", genre: "Deep house · Minimal vocals", time: "1:01:38" },
+        { file: "open-water.jpg", title: "Open Water", line: "Your only appointment is with the horizon.", genre: "Balearic house · Minimal vocals", time: "54:26" },
+        { file: "silver-frame.jpg", title: "Silver Frame", line: "House music for people with a vision.", genre: "Jazz house · Minimal vocals", time: "1:07:12" },
+        { file: "reference-sound.jpg", title: "Reference Sound", line: "Old-school house for people with ridiculously high standards.", genre: "Soulful house · Minimal vocals", time: "57:43" },
+      ],
+    },
   },
   {
     title: "TON 618",
