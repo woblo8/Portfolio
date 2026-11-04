@@ -662,8 +662,8 @@
     info.desc.textContent = p.short;
     const eb = $("#enterBtn span");
     if (eb) {
-      eb.dataset.es = p.kind ? "Abrir" : "Entrar al proyecto";
-      eb.dataset.en = p.kind ? "Open" : "Enter project";
+      eb.dataset.es = p.kind === "cv" ? "Abrir PDF ↗" : p.kind ? "Abrir" : "Entrar al proyecto";
+      eb.dataset.en = p.kind === "cv" ? "Open PDF ↗" : p.kind ? "Open" : "Enter project";
       eb.textContent = T(eb.dataset.es, eb.dataset.en);
     }
     hasInfo = true;
@@ -878,6 +878,8 @@
   /* ---------- enter / exit project ---------- */
   function enterProject() {
     if (S.mode !== "idle" || overlay || !hasInfo) return;
+    // the CV face opens the PDF itself, in a new tab: there is no CV page in the site
+    if (P[S.active].kind === "cv") { window.open(SITE.cv, "_blank", "noopener"); return; }
     hideInfo();
     S.mode = "enter";
     S.t0 = performance.now();
@@ -930,6 +932,23 @@
   const scrollCueLabel = $("#scrollCue span");
   page.addEventListener("scroll", () => page.classList.toggle("scrolled", page.scrollTop > 60), { passive: true });
   function stopLayout() { if (layoutCleanup) { layoutCleanup(); layoutCleanup = null; } }
+
+  /* ---------- smooth scroll on every page (Lenis) ----------
+     It eases the real scroll position, so the pinned and scroll-driven sections of the
+     case studies keep working exactly as before. Off with reduced motion. */
+  let lenis = null, smoothRaf = 0;
+  function startSmooth(kind) {
+    stopSmooth();
+    if (!window.Lenis || reduce || kind === "vip") return;
+    lenis = new window.Lenis({ wrapper: page, content: pageInner, lerp: 0.085, smoothWheel: true, wheelMultiplier: 0.95 });
+    const loop = (t) => { if (!lenis) return; lenis.raf(t); smoothRaf = requestAnimationFrame(loop); };
+    smoothRaf = requestAnimationFrame(loop);
+  }
+  function stopSmooth() {
+    cancelAnimationFrame(smoothRaf);
+    if (lenis) { lenis.destroy(); lenis = null; }
+  }
+  window.SMOOTH = { get lenis() { return lenis; } }; // for the lightbox: pause while it is open
   const ROUTE_OF = { about: "sobre-mi", contact: "contacto", vip: null };
   const slugIndex = (slug) => P.findIndex((p) => p.slug === slug);
   let routing = false; // true while we are reacting to the back / forward buttons
@@ -951,6 +970,7 @@
   });
   // open a face's page directly, without the camera dive (deep links, back / forward)
   function openFace(i) {
+    if (P[i].kind === "cv") { location.replace(SITE.cv); return; } // /cv is the PDF itself
     hideInfo();
     S.active = i;
     S.q.copy(FACES[PROJECT_FACE[i]].q);
@@ -984,6 +1004,7 @@
     page.classList.add("open");
     page.setAttribute("aria-hidden", "false");
     page.scrollTop = 0;
+    startSmooth(kind);
     [...menu.children].forEach((b) => b.classList.toggle("is-active", b.dataset.open === (kind === "project" ? "projects" : kind)));
     if (io) io.disconnect();
     io = new IntersectionObserver((entries) => entries.forEach((e) => {
@@ -1007,6 +1028,7 @@
 
   function closePage() {
     route(null);
+    stopSmooth();
     setTimeout(stopLayout, 800); // after the fade
     page.classList.remove("open");
     page.setAttribute("aria-hidden", "true");
@@ -1088,10 +1110,12 @@
     if (!lbList.length) return;
     lb.classList.add("open");
     lb.setAttribute("aria-hidden", "false");
+    if (lenis) lenis.stop(); // the page behind stays put
     lbShow(Math.max(0, lbList.indexOf(img)));
     $("#lbClose").focus({ preventScroll: true });
   }
   function lbClose() {
+    if (lenis) lenis.start();
     lb.classList.remove("open");
     lb.setAttribute("aria-hidden", "true");
   }
@@ -1128,33 +1152,17 @@
       </aside>`;
   }
 
-  function cvHTML() {
-    return `
-      <section class="cvp">
-        <div class="ph-code r"><b>CV</b><span>/</span><span>${esc(SITE.name)}</span></div>
-        <h1 class="about-title r">${T("Todo en una página.", "All on one page.")}</h1>
-        <div class="neon-line r"></div>
-        ${availHTML()}
-        <div class="cvp-actions r">
-          <a class="cta" href="${esc(SITE.cv)}" target="_blank" rel="noopener">${T("Abrir PDF", "Open PDF")} ↗</a>
-          <a class="print-link" href="${esc(SITE.cv)}" download>${T("Descargar", "Download")} ↓</a>
-          <a class="print-link" href="print.html" target="_blank" rel="noopener">${T("Versión imprimible", "Printable version")} ↗</a>
-        </div>
-        <div class="cvp-frame r"><iframe src="${esc(SITE.cv)}#view=FitH&toolbar=0" title="CV — ${esc(SITE.name)}" loading="lazy"></iframe></div>
-      </section>`;
-  }
-
   function availHTML() {
     return SITE.availability ? `<p class="avail r"><i></i>${esc(SITE.availability)}</p>` : "";
   }
 
   function projectHTML(i) {
     const p = P[i];
-    const ni = (i + 1) % P.length;
+    let ni = (i + 1) % P.length;
+    if (P[ni].kind === "cv") ni = (ni + 1) % P.length; // the CV is a PDF, not a page: "next" skips it
     const next = `<button class="next r" data-next="${ni}"><span>${T("Siguiente", "Next")} — ${pad(ni)}</span><strong>${esc(P[ni].title)}</strong></button>`;
     if (p.kind === "about") return aboutHTML() + next;
     if (p.kind === "contact") return contactHTML() + next;
-    if (p.kind === "cv") return cvHTML() + next;
     const L = p.layout && window.LAYOUTS && window.LAYOUTS[p.layout];
     if (L) {
       return tldrHTML(p) + L.render(p, i, { esc, pad }) +

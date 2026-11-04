@@ -1,6 +1,16 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/:slug(side-a|ton-618|safelife|sobre-mi|contacto|cv)", "destination": "/" }
+    {
+      "source": "/:slug(side-a|ton-618|safelife|sobre-mi|contacto)",
+      "destination": "/"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/cv",
+      "destination": "/assets/cv/Carlos-Infanzon-Civantos-CV.pdf",
+      "permanent": false
+    }
   ]
 }

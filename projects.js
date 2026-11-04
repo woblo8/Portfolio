@@ -246,7 +246,7 @@ window.PROJECTS = [
     meta: bi("Currículum · PDF", "Résumé · PDF"),
     tags: bi(["Experiencia", "Formación", "Herramientas"], ["Experience", "Education", "Tools"]),
     motif: "cube",
-    short: bi("Todo en una página: experiencia, formación y herramientas.", "Everything on one page: experience, education and tools."),
+    short: bi("Todo en una página: experiencia, formación y herramientas. Se abre el PDF.", "Everything on one page: experience, education and tools. Opens the PDF."),
     intro: "",
     sections: [],
     images: [],

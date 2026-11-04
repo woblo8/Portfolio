@@ -10,14 +10,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
-    @font-face { font-family: "Neue Haas Grotesk"; src: url("fonts/NeueHaasGrotesk-Roman.woff2") format("woff2"); font-weight: 400; }
-    @font-face { font-family: "Neue Haas Grotesk"; src: url("fonts/NeueHaasGrotesk-Bold.woff2") format("woff2"); font-weight: 600; }
-    :root { --ink: #0b0b0c; --mute: #6b6b70; --line: #d9d8d3; --paper: #f7f6f2;
+    /* black paper, white ink: the site, printed. (The browser is told to print the
+       backgrounds too, so it stays black on paper and in the saved PDF.) */
+    :root { --ink: #ecebe7; --mute: #8c8c92; --line: #2b2b2e; --paper: #0a0a0b; --body: #c4c3bf;
       --sans: "Neue Haas Grotesk", "Inter Tight", "Helvetica Neue", Arial, sans-serif; --mono: "Geist Mono", ui-monospace, monospace; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { background: #e9e8e3; }
+    html { background: #050506; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
-    .sheet { background: var(--paper); width: min(210mm, 100%); margin: 24px auto; padding: 18mm 16mm; box-shadow: 0 10px 40px rgba(0,0,0,.08); }
+    .sheet { background: var(--paper); width: min(210mm, 100%); margin: 24px auto; padding: 18mm 16mm; box-shadow: 0 0 0 1px #1c1c1f, 0 30px 80px rgba(0,0,0,.6); }
     .mono { font-family: var(--mono); font-size: 9pt; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
     header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 8mm; border-bottom: 1px solid var(--ink); }
     header h1 { font-size: 26pt; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
@@ -26,25 +26,26 @@
     .about p { font-size: 13pt; line-height: 1.35; letter-spacing: -.01em; }
     .about img { width: 34mm; height: 42mm; object-fit: cover; filter: grayscale(1); }
     .about .lists { margin-top: 5mm; display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
-    .about .lists p { font-size: 9.5pt; line-height: 1.5; color: #333; }
+    .about .lists p { font-size: 9.5pt; line-height: 1.5; color: var(--body); }
     .project { padding: 9mm 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
     .project-head { display: grid; grid-template-columns: 14mm 1fr; gap: 4mm; align-items: baseline; }
     .project h2 { font-size: 22pt; font-weight: 600; letter-spacing: -.035em; line-height: 1; }
     .project .meta { margin-top: 2mm; }
     .project .body { margin: 5mm 0 0 18mm; display: grid; grid-template-columns: 1fr 62mm; gap: 7mm; align-items: start; }
     .project .lead { font-size: 12pt; line-height: 1.35; font-weight: 500; letter-spacing: -.01em; margin-bottom: 3mm; }
-    .project .text p { font-size: 9.5pt; line-height: 1.55; color: #333; margin-top: 2mm; }
+    .project .text p { font-size: 9.5pt; line-height: 1.55; color: var(--body); margin-top: 2mm; }
     .project .text b { font-weight: 600; color: var(--ink); }
     .project img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #111; filter: grayscale(1); }
     footer { padding-top: 6mm; display: flex; justify-content: space-between; }
-    .bar { position: sticky; top: 0; z-index: 2; display: flex; justify-content: center; gap: 18px; padding: 12px; background: rgba(233,232,227,.92); backdrop-filter: blur(8px); }
+    .bar { position: sticky; top: 0; z-index: 2; display: flex; justify-content: center; gap: 18px; padding: 12px; background: rgba(5,5,6,.88); backdrop-filter: blur(8px); }
     .bar button, .bar a { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); background: none; border: 1px solid var(--ink); border-radius: 99px; padding: 9px 16px; cursor: pointer; text-decoration: none; }
-    .bar button { background: var(--ink); color: #fff; }
+    .bar button { background: var(--ink); color: #050506; }
     @page { size: A4; margin: 0; }
     @media print {
-      html { background: #fff; }
+      html, body { background: #0a0a0b; }
       .bar { display: none; }
-      .sheet { margin: 0; width: auto; box-shadow: none; background: #fff; }
+      .sheet { margin: 0; width: auto; min-height: 100vh; box-shadow: none; background: #0a0a0b; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
@@ -55,6 +56,15 @@
   </div>
   <main class="sheet" id="sheet"></main>
 
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script>
+    // smooth scroll here too, unless the reader asked for less motion
+    if (window.Lenis && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const lenis = new Lenis({ lerp: 0.085, smoothWheel: true });
+      const loop = (t) => { lenis.raf(t); requestAnimationFrame(loop); };
+      requestAnimationFrame(loop);
+    }
+  </script>
   <script src="i18n.js"></script>
   <script src="projects.js"></script>
   <script>

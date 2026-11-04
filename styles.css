@@ -499,16 +499,6 @@ body.xray-on .hint, body.xray-on .index { opacity: 0 !important; transition-dela
 @keyframes availPulse { 50% { opacity: 0.35; box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .avail i { animation: none; } }
 
-/* ---------- CV page ---------- */
-.cvp { padding-top: clamp(96px, 16vh, 160px); }
-.cvp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; margin-top: 34px; }
-.cvp-actions .print-link { margin-top: 0; }
-.cvp-frame {
-  margin-top: 48px; height: min(1100px, 130vw); border-radius: 6px; overflow: hidden; background: #111;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 40px 90px rgba(0, 0, 0, 0.6);
-}
-.cvp-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
-@media (max-width: 860px) { .cvp-frame { display: none; } } /* phones open the PDF instead */
 .cta {
   display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px; border-radius: 99px; text-decoration: none;
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #050506; background: var(--bone);
