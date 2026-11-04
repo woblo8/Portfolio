@@ -84,15 +84,37 @@ html.has-cursor .vt3-gl { cursor: none; }
 }
 .vt3-note.on { opacity: 1; visibility: visible; transition: opacity 0.5s var(--ease), visibility 0s; }
 .vt3-note-card {
-  width: min(360px, 100%); aspect-ratio: 5 / 7; background: #f3f1ea; color: #111; border-radius: 14px; padding: 28px;
-  display: grid; align-content: space-between; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(216, 181, 111, 0.5);
+  /* black lacquer card, gold hairline, a glow like it was lit from the lamp */
+  position: relative; width: min(360px, 100%); aspect-ratio: 5 / 7; padding: 30px 28px; border-radius: 14px;
+  display: grid; align-content: space-between; color: var(--bone);
+  background: radial-gradient(120% 80% at 50% 0%, #1a1712 0%, #0b0b0c 55%, #070708 100%);
+  box-shadow: 0 0 0 1px rgba(216, 181, 111, 0.65), inset 0 0 0 6px #0b0b0c, inset 0 0 0 7px rgba(216, 181, 111, 0.3),
+              0 0 60px rgba(216, 181, 111, 0.22), 0 40px 90px rgba(0, 0, 0, 0.8);
   transform: rotateY(90deg) scale(0.9); transition: transform 0.8s var(--ease);
 }
+.vt3-note-card::before { /* a fine guilloché, barely there */
+  content: ""; position: absolute; inset: 7px; border-radius: 9px; pointer-events: none; opacity: 0.08;
+  background: repeating-linear-gradient(45deg, var(--gold) 0 1px, transparent 1px 9px);
+}
 .vt3-note.on .vt3-note-card { transform: none; }
-.vt3-note-card small { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #8a6b32; }
-.vt3-note-card p { font-size: 17px; line-height: 1.45; letter-spacing: -0.01em; }
-.vt3-note-card em { font-style: normal; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: #555; }
-.vt3-note-close { justify-self: end; font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #111; }
+.vt3-note-card > * { position: relative; }
+.vt3-note-card small { font-family: var(--mono); font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); text-shadow: 0 0 10px rgba(216, 181, 111, 0.5); }
+.vt3-note-card p { font-size: 18px; line-height: 1.5; letter-spacing: -0.01em; color: var(--bone); }
+.vt3-note-card em { font-style: normal; font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; color: var(--gold-hi); }
+.vt3-note-close { justify-self: end; font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--smoke); transition: color 0.3s; }
+.vt3-note-close:hover { color: var(--gold-hi); }
+
+/* tiny labels that hang over the die and the card: what you can do with them */
+.vt3-label {
+  position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; white-space: nowrap;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold-hi);
+  text-shadow: 0 0 8px rgba(216, 181, 111, 0.6); opacity: 0; transition: opacity 0.5s var(--ease); will-change: transform;
+}
+.vt3-label::after { content: ""; width: 1px; height: 18px; background: linear-gradient(rgba(216, 181, 111, 0.8), rgba(216, 181, 111, 0)); }
+.vt3-label.on { opacity: 0.9; animation: vtLabel 2.8s ease-in-out infinite; }
+@keyframes vtLabel { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .vt3-label.on { animation: none; } }
 @media (max-width: 860px) {
   .vt3-head { top: 96px; }
   .vt3-tip { bottom: 128px; font-size: 10px; }

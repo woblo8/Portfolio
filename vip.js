@@ -41,6 +41,8 @@
           <h1>${T("Bienvenidos", "Welcome")}, <em>${esc(name)}.</em></h1>
         </header>
         <div class="vt3-tip" aria-live="polite"></div>
+        <span class="vt3-label" data-label="die">${T("Lánzame", "Roll me")}</span>
+        <span class="vt3-label" data-label="card">${T("Ábrela", "Open me")}</span>
         <footer class="vt3-foot">
           <span class="vt3-hint">${T("Arrastra para rodear la mesa · Lanza el dado o elige una casilla", "Drag to walk around the table · Roll the die or pick a box")}</span>
           <a class="vt-cta" href="mailto:${esc(site.email)}?subject=${subject}">${T("Hablemos", "Let’s talk")} <span>→</span></a>
@@ -697,13 +699,24 @@
 
     // the face-down card
     const cardMat = new THREE.MeshPhysicalMaterial({ map: canvasTex(cardBack()), roughness: 0.4, clearcoat: 0.4 });
-    const edge = new THREE.MeshStandardMaterial({ color: 0xf1ede2, roughness: 0.6 });
+    const edge = new THREE.MeshStandardMaterial({ color: 0xb08d4e, metalness: 0.9, roughness: 0.35 }); // gilt edges
     const card = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.004, 0.62), [edge, edge, cardMat, edge, edge, edge]);
     card.position.set(0.15, 0.004, -0.95);
     card.rotation.y = -0.32;
     card.castShadow = card.receiveShadow = true;
     scene.add(card);
     contacts.push([bet.position.x, bet.position.z, 0.26, 0.4], [card.position.x, card.position.z, 0.42, 0.35]);
+    // a gold halo that breathes under the card: something is waiting there
+    const cardHalo = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.1), new THREE.MeshBasicMaterial({
+      map: (() => { const c = mk(256, 256), x = c.getContext("2d"), g = x.createRadialGradient(128, 128, 30, 128, 128, 128);
+        g.addColorStop(0, "rgba(255,215,150,0.9)"); g.addColorStop(0.5, "rgba(255,200,120,0.25)"); g.addColorStop(1, "rgba(255,200,120,0)");
+        x.fillStyle = g; x.fillRect(0, 0, 256, 256); return canvasTex(c); })(),
+      transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    cardHalo.rotation.set(-Math.PI / 2, 0, -0.32);
+    cardHalo.position.set(card.position.x, 0.0015, card.position.z);
+    cardHalo.renderOrder = 1;
+    scene.add(cardHalo);
 
     const LEDGE_Y = 0.105;
     const onLedge = (g) => new THREE.Vector3(Math.cos(g) * (A + 0.54), LEDGE_Y, Math.sin(g) * (B + 0.54));
@@ -1113,6 +1126,17 @@
       const px = (hit.point.x / (2 * A) + 0.5) * pw, py = (hit.point.z / (2 * B) + 0.5) * ph;
       return { box: boxes.findIndex((b) => px > b.x && px < b.x + b.w && py > b.y && py < b.y + b.h) };
     };
+    const labels = { die: vt.querySelector("[data-label=die]"), card: vt.querySelector("[data-label=card]") };
+    const lp = new THREE.Vector3();
+    let noteSeen = false, rolledOnce = false;
+    const placeLabel = (el, obj, lift, show) => {
+      lp.copy(obj.position); lp.y += lift; lp.project(camera);
+      const vis = show && lp.z < 1 && Math.abs(lp.x) < 0.95 && lp.y < 0.85 && lp.y > -0.95;
+      el.classList.toggle("on", vis);
+      if (!vis) return;
+      const r = canvas.getBoundingClientRect();
+      el.style.transform = `translate3d(${((lp.x + 1) / 2 * r.width).toFixed(1)}px, ${((1 - lp.y) / 2 * r.height).toFixed(1)}px, 0) translate(-50%, -100%)`;
+    };
     const setTip = (txt) => { tip.textContent = txt || ""; tip.classList.toggle("on", !!txt); };
 
     const down = (e) => {
@@ -1149,8 +1173,8 @@
       canvas.classList.remove("is-drag");
       if (view.moved > 6) return;
       const p = pick(e);
-      if (p.die) { throwDie(); return; }
-      if (p.card) { noteEl.classList.add("on"); noteEl.setAttribute("aria-hidden", "false"); return; }
+      if (p.die) { rolledOnce = true; throwDie(); return; }
+      if (p.card) { noteSeen = true; noteEl.classList.add("on"); noteEl.setAttribute("aria-hidden", "false"); return; }
       if (p.box != null && p.box >= 0) {
         const btn = vt.querySelector(`[data-next="${boxes[p.box].i}"]`);
         if (btn) btn.click();
@@ -1188,6 +1212,10 @@
       }
       stepDust(now / 1000, dt);
       stepLamp(now / 1000, dt);
+      cardHalo.material.opacity = noteSeen ? 0.06 : 0.14 + Math.sin(now / 520) * 0.08;
+      // the labels stay until you have done the thing once
+      placeLabel(labels.die, die, DS * 1.6, !roll.on && !rolledOnce);
+      placeLabel(labels.card, card, 0.12, !noteSeen);
       stepSmoke(now / 1000, dt);
       smoke.material.uniforms.uScale.value = renderer.getPixelRatio();
       if (iceShake > 0.001) {
