@@ -823,7 +823,7 @@
       else el.remove();
     };
     root.querySelectorAll("img").forEach((img) => {
-      img.addEventListener("load", () => img.closest("figure").classList.add("has-media"));
+      img.addEventListener("load", () => img.closest("figure")?.classList.add("has-media"));
       if (!img.dataset.base) { img.addEventListener("error", () => fail(img)); return; }
       let n = 0;
       const tryNext = () => {
@@ -834,7 +834,7 @@
       tryNext();
     });
     root.querySelectorAll("video[data-src]").forEach((v) => {
-      v.addEventListener("loadeddata", () => v.closest("figure").classList.add("has-media"));
+      v.addEventListener("loadeddata", () => v.closest("figure")?.classList.add("has-media"));
       v.addEventListener("error", () => fail(v));
       v.src = v.dataset.src;
     });
@@ -918,8 +918,8 @@
   function aboutHTML() {
     const portrait = SITE.portrait
       ? `<figure class="about-portrait r" data-src="${esc(SITE.portrait)}" aria-label="${esc(SITE.name)}">
-          <canvas></canvas>
-          <figcaption><span>${esc(SITE.name)}</span><span class="about-hint">Hover to reveal</span></figcaption>
+          <div class="about-photo"><img src="${esc(SITE.portrait)}" alt="${esc(SITE.name)}"><i class="about-scan"></i></div>
+          <figcaption><span>${esc(SITE.name)}</span><span>Product Designer</span></figcaption>
         </figure>`
       : "";
     return `
@@ -1377,11 +1377,7 @@
 
   // first visit: the hand. Returning: straight to the object. ?intro forces the hand again.
   const SEEN_KEY = "woblo:intro-seen";
-  const RETURNING = (() => {
-    const q = new URLSearchParams(location.search);
-    if (q.has("intro") || q.has("xray")) return false;
-    try { return localStorage.getItem(SEEN_KEY) === "1"; } catch (e) { return false; }
-  })();
+  const RETURNING = false; // the hand plays on every visit
 
   // deep link: ?project=1 opens that project directly (shareable, and handy for testing)
   const DEEP = (() => { const n = parseInt(new URLSearchParams(location.search).get("project"), 10); return n >= 1 && n <= P.length ? n - 1 : null; })();

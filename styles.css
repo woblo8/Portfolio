@@ -410,14 +410,23 @@ body.xray-on .hint, body.xray-on .index { opacity: 0 !important; transition-dela
 .about-title { margin-top: 3vh; font-size: clamp(54px, 7.6vw, 136px); font-weight: 600; letter-spacing: -0.055em; line-height: 0.86; text-transform: uppercase; }
 .about-lead { margin-top: 1vh; max-width: 30ch; font-size: clamp(22px, 2.3vw, 36px); line-height: 1.22; letter-spacing: -0.02em; font-weight: 500; }
 .about-portrait { position: relative; justify-self: end; width: min(100%, 520px); }
-.about-portrait canvas { display: block; width: 100%; touch-action: pan-y; }
+.about-photo { position: relative; overflow: hidden; }
+.about-photo img {
+  display: block; width: 100%; height: auto;
+  clip-path: inset(0 0 100% 0); transition: clip-path 1.9s cubic-bezier(0.65, 0, 0.25, 1) 0.35s;
+}
+.about-scan {
+  position: absolute; left: 0; right: 0; top: 0; height: 1px; background: #fff;
+  box-shadow: 0 0 14px #fff, 0 0 3px #fff; opacity: 0;
+}
+.about-portrait.is-revealed .about-photo img { clip-path: inset(0 0 0 0); }
+.about-portrait.is-revealed .about-scan { animation: aboutScan 1.9s cubic-bezier(0.65, 0, 0.25, 1) 0.35s both; }
+@keyframes aboutScan { 0% { top: 0; opacity: 1; } 92% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
 .about-portrait figcaption {
   display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke);
 }
-.about-hint { transition: color 0.4s, text-shadow 0.4s; }
-.about-portrait.is-looking .about-hint { color: #fff; text-shadow: var(--neon-glow); }
 @media (max-width: 860px) {
   .about { grid-template-columns: 1fr; padding-top: 12vh; }
   .about-portrait { justify-self: start; width: 100%; }
