@@ -202,20 +202,3 @@ html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l
   .index > button { width: 30px; height: 30px; }
   .index > button .chip-face { font-size: 9px; }
 }
-
-/* ---------- the entry chips (About, Contact, CV): the negative of the projects ---------- */
-.index > button.chip-inv { background: var(--bone); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 0 10px rgba(255, 255, 255, 0.12); }
-.index > button.chip-inv::before {
-  background: repeating-conic-gradient(from 0deg, rgba(5, 5, 6, 0.55) 0 6deg, transparent 6deg 45deg);
-  opacity: 0.6;
-}
-.index > button.chip-inv .chip-face { color: #050506; font-weight: 500; }
-.index > button.chip-inv:hover { box-shadow: 0 0 0 1px #fff, 0 0 18px rgba(255, 255, 255, 0.5); }
-.index > button.chip-inv:hover .chip-face,
-.index > button.chip-inv.is-active .chip-face { color: #050506; text-shadow: none; }
-.index > button.chip-inv.is-active { background: #fff; box-shadow: 0 0 0 1.5px #fff, 0 0 22px rgba(255, 255, 255, 0.6), 0 0 4px #fff; }
-/* a breath between the three projects and the three entries */
-.index > button.chip-inv:not(.chip-inv + .chip-inv) { margin-left: 8px; }
-/* in VIP mode the active ring turns gold, white chips included */
-body.vip .index > button.chip-inv.is-active { box-shadow: 0 0 0 1.5px #d8b56f, 0 0 20px rgba(216, 181, 111, 0.55); }
-@media (max-width: 600px) { .index > button.chip-inv:not(.chip-inv + .chip-inv) { margin-left: 4px; } }
