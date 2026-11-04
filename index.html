@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Carlos Infanzón — Portfolio</title>
+  <meta name="description" content="Product Design / 3D / Visual Systems. Seis caras, seis entradas." />
+  <meta name="theme-color" content="#050506" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Geist Mono = microinformación. Inter Tight = solo fallback mientras no estén los archivos de Neue Haas Grotesk (ver styles.css) -->
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+</head>
+<body>
+  <canvas id="gl" aria-label="Dado interactivo: arrástralo y lánzalo"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="top">
+    <a class="brand" href="#" id="brand">
+      <span class="brand-name" id="brandName"></span>
+      <span class="brand-role" id="brandRole"></span>
+    </a>
+    <nav class="menu" id="menu">
+      <button data-open="projects" class="is-active">Projects</button>
+      <button data-open="about">About</button>
+      <button data-open="contact">Contact</button>
+    </nav>
+  </header>
+
+  <section class="info" id="info" aria-live="polite">
+    <div class="info-code"><b id="iCode">PROJECT 01</b><span>/</span><span id="iCat"></span><span class="info-face" id="iFace">FACE 01 / 06</span></div>
+    <h1 class="info-title" id="iTitle"></h1>
+    <div class="info-line"></div>
+    <p class="info-desc" id="iDesc"></p>
+    <button class="enter" id="enterBtn">Enter project <span>→</span></button>
+  </section>
+
+  <div class="hint" id="hint">
+    <div class="hint-row"><span>Drag to rotate</span><i></i><span>Throw</span><i></i><span>Explore</span></div>
+    <em id="tagline"></em>
+  </div>
+
+  <nav class="index" id="index" aria-label="Proyectos"></nav>
+
+  <div class="flash" id="flash" aria-hidden="true"></div>
+
+  <article class="page" id="page" aria-hidden="true">
+    <div class="page-bar">
+      <button class="back" id="backBtn">← Back to object</button>
+      <span class="page-tag" id="pageTag"></span>
+    </div>
+    <div class="page-inner" id="pageInner"></div>
+  </article>
+
+  <noscript><p class="noscript">Este portfolio necesita JavaScript.</p></noscript>
+
+  <script src="projects.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
