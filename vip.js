@@ -183,7 +183,8 @@
 
   const EX = "https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/";
   const POST_URLS = ["shaders/CopyShader.js", "shaders/LuminosityHighPassShader.js", "postprocessing/EffectComposer.js",
-    "postprocessing/RenderPass.js", "postprocessing/ShaderPass.js", "postprocessing/UnrealBloomPass.js"].map((p) => EX + p);
+    "postprocessing/RenderPass.js", "postprocessing/ShaderPass.js", "postprocessing/UnrealBloomPass.js",
+    "shaders/BokehShader.js", "postprocessing/BokehPass.js"].map((p) => EX + p);
   const loaded = new Set();
   const addScript = (src) => new Promise((res) => {
     if (loaded.has(src)) return res(true);
@@ -269,19 +270,46 @@
       const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 6, 6), shadeOut);
       cord.position.y = 3.3;
       [outer, inner, rim, bulb, cap, cord].forEach((m) => { m.castShadow = false; lampGroup.add(m); });
-      lampGroup.position.y = LAMP_Y;
-      scene.add(lampGroup);
+      lampGroup.position.y = -6.3; // hangs 6.3 below the ceiling hook
+    }
+    const lampPivot = new THREE.Group();
+    lampPivot.position.y = LAMP_Y + 6.3;
+    lampPivot.add(lampGroup);
+    scene.add(lampPivot);
+    const sway = { x: 0, z: 0, vx: 0, vz: 0 };
+    const lampWorld = new THREE.Vector3(), lampDown = new THREE.Vector3();
+    function stepLamp(t, dt) {
+      // a pendulum: spring back to rest, lose a little each swing, a breath of air
+      const k = 3.2, c = 0.35;
+      sway.vx += (-k * sway.x - c * sway.vx) * dt + Math.sin(t * 0.7) * 0.0009;
+      sway.vz += (-k * sway.z - c * sway.vz) * dt + Math.cos(t * 0.53) * 0.0007;
+      sway.x += sway.vx * dt; sway.z += sway.vz * dt;
+      lampPivot.rotation.set(sway.x, 0, sway.z);
+      lampPivot.updateMatrixWorld();
+      lampGroup.getWorldPosition(lampWorld);
+      lampDown.set(0, -1, 0).applyQuaternion(lampPivot.quaternion);
+      lamp.position.copy(lampWorld).addScaledVector(lampDown, 0.2);
+      lamp.target.position.copy(lampWorld).addScaledVector(lampDown, LAMP_Y);
+      lamp.target.updateMatrixWorld();
+    }
+    {
     }
 
     // bloom: the gold and the brass glow where the lamp catches them.
     // Rendered in half float so the highlights keep their energy; tone mapping
     // and sRGB are applied in the last pass, since render targets skip them.
-    let composer = null, bloom = null;
+    let composer = null, bloom = null, bokeh = null;
     loadChain(POST_URLS).then((ok) => {
       if (!ok || disposed || !THREE.EffectComposer || !THREE.UnrealBloomPass) return;
       const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
       composer = new THREE.EffectComposer(renderer, rt);
       composer.addPass(new THREE.RenderPass(scene, camera));
+      // like a lens: the near rail and the far dark soften, the middle of the table stays sharp
+      if (!small && THREE.BokehPass) {
+        const bp = new THREE.BokehPass(scene, camera, { focus: 7, aperture: 0.0016, maxblur: 0.0065 });
+        bokeh = { uniforms: bp.uniforms };
+        composer.addPass(bp);
+      }
       bloom = new THREE.UnrealBloomPass(new THREE.Vector2(2, 2), 0.3, 0.32, 0.95);
       composer.addPass(bloom);
       composer.addPass(new THREE.ShaderPass({
@@ -451,19 +479,48 @@
     }
 
     // chips: stacks of black and ivory, their name on the gold ones
-    const chipGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.036, 64, 1);
+    const chipGeo = (() => {
+      const g = new THREE.CylinderGeometry(0.2, 0.2, 0.036, 72, 8), p = g.attributes.position, hh = 0.018;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), y = p.getY(i), z = p.getZ(i), r = Math.hypot(x, z);
+        if (r < 0.199) continue;
+        const k = (0.2 - 0.006 * Math.pow(Math.abs(y) / hh, 5)) / r; // the edge rolls over, like moulded clay
+        p.setX(i, x * k); p.setZ(i, z * k);
+      }
+      g.computeVertexNormals();
+      return g;
+    })();
+    // relief: a raised ring around the inlay, the inlay sunk, the inserts pressed into the edge
+    const chipTopBump = (() => {
+      const S = 256, c = mk(S, S), x = c.getContext("2d");
+      x.fillStyle = "#808080"; x.fillRect(0, 0, S, S);
+      x.fillStyle = "#5a5a5a"; x.beginPath(); x.arc(S / 2, S / 2, 66, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = "#c8c8c8"; x.lineWidth = 7; x.beginPath(); x.arc(S / 2, S / 2, 72, 0, Math.PI * 2); x.stroke();
+      x.strokeStyle = "#a0a0a0"; x.lineWidth = 3; x.beginPath(); x.arc(S / 2, S / 2, 118, 0, Math.PI * 2); x.stroke();
+      return canvasTex(c, false);
+    })();
+    const chipSideBump = (() => {
+      const c = mk(512, 32), x = c.getContext("2d");
+      x.fillStyle = "#808080"; x.fillRect(0, 0, 512, 32);
+      x.fillStyle = "#4c4c4c";
+      for (let k = 0; k < 8; k++) { x.fillRect(k * 64 + 19, 0, 2, 32); x.fillRect(k * 64 + 43, 0, 2, 32); }
+      x.fillStyle = "#6a6a6a"; x.fillRect(0, 0, 512, 3); x.fillRect(0, 29, 512, 3);
+      return canvasTex(c, false);
+    })();
     const chipMats = (base, insert, label) => {
-      const side = new THREE.MeshPhysicalMaterial({ map: canvasTex(chipSide(base, insert)), roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 0.3 });
-      const top = new THREE.MeshPhysicalMaterial({ map: canvasTex(chipTop(base, insert, label)), roughness: 0.36, clearcoat: 0.6, clearcoatRoughness: 0.25, envMapIntensity: 0.3 });
+      const side = new THREE.MeshPhysicalMaterial({ map: canvasTex(chipSide(base, insert)), bumpMap: chipSideBump, bumpScale: 0.6, roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.3, envMapIntensity: 0.3 });
+      const top = new THREE.MeshPhysicalMaterial({ map: canvasTex(chipTop(base, insert, label)), bumpMap: chipTopBump, bumpScale: 0.8, roughness: 0.38, clearcoat: 0.55, clearcoatRoughness: 0.25, envMapIntensity: 0.3 });
       return [side, top, top];
     };
     const kinds = [chipMats("#0d0d0e", "#d8b56f", ctx.name.toUpperCase()), chipMats("#e9e4d8", "#0d0d0e", "woblo"), chipMats("#0d0d0e", "#8c7444", "1000")];
     const stack = (x, z, n, kind) => {
-      const g = new THREE.Group();
+      const g = new THREE.Group(), lean = { x: 0, z: 0 };
       for (let k = 0; k < n; k++) {
         const m = new THREE.Mesh(chipGeo, kinds[kind]);
-        m.position.set((Math.random() - 0.5) * 0.012, 0.018 + k * 0.037, (Math.random() - 0.5) * 0.012);
-        m.rotation.y = Math.random() * Math.PI * 2;
+        // each chip a little off the one below, the column drifting as it rises
+        lean.x += (Math.random() - 0.5) * 0.007; lean.z += (Math.random() - 0.5) * 0.007;
+        m.position.set(lean.x, 0.018 + k * 0.0372, lean.z);
+        m.rotation.set((Math.random() - 0.5) * 0.03, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.03);
         m.castShadow = m.receiveShadow = true;
         g.add(m);
       }
@@ -477,6 +534,16 @@
     stack(-1.9, -0.36, 4, 2);
     stack(2.1, -0.72, 9, 0);
     stack(1.72, -0.95, 3, 1);
+    // a loose chip leaning against the ivory stack, another lying flat on its own
+    {
+      const lean1 = new THREE.Mesh(chipGeo, kinds[0]);
+      lean1.position.set(-1.62 + 0.235, 0.075, -0.92 + 0.04);
+      lean1.rotation.set(0.1, 0.3, 1.18, "YXZ");
+      const flat = new THREE.Mesh(chipGeo, kinds[2]);
+      flat.position.set(1.45, 0.019, -0.55); flat.rotation.y = 2.1;
+      [lean1, flat].forEach((m) => { m.castShadow = m.receiveShadow = true; scene.add(m); });
+      contacts.push([1.45, -0.55, 0.24, 0.35], [-1.39, -0.88, 0.18, 0.3]);
+    }
     // one chip lying on the first bet
     const bet = new THREE.Mesh(chipGeo, kinds[0]);
     const b0 = toWorld(boxes[0].x + boxes[0].w * 0.82, boxes[0].y + boxes[0].h * 0.2);
@@ -493,6 +560,79 @@
     card.castShadow = card.receiveShadow = true;
     scene.add(card);
     contacts.push([bet.position.x, bet.position.z, 0.26, 0.4], [card.position.x, card.position.z, 0.42, 0.35]);
+
+    const LEDGE_Y = 0.105;
+    const onLedge = (g) => new THREE.Vector3(Math.cos(g) * (A + 0.54), LEDGE_Y, Math.sin(g) * (B + 0.54));
+    const glassMat = (extra) => new THREE.MeshPhysicalMaterial(Object.assign({
+      color: 0xffffff, metalness: 0, roughness: 0.04, transmission: 1, thickness: 0.06, ior: 1.5,
+      envMapIntensity: 0.22, clearcoat: 0.4, clearcoatRoughness: 0.05, specularIntensity: 0.8,
+    }, extra));
+    const lathe = (pts, seg = 64) => new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), seg);
+    // ashtray: heavy cut glass, a shallow bowl
+    const ashPos = onLedge(1.08);
+    const ash = new THREE.Mesh(lathe([[0, 0], [0.2, 0], [0.215, 0.012], [0.215, 0.062], [0.2, 0.066], [0.15, 0.058], [0.13, 0.03], [0, 0.03]]), glassMat({ thickness: 0.12, envMapIntensity: 0.7, clearcoat: 1, color: new THREE.Color(0xdfe6e2) }));
+    ash.position.copy(ashPos);
+    ash.castShadow = true;
+    scene.add(ash);
+    // the cigar resting on the rim, its end burning
+    const cigar = new THREE.Group();
+    {
+      const leaf = new THREE.MeshStandardMaterial({ color: new THREE.Color(0x5a3418).convertSRGBToLinear(), roughness: 0.75 });
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.021, 0.34, 20), leaf);
+      body.rotation.z = Math.PI / 2;
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0222, 0.0222, 0.03, 20), new THREE.MeshStandardMaterial({ color: 0xb08d4e, metalness: 0.8, roughness: 0.35 }));
+      band.rotation.z = Math.PI / 2; band.position.x = 0.1;
+      const ashTip = new THREE.Mesh(new THREE.CylinderGeometry(0.0205, 0.021, 0.035, 20), new THREE.MeshStandardMaterial({ color: 0x8d8a86, roughness: 1 }));
+      ashTip.rotation.z = Math.PI / 2; ashTip.position.x = -0.187;
+      const ember = new THREE.Mesh(new THREE.CircleGeometry(0.019, 20), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff5a1a).multiplyScalar(4) }));
+      ember.rotation.y = -Math.PI / 2; ember.position.x = -0.2055;
+      [body, band, ashTip, ember].forEach((m) => { m.castShadow = true; cigar.add(m); });
+      cigar.userData.ember = ember;
+    }
+    cigar.position.copy(ashPos).add(new THREE.Vector3(0, 0.07, 0));
+    cigar.rotation.set(0, 1.08 + Math.PI / 2, -0.12);
+    cigar.translateX(-0.05);
+    scene.add(cigar);
+    const emberWorld = new THREE.Vector3();
+    cigar.userData.ember.getWorldPosition(emberWorld);
+
+    // the glass: a heavy tumbler, two fingers of whisky, three cubes of ice
+    const glassPos = onLedge(2.12);
+    const tumbler = new THREE.Group();
+    {
+      const g = new THREE.Mesh(lathe([[0, 0], [0.13, 0], [0.135, 0.01], [0.14, 0.23], [0.132, 0.232], [0.125, 0.04], [0, 0.04]]), glassMat({ thickness: 0.03 }));
+      const whisky = new THREE.Mesh(new THREE.CylinderGeometry(0.123, 0.121, 0.085, 48), new THREE.MeshPhysicalMaterial({
+        // opaque on purpose: glass only shows what is opaque behind it
+        color: new THREE.Color(0x8a4512).convertSRGBToLinear(), emissive: new THREE.Color(0x5a2406).convertSRGBToLinear(), emissiveIntensity: 0.35,
+        roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 0.35,
+      }));
+      whisky.position.y = 0.04 + 0.0425;
+      g.castShadow = true;
+      tumbler.add(g, whisky);
+      const cube = (() => {
+        const b = new THREE.BoxGeometry(1, 1, 1, 4, 4, 4), p = b.attributes.position, v = new THREE.Vector3(), cc = new THREE.Vector3(), r = 0.18, inner = 0.5 - r;
+        for (let i = 0; i < p.count; i++) {
+          v.fromBufferAttribute(p, i);
+          cc.set(Math.max(-inner, Math.min(inner, v.x)), Math.max(-inner, Math.min(inner, v.y)), Math.max(-inner, Math.min(inner, v.z)));
+          v.sub(cc).normalize().multiplyScalar(r).add(cc);
+          p.setXYZ(i, v.x * 0.075, v.y * 0.075, v.z * 0.075);
+        }
+        b.computeVertexNormals();
+        return b;
+      })();
+      const iceMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0xc9d6dc).convertSRGBToLinear(), roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.45 });
+      tumbler.userData.ice = [[-0.04, 0.03, 0.4], [0.045, -0.02, 1.3], [0.0, 0.05, 2.2]].map(([x, z, r], k) => {
+        const m = new THREE.Mesh(cube, iceMat);
+        m.position.set(x, 0.125 + k * 0.012, z);
+        m.rotation.set(r * 0.3, r, r * 0.2);
+        m.userData.rest = m.position.clone(); m.userData.rot = m.rotation.clone();
+        tumbler.add(m);
+        return m;
+      });
+    }
+    tumbler.position.copy(glassPos);
+    scene.add(tumbler);
+    let iceShake = 0;
 
     // ambient occlusion baked into the felt: darker where it meets the rail,
     // a soft pool under everything that rests on it
@@ -605,6 +745,77 @@
       depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: true,
     }));
     scene.add(dust);
+    // smoke: rises from the ember, curls, leans towards the warm air under the lamp
+    const SMOKE = small ? 110 : 220;
+    const smokeAge = new Float32Array(SMOKE), smokeSeed = new Float32Array(SMOKE), smokePos = new Float32Array(SMOKE * 3);
+    for (let k = 0; k < SMOKE; k++) { smokeAge[k] = k / SMOKE; smokeSeed[k] = Math.random() * 100; }
+    const smokeGeo = new THREE.BufferGeometry();
+    smokeGeo.setAttribute("position", new THREE.BufferAttribute(smokePos, 3));
+    smokeGeo.setAttribute("aAge", new THREE.BufferAttribute(smokeAge, 1));
+    const smoke = new THREE.Points(smokeGeo, new THREE.ShaderMaterial({
+      uniforms: { uScale: { value: 1 } },
+      vertexShader: `attribute float aAge; varying float vA; uniform float uScale;
+        void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * mv;
+          gl_PointSize = uScale * (0.07 + aAge * 0.6) * 300.0 / -mv.z;
+          vA = smoothstep(0.0, 0.06, aAge) * pow(1.0 - aAge, 1.5) * 0.075; }`,
+      fragmentShader: `varying float vA;
+        void main(){ vec2 p = gl_PointCoord - 0.5; float d = length(p); float a = pow(smoothstep(0.5, 0.0, d), 1.6);
+          gl_FragColor = vec4(vec3(0.85, 0.83, 0.8), a * vA); }`,
+      transparent: true, depthWrite: false, blending: THREE.NormalBlending,
+    }));
+    smoke.frustumCulled = false;
+    scene.add(smoke);
+    const stepSmoke = (t, dt) => {
+      const toC = new THREE.Vector2(-emberWorld.x, -emberWorld.z).normalize();
+      for (let k = 0; k < SMOKE; k++) {
+        let a = smokeAge[k] + dt / 7;
+        if (a >= 1) { a -= 1; smokeSeed[k] = Math.random() * 100; }
+        smokeAge[k] = a;
+        const s = smokeSeed[k], y = a * 2.1;
+        const curl = Math.sin(t * 0.9 + s + y * 5) * 0.09 * (0.25 + a) + Math.sin(y * 9 + s) * 0.012;
+        const drift = Math.pow(a, 1.6) * 1.4; // drawn towards the light as it climbs
+        smokePos[k * 3] = emberWorld.x + toC.x * drift + curl;
+        smokePos[k * 3 + 1] = emberWorld.y + y;
+        smokePos[k * 3 + 2] = emberWorld.z + toC.y * drift + Math.cos(t * 0.7 + s + y * 4) * 0.04 * (0.3 + a);
+      }
+      smokeGeo.attributes.position.needsUpdate = true;
+      smokeGeo.attributes.aAge.needsUpdate = true;
+    };
+
+    // marks in the felt where the die has landed, kept between visits
+    const MARK_KEY = "woblo:vt-marks:" + ctx.name.toLowerCase();
+    const markC = mk(1024, Math.round((1024 * FB) / FA)), markX = markC.getContext("2d");
+    const markTex = canvasTex(markC, false);
+    const markMesh = new THREE.Mesh(normUV(new THREE.ShapeGeometry(ellipse(FA, FB), 120), FA, FB),
+      new THREE.MeshBasicMaterial({ map: markTex, color: 0x000000, transparent: true, depthWrite: false, toneMapped: false }));
+    markMesh.rotation.x = -Math.PI / 2; markMesh.position.y = 0.0012; markMesh.renderOrder = 1;
+    scene.add(markMesh);
+    let marks = [];
+    try { marks = JSON.parse(localStorage.getItem(MARK_KEY) || "[]").slice(-24); } catch (e) { marks = []; }
+    const drawMark = ([wx, wz, yaw, dx, dz]) => {
+      const W = markC.width, H = markC.height;
+      const px = (wx / (2 * FA) + 0.5) * W, py = (wz / (2 * FB) + 0.5) * H, s = (DS / (2 * FA)) * W;
+      markX.save(); markX.translate(px, py); markX.rotate(-yaw);
+      // the fibres pressed flat under the die: a soft square
+      const g = markX.createRadialGradient(0, 0, s * 0.1, 0, 0, s * 0.75);
+      g.addColorStop(0, "rgba(0,0,0,0.13)"); g.addColorStop(0.7, "rgba(0,0,0,0.07)"); g.addColorStop(1, "rgba(0,0,0,0)");
+      markX.fillStyle = g; markX.fillRect(-s * 0.8, -s * 0.8, s * 1.6, s * 1.6);
+      markX.restore();
+      // a faint scuff where it slid in
+      const len = Math.hypot(dx, dz) || 1;
+      markX.strokeStyle = "rgba(0,0,0,0.05)"; markX.lineWidth = s * 0.35; markX.lineCap = "round";
+      markX.beginPath(); markX.moveTo(px, py);
+      markX.lineTo(px - (dx / len) * s * 1.6, py - (dz / len) * s * 1.6 * (W / H) * (FB / FA)); markX.stroke();
+    };
+    marks.forEach(drawMark);
+    markTex.needsUpdate = true;
+    function addMark(x, z, yaw, dx, dz) {
+      const m = [+x.toFixed(3), +z.toFixed(3), +yaw.toFixed(3), +dx.toFixed(3), +dz.toFixed(3)];
+      marks.push(m); marks = marks.slice(-24);
+      drawMark(m); markTex.needsUpdate = true;
+      try { localStorage.setItem(MARK_KEY, JSON.stringify(marks)); } catch (e) { /* private mode */ }
+    }
+
     const stepDust = (t, dt) => {
       for (let k = 0; k < DUST; k++) {
         const i = k * 3, s = dustSeed[k];
@@ -617,6 +828,25 @@
     };
     const roll = { on: false, t: 0, dur: 1.7, p0: new THREE.Vector3(), p1: new THREE.Vector3(), q1: new THREE.Quaternion(), axis: new THREE.Vector3(), spins: 0, val: 0 };
     let chosen = -1;
+    const rolls = []; // for the receipt
+    const S = window.CASINO && window.CASINO.sound;
+    // ice against glass: two bright partials, quickly gone
+    function tinkle(v) {
+      if (!S || !S.on) return;
+      const a = S.audio(); if (!a) return;
+      const n = 1 + Math.floor(v * 3);
+      for (let i = 0; i < n; i++) {
+        const t0 = a.currentTime + i * (0.05 + Math.random() * 0.06);
+        [2900 + Math.random() * 900, 5200 + Math.random() * 1200].forEach((fq, j) => {
+          const o = a.createOscillator(), g = a.createGain();
+          o.type = "sine"; o.frequency.value = fq;
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime((j ? 0.025 : 0.05) * Math.min(1, v + 0.3), t0 + 0.003);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35 - j * 0.15);
+          o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + 0.4);
+        });
+      }
+    }
     const WORDS = T(["Uno", "Dos", "Tres", "Cuatro", "Cinco", "Seis"], ["One", "Two", "Three", "Four", "Five", "Six"]);
     function throwDie() {
       if (roll.on) return;
@@ -632,6 +862,7 @@
       roll.axis.set(z - roll.p0.z, 0, -(x - roll.p0.x)).normalize(); // it tumbles in the direction it travels
       if (roll.axis.lengthSq() < 0.01) roll.axis.set(1, 0, 0);
       roll.spins = 2 + Math.floor(Math.random() * 2);
+      roll.bounce = 0;
       setTip("Rien ne va plus.");
     }
     const tmpQ = new THREE.Quaternion();
@@ -642,14 +873,72 @@
       die.position.lerpVectors(roll.p0, roll.p1, e);
       // three bounces, each lower than the last
       die.position.y = DS / 2 + Math.abs(Math.sin(t * Math.PI * 3.5)) * 0.55 * Math.pow(1 - t, 2.2);
+      const bounce = Math.floor(t * 3.5);
+      if (bounce > roll.bounce) {
+        roll.bounce = bounce;
+        const v = Math.pow(1 - t, 2.2) * 1.4;
+        if (S) S.thud(Math.min(1, v + 0.15));
+        const near = die.position.distanceTo(tumbler.position);
+        iceShake = Math.max(iceShake, v * Math.max(0, 1 - near / 4.2));
+        if (iceShake > 0.08) tinkle(iceShake);
+      }
       tmpQ.setFromAxisAngle(roll.axis, (1 - e) * roll.spins * Math.PI * 2);
       die.quaternion.copy(tmpQ).multiply(roll.q1);
       if (t >= 1) {
         roll.on = false;
         chosen = (roll.val - 1) % boxes.length;
+        const e2 = new THREE.Euler().setFromQuaternion(die.quaternion, "YXZ");
+        addMark(die.position.x, die.position.z, e2.y, roll.p1.x - roll.p0.x, roll.p1.z - roll.p0.z);
+        rolls.push({ val: roll.val, title: boxes[chosen].title, at: new Date() });
         const b = boxes[chosen];
         setTip(`${WORDS[roll.val - 1]}. ${b.title} — ${T("apostar", "place your bet")} →`);
       }
+    }
+
+    /* ---------- the room you cannot see: murmur, a far roulette, chips ---------- */
+    const amb = { on: false, nodes: null, next: 0, roul: 0 };
+    function ambStart() {
+      const a = S && S.audio(); if (!a) return;
+      const len = a.sampleRate * 3, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+      let b0 = 0, b1 = 0; // brown-ish noise: the low hum of a full room
+      for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; b0 = 0.995 * b0 + w * 0.05; b1 = 0.9 * b1 + w * 0.1; d[i] = b0 * 0.7 + b1 * 0.3; }
+      const src = a.createBufferSource(); src.buffer = buf; src.loop = true;
+      const lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 650;
+      const bp = a.createBiquadFilter(); bp.type = "peaking"; bp.frequency.value = 320; bp.gain.value = 6; bp.Q.value = 0.8;
+      const g = a.createGain(); g.gain.setValueAtTime(0.0001, a.currentTime); g.gain.exponentialRampToValueAtTime(0.05, a.currentTime + 2.5);
+      // voices rise and fall
+      const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = 0.13; lg.gain.value = 0.018;
+      lfo.connect(lg).connect(g.gain);
+      src.connect(lp).connect(bp).connect(g).connect(a.destination);
+      src.start(); lfo.start();
+      amb.nodes = { src, lfo, g, a };
+      amb.on = true; amb.next = 0; amb.roul = 0;
+    }
+    function ambStop() {
+      if (!amb.nodes) { amb.on = false; return; }
+      const { src, lfo, g, a } = amb.nodes;
+      try { g.gain.cancelScheduledValues(a.currentTime); g.gain.setTargetAtTime(0.0001, a.currentTime, 0.25); src.stop(a.currentTime + 1.2); lfo.stop(a.currentTime + 1.2); } catch (e) { /* already stopped */ }
+      amb.nodes = null; amb.on = false;
+    }
+    // a roulette across the room: the ball ticking, slowing, settling
+    function farRoulette() {
+      const a = S.audio(); if (!a) return;
+      let t = a.currentTime, gap = 0.07;
+      for (let i = 0; i < 26; i++) {
+        S.burst(a, t, { freq: 2400, type: "bandpass", q: 3, gain: 0.018, dur: 0.02 });
+        t += gap; gap *= 1.09;
+      }
+      S.burst(a, t + 0.05, { freq: 1500, type: "bandpass", q: 2, gain: 0.03, dur: 0.06 });
+    }
+    function stepAmbience(t) {
+      const want = !!(S && S.on);
+      if (want && !amb.on) ambStart();
+      if (!want && amb.on) ambStop();
+      if (!amb.on) return;
+      if (!amb.next) amb.next = t + 4 + Math.random() * 5;
+      if (t > amb.next) { S.chip(0.25 + Math.random() * 0.2); if (Math.random() < 0.5) setTimeout(() => S.chip(0.18), 90 + Math.random() * 80); amb.next = t + 6 + Math.random() * 9; }
+      if (!amb.roul) amb.roul = t + 14 + Math.random() * 10;
+      if (t > amb.roul) { farRoulette(); amb.roul = t + 28 + Math.random() * 20; }
     }
 
     /* ---------- camera: the height of a die, walking around ---------- */
@@ -693,6 +982,7 @@
         const dx = e.clientX - view.x0, dy = e.clientY - view.y0;
         view.moved += Math.abs(dx) + Math.abs(dy);
         view.vth = -dx * 0.0042;
+        sway.vz += dx * 0.00035; sway.vx -= dy * 0.00025; // the air you move reaches the lamp
         view.th += view.vth;
         view.h = Math.min(H_MAX, Math.max(0.24, view.h + dy * 0.003));
         view.x0 = e.clientX; view.y0 = e.clientY;
@@ -747,6 +1037,19 @@
         dieAO.material.opacity = 0.85 / (1 + hgt * 9);
       }
       stepDust(now / 1000, dt);
+      stepLamp(now / 1000, dt);
+      stepSmoke(now / 1000, dt);
+      smoke.material.uniforms.uScale.value = renderer.getPixelRatio();
+      if (iceShake > 0.001) {
+        iceShake *= Math.exp(-dt * 3.2);
+        tumbler.userData.ice.forEach((m, k) => {
+          const w = Math.sin(now / 1000 * (26 + k * 7) + k) * iceShake;
+          m.position.set(m.userData.rest.x + w * 0.012, m.userData.rest.y + Math.abs(w) * 0.008, m.userData.rest.z - w * 0.01);
+          m.rotation.set(m.userData.rot.x + w * 0.25, m.userData.rot.y + w * 0.4, m.userData.rot.z);
+        });
+      }
+      if (bokeh) bokeh.uniforms.focus.value = camera.position.distanceTo(die.position) * 0.6 + camera.position.distanceTo(target) * 0.4;
+      stepAmbience(now / 1000);
       glows.forEach((g, k) => {
         const want = k === hoverBox ? 0.16 : k === chosen ? 0.1 + Math.sin(now / 260) * 0.04 : 0;
         g.material.opacity += (want - g.material.opacity) * Math.min(1, dt * 8);
@@ -760,6 +1063,8 @@
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
+      ambStop();
+      if (rolls.length) showReceipt(ctx.name, rolls);
       removeEventListener("resize", resize);
       removeEventListener("pointermove", move);
       removeEventListener("pointerup", up);
@@ -775,6 +1080,86 @@
       renderer.forceContextLoss();
       window.__vt = null;
     };
+  }
+
+  /* ---------- the receipt: what the house saw, to keep ---------- */
+  function showReceipt(name, rolls) {
+    const old = document.querySelector(".vt-receipt");
+    if (old) old.remove();
+    const now = new Date();
+    const date = now.toLocaleDateString(T("es-ES", "en-GB"), { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+    const time = now.toLocaleTimeString(T("es-ES", "en-GB"), { hour: "2-digit", minute: "2-digit" });
+    const no = String(Math.floor(now.getTime() / 1000) % 100000).padStart(5, "0");
+    const W = T(["UNO", "DOS", "TRES", "CUATRO", "CINCO", "SEIS"], ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"]);
+    const lines = rolls.slice(-8).map((r, i) => [String(i + 1).padStart(2, "0"), `${W[r.val - 1]} → ${r.title.toUpperCase()}`]);
+    const sum = rolls.reduce((s, r) => s + r.val, 0);
+    const head = ["WOBLO.IO", T("MESA PRIVADA", "PRIVATE TABLE")];
+    const meta = [[T("INVITADO", "GUEST"), name.toUpperCase()], [T("FECHA", "DATE"), `${date} · ${time}`], [T("TICKET", "TICKET"), `Nº ${no}`]];
+    const foot = [T(`TIRADAS ${rolls.length} · SUMA ${sum}`, `ROLLS ${rolls.length} · TOTAL ${sum}`), T("LA CASA AGRADECE SU VISITA", "THE HOUSE THANKS YOU"), "carlos · woblo.io"];
+
+    const el = document.createElement("aside");
+    el.className = "vt-receipt";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-label", T("Recibo de la mesa", "Table receipt"));
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    el.innerHTML = `
+      <div class="vtr-paper">
+        <div class="vtr-head">${head.map(esc).join("<br>")}</div>
+        <div class="vtr-rule"></div>
+        ${meta.map(([k, v]) => `<div class="vtr-row"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("")}
+        <div class="vtr-rule"></div>
+        ${lines.map(([k, v]) => `<div class="vtr-row"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("")}
+        <div class="vtr-rule"></div>
+        <div class="vtr-foot">${foot.map(esc).join("<br>")}</div>
+      </div>
+      <div class="vtr-actions">
+        <button type="button" class="vtr-dl">${T("Descargar", "Download")} ↓</button>
+        <button type="button" class="vtr-x" aria-label="${T("Cerrar", "Close")}">✕</button>
+      </div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("on"));
+    let timer = setTimeout(close, 14000);
+    el.addEventListener("pointerenter", () => clearTimeout(timer));
+    el.addEventListener("pointerleave", () => { clearTimeout(timer); timer = setTimeout(close, 6000); });
+    function close() { el.classList.remove("on"); setTimeout(() => el.remove(), 700); }
+    el.querySelector(".vtr-x").addEventListener("click", close);
+    el.querySelector(".vtr-dl").addEventListener("click", () => {
+      // drawn again on a canvas, at print size, so it saves as a clean image
+      const S = 2, w = 380, rowH = 22;
+      const rows = [...meta, null, ...lines];
+      const h = 64 + head.length * 22 + 24 + rows.length * rowH + 24 + foot.length * 20 + 40;
+      const c = document.createElement("canvas"); c.width = w * S; c.height = h * S;
+      const x = c.getContext("2d"); x.scale(S, S);
+      x.fillStyle = "#f2efe8"; x.fillRect(0, 0, w, h);
+      // the torn bottom edge
+      x.fillStyle = "#050506";
+      for (let i = 0; i < w; i += 12) { x.beginPath(); x.moveTo(i, h); x.lineTo(i + 6, h - 6); x.lineTo(i + 12, h); x.fill(); }
+      x.fillStyle = "#111"; x.textBaseline = "middle";
+      const mono = (sz, wgt = 500) => `${wgt} ${sz}px "Geist Mono", ui-monospace, monospace`;
+      const rule = (yy) => { x.save(); x.strokeStyle = "rgba(0,0,0,0.35)"; x.setLineDash([3, 3]); x.beginPath(); x.moveTo(24, yy); x.lineTo(w - 24, yy); x.stroke(); x.restore(); };
+      let y = 40;
+      x.textAlign = "center"; x.font = mono(14);
+      head.forEach((t) => { x.fillText(t, w / 2, y); y += 22; });
+      y += 4; rule(y); y += 20;
+      x.font = mono(11);
+      rows.forEach((r) => {
+        if (!r) { rule(y - 6); y += 6; return; }
+        x.textAlign = "left"; x.fillStyle = "#6b6b70"; x.fillText(r[0], 24, y);
+        x.textAlign = "right"; x.fillStyle = "#111"; x.fillText(r[1], w - 24, y);
+        y += rowH;
+      });
+      rule(y); y += 22;
+      x.textAlign = "center"; x.fillStyle = "#6b6b70";
+      foot.forEach((t) => { x.fillText(t, w / 2, y); y += 20; });
+      c.toBlob((blob) => {
+        if (!blob) return;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `woblo-mesa-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${no}.png`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      }, "image/png");
+    });
   }
 
   window.VIP_TABLE = { html, init };

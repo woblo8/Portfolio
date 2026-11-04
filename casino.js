@@ -203,7 +203,8 @@
       </div>`;
     requestAnimationFrame(() => el.classList.add("is-drawn"));
   }
-  window.CASINO = { mountOdds };
+  // the private table borrows the same synthesiser (and the same on/off)
+  window.CASINO = { mountOdds, sound: { audio, burst, chip, thud, tick, get on() { return SND.on; } } };
 
   /* ---------- private table ---------- */
   if (window.VIP) {

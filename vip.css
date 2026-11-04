@@ -109,3 +109,26 @@ html.has-cursor .vt3-gl { cursor: none; }
   .vt3-tip { font-size: 9.5px; letter-spacing: 0.12em; }
   .vt3-head h1 { font-size: 30px; }
 }
+
+/* ---------- the receipt handed over when you leave the table ---------- */
+.vt-receipt {
+  position: fixed; left: var(--gut); bottom: calc(var(--gut) + 64px); z-index: 80; width: 300px;
+  opacity: 0; transform: translateY(40px) rotate(-1.5deg); transition: opacity 0.6s var(--ease), transform 0.9s var(--ease);
+}
+.vt-receipt.on { opacity: 1; transform: rotate(-1.5deg); }
+.vtr-paper {
+  background: #f2efe8; color: #111; padding: 20px 18px 24px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 6px repeat-x;
+          mask: linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 6px repeat-x;
+}
+.vtr-head { text-align: center; font-size: 12px; letter-spacing: 0.2em; line-height: 1.6; }
+.vtr-rule { border-top: 1px dashed rgba(0, 0, 0, 0.35); margin: 10px 0; }
+.vtr-row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.vtr-row span:first-child { color: #6b6b70; }
+.vtr-row span:last-child { text-align: right; }
+.vtr-foot { text-align: center; color: #6b6b70; line-height: 1.8; }
+.vtr-actions { display: flex; justify-content: space-between; margin-top: 10px; }
+.vtr-actions button { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold-hi); padding: 6px 2px; }
+.vtr-actions button:hover { text-shadow: 0 0 10px rgba(216, 181, 111, 0.7); }
+@media (max-width: 600px) { .vt-receipt { left: 50%; width: min(300px, calc(100vw - 40px)); margin-left: calc(min(300px, calc(100vw - 40px)) / -2); bottom: 150px; } }
