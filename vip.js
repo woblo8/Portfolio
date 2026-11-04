@@ -1064,17 +1064,17 @@
       })();
       const tf = canvasTex(front), tb = canvasTex(back);
       const noFight = { polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }; // the print is pulled forward too
-      const matF = new THREE.MeshStandardMaterial({ ...noFight, map: tf, bumpMap: tf, bumpScale: 0.35, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.FrontSide });
-      const matB = new THREE.MeshStandardMaterial({ ...noFight, map: tb, bumpMap: tb, bumpScale: 0.35, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.BackSide });
+      const matF = new THREE.MeshStandardMaterial({ ...noFight, map: tf, bumpMap: tf, bumpScale: 0.08, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.FrontSide });
+      const matB = new THREE.MeshStandardMaterial({ ...noFight, map: tb, bumpMap: tb, bumpScale: 0.08, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.BackSide });
       // the paper: a soft curl along its length, and optionally folded in half
-      const noteGeo = (fold) => {
+      const noteGeo = (fold, pressed) => {
         const g = new THREE.PlaneGeometry(NW, NH, 64, 10), p = g.attributes.position;
         for (let i = 0; i < p.count; i++) {
           const x0 = p.getX(i), y0 = p.getY(i), u = x0 / (NW / 2), v = y0 / (NH / 2);
-          let x = x0, z = u * u * 0.012 + v * v * 0.006 + Math.sin(u * 3.1 + v) * 0.003;
+          let x = x0, z = pressed ? Math.sin(u * 3.1 + v) * 0.0008 : u * u * 0.012 + v * v * 0.006 + Math.sin(u * 3.1 + v) * 0.003;
           if (fold && x0 > 0) {
             // the right half folded back over the left, not quite pressed flat
-            const phi = Math.PI - 0.035 - (1 - Math.abs(v)) * 0.012; // pressed nearly flat, as in a wallet
+            const phi = pressed ? Math.PI - 0.004 : Math.PI - 0.035 - (1 - Math.abs(v)) * 0.012; // pressed nearly flat, as in a wallet
             x = Math.cos(phi) * x0; z = Math.sin(phi) * x0 + 0.004 + z * 0.4;
           }
           p.setXYZ(i, x, y0, z);
@@ -1082,17 +1082,40 @@
         g.computeVertexNormals();
         return g;
       };
-      const flat = noteGeo(false), folded = noteGeo(true);
-      // [x, z, yaw, height, folded] — placed by a check against every chip, card, plaque,
-      // betting box and the die's landing zone: nothing goes through anything
-      const notes = [
-        // only at the two ends of the oval: the one place with no lettering, no box and no chip
-        // one folded note at each end: no two notes touch, nothing passes through anything
-        [2.58, 0.0, 1.4, 0.006, true],
-        [-2.6, 0.0, 1.75, 0.006, true],
-      ];
-      notes.forEach(([nx, nz, yaw, y, isFolded]) => {
-        const geo = isFolded ? folded : flat;
+      const flat = noteGeo(false), folded = noteGeo(true), pressed = noteGeo(true, true);
+      // the bank strap around each bundle: kraft paper, a gold rule, the amount
+      const strapTex = (() => {
+        const c = mk(512, 64), x = c.getContext("2d");
+        x.fillStyle = "#b9925a"; x.fillRect(0, 0, 512, 64);
+        x.fillStyle = "rgba(0,0,0,0.12)"; for (let k = 0; k < 260; k++) x.fillRect(Math.random() * 512, Math.random() * 64, 2, 1);
+        x.fillStyle = "#6b4a22"; x.fillRect(0, 6, 512, 3); x.fillRect(0, 55, 512, 3);
+        x.fillStyle = "#3b2812"; x.font = `700 26px ${SERIF}`; x.textAlign = "center"; x.textBaseline = "middle";
+        x.fillText("WOBLO RESERVE  ·  $10,000  ·  WOBLO RESERVE", 256, 33);
+        return canvasTex(c);
+      })();
+      const strapMat = new THREE.MeshStandardMaterial({ map: strapTex, roughness: 0.8, envMapIntensity: 0.1 });
+      // [x, z, yaw] of each end, found by a check against every chip, card, plaque, betting box,
+      // the lettering and the die's landing zone: the bundles sit where nothing else is
+      const ENDS = [[2.58, 0.0, 1.4], [-2.6, 0.0, 1.75]];
+      const notes = []; // [x, z, yaw, height, geometry]
+      const STEP = 0.0062; // one pressed note
+      ENDS.forEach(([ex, ez, ey], side) => {
+        // the bundle: ten notes, squared up by a cashier's hands, not a machine
+        const N = 10;
+        for (let k = 0; k < N; k++) notes.push([ex + (Math.random() - 0.5) * 0.012, ez + (Math.random() - 0.5) * 0.012, ey + (Math.random() - 0.5) * 0.03, 0.004 + k * STEP, pressed]);
+        const top = 0.004 + N * STEP;
+        // its strap, across the short side of the folded notes
+        const strap = new THREE.Mesh(new THREE.BoxGeometry(0.1, top + 0.004, NH + 0.012), strapMat);
+        strap.position.set(ex, (top + 0.004) / 2, ez);
+        strap.rotation.y = -ey;
+        strap.castShadow = strap.receiveShadow = true;
+        scene.add(strap);
+        // and loose on top: two more, pulled out and dropped back askew
+        notes.push([ex + 0.02, ez + 0.015, ey + (side ? 0.18 : 0.18), top + 0.006, pressed]);
+        notes.push([ex - 0.015, ez - 0.01, ey + (side ? -0.12 : -0.17), top + 0.006 + STEP, folded]);
+      });
+      notes.forEach(([nx, nz, yaw, y, geo]) => {
+        const isFolded = geo !== flat;
         [matF, matB].forEach((mt) => {
           const m = new THREE.Mesh(geo, mt);
           m.rotation.set(-Math.PI / 2, 0, -yaw); // same yaw convention as the placement check
