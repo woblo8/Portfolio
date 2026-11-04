@@ -266,4 +266,24 @@ body.ui-in .house-open { opacity: 1; transform: none; }
   .shell-glass { height: 96px; }
 }
 @media (prefers-reduced-motion: reduce) { .house.is-picking .shell-cup .shell-glass { animation: none; } }
+/* the ranking on the table: always in sight under the buttons */
+.house-mini { margin-top: 16px; padding: 12px 14px 8px; border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
+.house-mini header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.house-more { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mist); transition: color 0.3s; }
+.house-more:hover { color: #fff; }
+.house-mini ol { list-style: none; margin-top: 8px; }
+.house-mini li {
+  display: grid; grid-template-columns: 30px auto 1fr auto; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px;
+  font-family: var(--mono); font-size: 12px; color: var(--mist);
+}
+.house-mini li span { color: var(--smoke); }
+.house-mini li b { font-weight: 500; letter-spacing: 0.3em; color: #fff; }
+.house-mini li em { grid-column: 4; font-style: normal; color: #fff; font-variant-numeric: tabular-nums; }
+.house-mini li > i { font-style: normal; font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #050506; background: #fff; padding: 2px 6px; border-radius: 99px; justify-self: start; }
+.house-mini li:first-child:not(.is-empty) b, .house-mini li:first-child:not(.is-empty) em { text-shadow: var(--neon-glow); }
+.house-mini li.is-me { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8); }
+.house-mini li.is-empty { display: block; text-align: center; padding: 10px 0 8px; font-family: inherit; font-size: 13px; color: var(--smoke); }
+/* a shorter cabinet: the title on one line, the table a touch lower */
+.house-top h2 { font-size: clamp(22px, 4vw, 30px); }
+.house-tab { white-space: nowrap; }
 [hidden] { display: none !important; }

@@ -78,6 +78,10 @@
         </div>
         <p class="house-say" aria-live="polite"></p>
         <div class="house-actions"></div>
+        <section class="house-mini" hidden>
+          <header><span class="house-k">${T("Ranking · esta semana", "Ranking · this week")}</span><button type="button" class="house-more">${T("Ver todo", "See all")} →</button></header>
+          <ol data-k="mini"></ol>
+        </section>
         <form class="house-sign" hidden>
           <label for="houseName">${T("Tus iniciales para el ranking", "Your initials for the ranking")}</label>
           <div class="house-sign-row">
@@ -296,7 +300,18 @@
   });
   async function fetchBoard(fresh) {
     const r = await fetch(`${API}?p=${PLAYER}${fresh ? "&fresh=1" : ""}`, { cache: "no-store" });
-    return r.json();
+    const j = await r.json();
+    paintMini(j);
+    return j;
+  }
+  // the short version on the table: three rows, and yours if you are further down
+  function paintMini(j) {
+    const box = $(".house-mini"), list = k("mini"), rows = (j && j.week) || [], me = j && j.me && j.me.week;
+    box.hidden = false;
+    const row = (x, rank, isMe) => `<li class="${isMe ? "is-me" : ""}"><span>${String(rank).padStart(2, "0")}</span><b>${x.name}</b>${isMe ? `<i>${T("tú", "you")}</i>` : ""}<em>${x.score}</em></li>`;
+    let html = rows.slice(0, 3).map((x, i) => row(x, i + 1, me && i + 1 === me.rank)).join("");
+    if (me && me.rank > 3) html += row(me, me.rank, true);
+    list.innerHTML = html || `<li class="is-empty">${T("Nadie todavía. El primer puesto es tuyo.", "Nobody yet. First place is yours.")}</li>`;
   }
   async function openBoard(fresh) {
     $(".house-play").hidden = true; $(".house-board").hidden = false;
@@ -339,6 +354,7 @@
   }
   function closeBoard() {
     $(".house-play").hidden = false; $(".house-board").hidden = true;
+    $(".house-machine").scrollTop = 0;
     tabLabel();
   }
 
@@ -350,13 +366,14 @@
     document.documentElement.classList.add("house-open-now");
     { const s = snd(); if (s) s.chip(0.6); }
     requestAnimationFrame(place);
+    $(".house-machine").scrollTop = 0;
     if (!G.mode) {
       render();
       await newGame();
       if (!say.textContent) speak(LINES.welcome());
     }
     render();
-    setTimeout(() => { const m = actions.querySelector(".is-main"); if (m) m.focus({ preventScroll: true }); }, 450);
+    setTimeout(() => { const m = actions.querySelector(".is-main"); if (m) m.focus({ preventScroll: true }); $(".house-machine").scrollTop = 0; }, 450);
   }
   function close() {
     root.classList.remove("on"); root.setAttribute("aria-hidden", "true");
@@ -367,6 +384,7 @@
   root.addEventListener("click", (e) => {
     if (e.target === root || e.target.closest(".house-x")) return close();
     if (e.target.closest(".house-tab")) return $(".house-board").hidden ? openBoard() : closeBoard();
+    if (e.target.closest(".house-more")) return openBoard();
     const c = e.target.closest(".shell-cup");
     if (c && !c.disabled) return choose(+c.dataset.cup);
     const a = e.target.closest("[data-a]");
