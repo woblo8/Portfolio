@@ -203,37 +203,48 @@ html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l
   .index > button .chip-face { font-size: 9px; }
 }
 
-/* ---------- the voucher: the cash-out ticket of a slot machine, pared down (voucher.js) ---------- */
+/* ---------- the ticket (voucher.js) ----------
+   A cash-out ticket, in the language of the site: black glass, a hairline of light,
+   mono type, the amount in the display face. Small, and it can be closed. */
 .vc {
   position: relative; display: grid; justify-items: center; text-align: center;
-  width: 280px; max-width: calc(100vw - 32px); padding: 22px 22px 18px; color: #0b0b0c; background: #f6f5f0;
-  font-family: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif; font-weight: 600; text-transform: uppercase;
-  /* perforated top and bottom edges, like paper torn off the roll */
-  -webkit-mask: radial-gradient(circle 3px at 6px 0, transparent 98%, #000) 0 0 / 12px 51% repeat-x,
-                radial-gradient(circle 3px at 6px 100%, transparent 98%, #000) 0 100% / 12px 51% repeat-x;
-          mask: radial-gradient(circle 3px at 6px 0, transparent 98%, #000) 0 0 / 12px 51% repeat-x,
-                radial-gradient(circle 3px at 6px 100%, transparent 98%, #000) 0 100% / 12px 51% repeat-x;
+  width: 208px; padding: 16px 16px 13px; color: var(--bone);
+  background: radial-gradient(120% 70% at 50% 0%, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 60%), rgba(10, 10, 12, 0.92);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  font-family: var(--mono); font-weight: 400; text-transform: uppercase;
+  /* torn off the roll: a perforated top and bottom */
+  -webkit-mask: radial-gradient(circle 2.5px at 5px 0, transparent 98%, #000) 0 0 / 10px 51% repeat-x,
+                radial-gradient(circle 2.5px at 5px 100%, transparent 98%, #000) 0 100% / 10px 51% repeat-x;
+          mask: radial-gradient(circle 2.5px at 5px 0, transparent 98%, #000) 0 0 / 10px 51% repeat-x,
+                radial-gradient(circle 2.5px at 5px 100%, transparent 98%, #000) 0 100% / 10px 51% repeat-x;
 }
 .vc > * { display: block; }
-.vc-house { font-size: 11px; letter-spacing: 0.4em; padding-left: 0.4em; color: #55555a; }
-.vc-title { margin-top: 6px; font-weight: 700; font-size: 31px; letter-spacing: 0.03em; line-height: 0.95; }
-.vc-sub { margin-top: 6px; font-size: 12px; letter-spacing: 0.18em; color: #55555a; }
-.vc-bars { width: 72%; height: 42px; margin: 16px 0 6px; padding-top: 14px; box-sizing: content-box; fill: #0b0b0c; border-top: 1px dashed rgba(11, 11, 12, 0.2); }
-.vc-code { font-size: 10.5px; letter-spacing: 0.16em; color: #55555a; }
-.vc-amount { margin-top: 12px; font-weight: 700; font-size: 44px; letter-spacing: 0.01em; line-height: 1; }
-.vc-words { margin-top: 6px; font-size: 11px; letter-spacing: 0.08em; color: #55555a; }
-.vc-detail { margin-top: 6px; font-size: 12px; letter-spacing: 0.08em; }
+.vc-house { font-size: 8.5px; letter-spacing: 0.32em; padding-left: 0.32em; color: var(--smoke); }
+.vc-title { text-transform: none; margin-top: 5px; font-family: var(--sans); font-weight: 600; font-size: 15px; letter-spacing: -0.01em; line-height: 1; color: #fff; }
+.vc-sub { margin-top: 5px; font-size: 8.5px; letter-spacing: 0.16em; color: var(--mist); }
+.vc-bars { width: 76%; height: 18px; margin: 11px 0 4px; fill: rgba(255, 255, 255, 0.75); }
+.vc-code { font-size: 7.5px; letter-spacing: 0.14em; color: var(--smoke); }
+.vc-amount { margin-top: 9px; font-family: var(--sans); font-weight: 600; font-size: 30px; letter-spacing: -0.04em; line-height: 1; color: #fff; text-shadow: 0 0 16px rgba(255, 255, 255, 0.25); }
+.vc-words { margin-top: 5px; font-size: 7.5px; letter-spacing: 0.1em; color: var(--smoke); line-height: 1.4; }
+.vc-detail { margin-top: 4px; font-size: 8.5px; letter-spacing: 0.12em; color: var(--mist); }
 .vc-meta {
-  display: flex !important; justify-content: center; gap: 14px; width: 100%; margin-top: 14px; padding-top: 12px;
-  border-top: 1px dashed rgba(11, 11, 12, 0.2); font-size: 11px; letter-spacing: 0.12em; color: #55555a;
+  display: flex !important; justify-content: center; gap: 10px; width: 100%; margin-top: 10px; padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14); font-size: 7.5px; letter-spacing: 0.12em; color: var(--smoke);
 }
+.vc-x {
+  position: absolute; top: 9px; right: 9px; width: 18px; height: 18px; display: grid; place-items: center;
+  font-family: var(--mono); font-size: 10px; color: var(--smoke); border-radius: 50%; transition: color 0.3s, box-shadow 0.3s;
+}
+.vc-x:hover { color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4); }
 
-/* the slip after a visit: printed out of the bottom-left corner */
-.receipt { padding: 0; min-width: 0; background: none; -webkit-mask: none; mask: none; transform: translateY(40px) rotate(-1.2deg); }
-.receipt.on { transform: rotate(-1.2deg); }
-/* the old slip's styles stop at the voucher's edge */
-.receipt .vc b { padding: 0; border: 0; letter-spacing: inherit; }
-.receipt .vc .vc-title { font-weight: 700; font-size: 31px; letter-spacing: 0.03em; }
-.receipt .vc .vc-amount { font-weight: 700; font-size: 44px; letter-spacing: 0.01em; }
-/* the shadow lives on the holder: the perforation mask would cut it off the slip itself */
-.receipt, .vt-receipt { filter: drop-shadow(0 26px 40px rgba(0, 0, 0, 0.5)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25)); }
+/* the slip after a visit: it slides up in the bottom-left corner, and can be closed */
+.receipt {
+  padding: 0; min-width: 0; background: none; -webkit-mask: none; mask: none; gap: 0;
+  transform: translateY(24px); filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5));
+}
+.receipt.on { transform: none; pointer-events: auto; }
+.receipt .vc b { padding: 0; border: 0; }
+.receipt .vc .vc-title { font-family: var(--sans); font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+.receipt .vc .vc-amount { font-family: var(--sans); font-weight: 600; font-size: 30px; letter-spacing: -0.04em; }
+.vt-receipt { filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5)); }

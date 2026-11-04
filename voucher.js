@@ -7,7 +7,6 @@
    ============================================================ */
 (() => {
   "use strict";
-  const FONT = '"Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif';
   const pad = (n, l = 2) => String(n).padStart(l, "0");
   const rnd = (n) => Math.floor(Math.random() * n);
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -60,6 +59,7 @@
     v.bars.forEach((b) => { rects.push(`<rect x="${x}" y="0" width="${b.w}" height="40"/>`); x += b.w + b.gap; });
     return `
       <div class="vc">
+        <button type="button" class="vc-x" aria-label="${T("Cerrar", "Close")}">✕</button>
         <span class="vc-house">WOBLO.IO</span>
         <b class="vc-title">${T("Ticket de salida", "Cashout voucher")}</b>
         <span class="vc-sub">${esc(v.sub || "")}</span>
@@ -72,38 +72,43 @@
       </div>`;
   }
 
-  // the same slip on a canvas, for "Download": same order, same proportions
+  // the same slip on a canvas, for "Download": black glass, white ink, same order
   async function canvas(v, scale = 2) {
-    try { await document.fonts.load(`700 40px "Barlow Condensed"`); await document.fonts.load(`600 16px "Barlow Condensed"`); } catch (e) { /* fall back */ }
-    const W = 520, H = v.detail ? 546 : 518; // ends one margin below the last line
+    const MONO = '"Geist Mono", ui-monospace, Menlo, monospace', SANS = '"Inter Tight", "Helvetica Neue", Arial, sans-serif';
+    try { await document.fonts.load(`400 14px "Geist Mono"`); await document.fonts.load(`600 40px "Inter Tight"`); } catch (e) { /* fall back */ }
+    const W = 416, H = v.detail ? 436 : 412;
     const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale;
     const x = c.getContext("2d"); x.scale(scale, scale);
-    // paper, with the faint grain of thermal stock, and a perforated top and bottom edge
-    x.fillStyle = "#f6f5f0"; x.fillRect(0, 0, W, H);
-    for (let i = 0; i < 1800; i++) { x.fillStyle = `rgba(0,0,0,${Math.random() * 0.025})`; x.fillRect(Math.random() * W, Math.random() * H, 1, 1); }
-    x.fillStyle = "#0b0b0c";
-    for (let i = 0; i < W; i += 12) { x.beginPath(); x.arc(i + 6, 0, 3, 0, Math.PI); x.fill(); x.beginPath(); x.arc(i + 6, H, 3, Math.PI, 0); x.fill(); }
-    const text = (t, py, size, weight = 600, spacing = 1, color = "#0b0b0c") => {
-      x.fillStyle = color; x.font = `${weight} ${size}px ${FONT}`; x.textAlign = "center";
+    x.fillStyle = "#0a0a0c"; x.fillRect(0, 0, W, H);
+    const g = x.createRadialGradient(W / 2, 0, 0, W / 2, 0, W * 0.8);
+    g.addColorStop(0, "rgba(255,255,255,0.08)"); g.addColorStop(1, "rgba(255,255,255,0)");
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.strokeStyle = "rgba(255,255,255,0.16)"; x.lineWidth = 1; x.strokeRect(0.5, 0.5, W - 1, H - 1);
+    // perforated top and bottom
+    x.save(); x.globalCompositeOperation = "destination-out";
+    for (let i = 0; i < W; i += 20) { x.beginPath(); x.arc(i + 10, 0, 5, 0, Math.PI * 2); x.fill(); x.beginPath(); x.arc(i + 10, H, 5, 0, Math.PI * 2); x.fill(); }
+    x.restore();
+    const text = (t, py, size, font, spacing, color) => {
+      x.fillStyle = color; x.font = font === SANS ? `600 ${size}px ${SANS}` : `400 ${size}px ${MONO}`; x.textAlign = "center";
       if ("letterSpacing" in x) x.letterSpacing = `${spacing}px`;
       x.fillText(t, W / 2, py);
     };
-    const rule = (py) => { x.fillStyle = "rgba(11,11,12,0.18)"; for (let i = 40; i < W - 40; i += 8) x.fillRect(i, py, 4, 1); };
-    let y = 64;
-    text("WOBLO.IO", y, 17, 600, 6, "#55555a");
-    y += 52; text(T("TICKET DE SALIDA", "CASHOUT VOUCHER"), y, 50, 700, 2);
-    y += 32; text(v.sub || "", y, 18, 600, 3, "#55555a");
-    y += 26; rule(y);
-    // the barcode, crisp and centred
-    const total = v.bars.reduce((s, b) => s + b.w + b.gap, 0), bw = 360, k = bw / total;
+    const SMOKE = "#8c8c92", MIST = "#c4c3bf";
+    let y = 48;
+    text("WOBLO.IO", y, 16, MONO, 5, SMOKE);
+    y += 38; text(T("Ticket de salida", "Cashout voucher"), y, 30, SANS, -0.3, "#fff");
+    y += 28; text((v.sub || "").toUpperCase(), y, 16, MONO, 2.5, MIST);
+    // barcode
+    const total = v.bars.reduce((s, b) => s + b.w + b.gap, 0), bw = 300, k = bw / total;
     let bx = (W - bw) / 2; y += 24;
-    x.fillStyle = "#0b0b0c"; v.bars.forEach((b) => { x.fillRect(Math.round(bx), y, Math.max(1, Math.round(b.w * k)), 64); bx += (b.w + b.gap) * k; });
-    y += 88; text(v.validation, y, 16, 600, 3, "#55555a");
-    y += 74; text(v.amount || "", y, 64, 700, 1);
-    y += 32; text(v.words || "", y, 16, 600, 1.5, "#55555a");
-    if (v.detail) { y += 28; text(v.detail, y, 16, 600, 1.5); }
-    y += 28; rule(y);
-    y += 36; text(`${v.date}   ·   ${v.time.slice(0, 5)}   ·   Nº ${v.number}`, y, 16, 600, 2, "#55555a");
+    x.fillStyle = "rgba(255,255,255,0.75)"; v.bars.forEach((b) => { x.fillRect(bx, y, Math.max(1, b.w * k), 36); bx += (b.w + b.gap) * k; });
+    y += 58; text(v.validation, y, 14, MONO, 2, SMOKE);
+    y += 64; x.shadowColor = "rgba(255,255,255,0.3)"; x.shadowBlur = 24;
+    text(v.amount || "", y, 60, SANS, -2, "#fff"); x.shadowBlur = 0;
+    y += 30; text(v.words || "", y, 13, MONO, 1.2, SMOKE);
+    if (v.detail) { y += 24; text(v.detail, y, 15, MONO, 1.6, MIST); }
+    y += 26; x.fillStyle = "rgba(255,255,255,0.14)"; for (let i = 32; i < W - 32; i += 8) x.fillRect(i, y, 4, 1);
+    y += 30; text(`${v.date}   ${v.time.slice(0, 5)}   Nº ${v.number}`, y, 13, MONO, 2, SMOKE);
     return c;
   }
 

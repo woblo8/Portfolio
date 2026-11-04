@@ -1977,7 +1977,6 @@
     el.innerHTML = `${V.html(v)}
       <div class="vtr-actions">
         <button type="button" class="vtr-dl">${T("Descargar", "Download")} ↓</button>
-        <button type="button" class="vtr-x" aria-label="${T("Cerrar", "Close")}">✕</button>
       </div>`;
     document.body.appendChild(el);
     requestAnimationFrame(() => el.classList.add("on"));
@@ -1985,7 +1984,7 @@
     el.addEventListener("pointerenter", () => clearTimeout(timer));
     el.addEventListener("pointerleave", () => { clearTimeout(timer); timer = setTimeout(close, 6000); });
     function close() { el.classList.remove("on"); setTimeout(() => el.remove(), 700); }
-    el.querySelector(".vtr-x").addEventListener("click", close);
+    el.querySelector(".vc-x").addEventListener("click", close);
     el.querySelector(".vtr-dl").addEventListener("click", async () => {
       const c = await V.canvas(v, 2);
       c.toBlob((blob) => {

@@ -150,6 +150,9 @@
   /* ---------- the receipt: a tiny slip that sums up the visit ---------- */
   const receipt = $("#receipt");
   let receiptTimer = 0;
+  receipt.addEventListener("click", (e) => { if (e.target.closest(".vc-x")) { clearTimeout(receiptTimer); receipt.classList.remove("on"); } });
+  receipt.addEventListener("pointerenter", () => clearTimeout(receiptTimer));
+  receipt.addEventListener("pointerleave", () => { if (receipt.classList.contains("on")) { clearTimeout(receiptTimer); receiptTimer = setTimeout(() => receipt.classList.remove("on"), 3000); } });
   const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   function printReceipt({ index, title, secs, detail }) {
     // printed like a slot machine's cash-out ticket: what you spent here is time
@@ -166,7 +169,7 @@
     void receipt.offsetWidth;
     receipt.classList.add("on");
     clearTimeout(receiptTimer);
-    receiptTimer = setTimeout(() => receipt.classList.remove("on"), 5200);
+    receiptTimer = setTimeout(() => receipt.classList.remove("on"), 7000);
     chip(0.4);
   }
   D.on("land", ({ index }) => {
