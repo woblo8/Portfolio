@@ -35,6 +35,7 @@
       <section class="vt3">
         <canvas class="vt3-gl" aria-hidden="true"></canvas>
         <div class="vt3-veil" aria-hidden="true"></div>
+        <div class="vt3-grain" aria-hidden="true"></div>
         <header class="vt3-head">
           <span class="vt-k">${T("Mesa privada", "Private table")} · ${T("reservada", "reserved")}</span>
           <h1>${T("Bienvenidos", "Welcome")}, <em>${esc(name)}.</em></h1>
@@ -257,11 +258,13 @@
     // felt: tiles of 1.1 units, a fibre sharp at a few centimetres
     const FA = A + 0.12, FB = B + 0.12;
     const tileX = (2 * FA) / 1.1, tileY = (2 * FB) / 1.1;
-    const felt = new THREE.Mesh(normUV(new THREE.ShapeGeometry(ellipse(FA, FB), 160), FA, FB), new THREE.MeshStandardMaterial({
+    const felt = new THREE.Mesh(normUV(new THREE.ShapeGeometry(ellipse(FA, FB), 160), FA, FB), new THREE.MeshPhysicalMaterial({
       map: tex("assets/table/felt.jpg", true, tileX, tileY),
       normalMap: tex("assets/table/felt_n.jpg", false, tileX, tileY),
       normalScale: new THREE.Vector2(0.9, 0.9),
       color: 0x9eaaa3, roughness: 0.96, metalness: 0, envMapIntensity: 0.2,
+      // wool catches light at grazing angles, like velvet
+      sheen: 0.15, sheenColor: new THREE.Color(0x0f2a1e), sheenRoughness: 0.8,
     }));
     felt.rotation.x = -Math.PI / 2;
     felt.receiveShadow = true;
@@ -303,13 +306,45 @@
     }
     const rail = new THREE.Mesh(new THREE.TubeGeometry(new Oval(A + 0.2, B + 0.2, 0.06), 420, 0.19, 32, true),
       new THREE.MeshPhysicalMaterial({
-        color: 0x1e0d07, roughness: 0.55, metalness: 0,
+        color: 0x150805, roughness: 0.55, metalness: 0,
         normalMap: tex("assets/table/leather_n.jpg", false, 90, 2), normalScale: new THREE.Vector2(0.55, 0.55),
         clearcoat: 0.12, clearcoatRoughness: 0.5, envMapIntensity: 0.1,
       }));
     rail.scale.y = 0.72;
     rail.castShadow = rail.receiveShadow = true;
     scene.add(rail);
+
+    // saddle stitching along both edges of the rail, in waxed tan thread
+    {
+      const RA = A + 0.2, RB = B + 0.2, RR = 0.19, STEP = 0.042;
+      const rows = [0.95, 2.2]; // angle on the tube's section: inner edge, outer edge
+      const per = Math.round((Math.PI * Math.sqrt(2 * (RA * RA + RB * RB))) / STEP);
+      const st = new THREE.InstancedMesh(new THREE.BoxGeometry(0.024, 0.005, 0.0055),
+        new THREE.MeshStandardMaterial({ color: 0x9c7a46, roughness: 0.7, envMapIntensity: 0.15 }), per * rows.length);
+      const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s1 = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3();
+      let n = 0;
+      rows.forEach((phi) => {
+        for (let k = 0; k < per; k++) {
+          const g = (k / per) * Math.PI * 2;
+          const nx = Math.cos(g) / RA, nz = Math.sin(g) / RB, nl = Math.hypot(nx, nz); // outward normal of the oval
+          const out = -Math.cos(phi) * RR; // phi from the inside
+          p.set(Math.cos(g) * RA + (nx / nl) * out, 0.06 * 0.72 + Math.sin(phi) * RR * 0.72 + 0.002, Math.sin(g) * RB + (nz / nl) * out);
+          const tang = Math.atan2(Math.cos(g) * RB, -Math.sin(g) * RA);
+          e.set(0, -tang, phi < 1.57 ? -0.6 : 0.6, "YXZ");
+          q.setFromEuler(e);
+          st.setMatrixAt(n++, m4.compose(p, q, s1));
+        }
+      });
+      st.instanceMatrix.needsUpdate = true;
+      scene.add(st);
+    }
+    // a brass bead between the leather and the wood
+    const brass = new THREE.MeshStandardMaterial({ color: 0xc9a465, metalness: 1, roughness: 0.28, envMapIntensity: 1 });
+    const bead = new THREE.Mesh(new THREE.TubeGeometry(new Oval(A + 0.405, B + 0.405, 0.1), 420, 0.014, 10, true), brass);
+    bead.castShadow = true;
+    scene.add(bead);
+    const inlay = new THREE.Mesh(new THREE.TubeGeometry(new Oval(A + 0.68, B + 0.68, 0.1), 420, 0.007, 6, true), brass);
+    scene.add(inlay);
 
     // lacquered wood: the drink ledge and the body of the table
     const woodMat = (dark) => new THREE.MeshPhysicalMaterial({
@@ -350,7 +385,9 @@
       }
       g.position.set(x, 0, z);
       scene.add(g);
+      contacts.push([x, z, 0.3, 0.55]);
     };
+    const contacts = [];
     stack(-2.05, -0.75, 12, 0);
     stack(-1.62, -0.92, 7, 1);
     stack(-1.9, -0.36, 4, 2);
@@ -371,13 +408,35 @@
     card.rotation.y = -0.32;
     card.castShadow = card.receiveShadow = true;
     scene.add(card);
+    contacts.push([bet.position.x, bet.position.z, 0.26, 0.4], [card.position.x, card.position.z, 0.42, 0.35]);
+
+    // ambient occlusion baked into the felt: darker where it meets the rail,
+    // a soft pool under everything that rests on it
+    {
+      const W = 1024, H = Math.round((W * FB) / FA), c = mk(W, H), x = c.getContext("2d");
+      x.save(); x.translate(W / 2, H / 2); x.scale(1, FB / FA);
+      const g = x.createRadialGradient(0, 0, W * 0.3, 0, 0, W / 2);
+      g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(0.72, "rgba(0,0,0,0.12)"); g.addColorStop(0.93, "rgba(0,0,0,0.55)"); g.addColorStop(1, "rgba(0,0,0,0.85)");
+      x.fillStyle = g; x.beginPath(); x.arc(0, 0, W / 2, 0, Math.PI * 2); x.fill();
+      x.restore();
+      contacts.forEach(([wx, wz, r, a]) => {
+        const px = (wx / (2 * FA) + 0.5) * W, py = (wz / (2 * FB) + 0.5) * H, pr = (r / (2 * FA)) * W;
+        const gg = x.createRadialGradient(px, py, 0, px, py, pr);
+        gg.addColorStop(0, `rgba(0,0,0,${a})`); gg.addColorStop(0.55, `rgba(0,0,0,${a * 0.45})`); gg.addColorStop(1, "rgba(0,0,0,0)");
+        x.fillStyle = gg; x.fillRect(px - pr, py - pr, pr * 2, pr * 2);
+      });
+      const ao = new THREE.Mesh(normUV(new THREE.ShapeGeometry(ellipse(FA, FB), 120), FA, FB),
+        new THREE.MeshBasicMaterial({ map: canvasTex(c, false), transparent: true, depthWrite: false, toneMapped: false, color: 0x000000 }));
+      ao.rotation.x = -Math.PI / 2; ao.position.y = 0.001; ao.renderOrder = 1;
+      scene.add(ao);
+    }
 
     // reserved plaque, black acrylic, leaning back, readable from both sides
     const plaqueMat = new THREE.MeshPhysicalMaterial({ map: canvasTex(plaqueFace(ctx.name)), roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.3 });
     const black = new THREE.MeshPhysicalMaterial({ color: 0x020202, roughness: 0.6, clearcoat: 0, envMapIntensity: 0.02 });
     const plaqueGeo = new THREE.BoxGeometry(0.62, 0.22, 0.05);
     [[1.25, 1.02, 0], [-1.25, -1.02, Math.PI]].forEach(([x, z, ry]) => {
-      const m = new THREE.Mesh(plaqueGeo, [black, black, black, black, plaqueMat, black]);
+      const m = new THREE.Mesh(plaqueGeo, [black, black, black, black, plaqueMat, plaqueMat]); // printed on both faces: never a blank back
       m.position.set(x, 0.115, z);
       m.rotation.set(ry ? 0.22 : -0.22, ry, 0, "YXZ");
       m.castShadow = true;
@@ -428,6 +487,49 @@
     die.position.set(0.95, DS / 2, -0.32);
     die.quaternion.copy(restQ(5, 0.5));
     scene.add(die);
+    // a contact shadow that follows it and fades as it leaves the felt
+    const blobTex = (() => {
+      const c = mk(256, 256), x = c.getContext("2d"), g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+      g.addColorStop(0, "rgba(0,0,0,0.9)"); g.addColorStop(0.35, "rgba(0,0,0,0.55)"); g.addColorStop(1, "rgba(0,0,0,0)");
+      x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+      return canvasTex(c, false);
+    })();
+    const dieAO = new THREE.Mesh(new THREE.PlaneGeometry(DS * 2.1, DS * 2.1),
+      new THREE.MeshBasicMaterial({ map: blobTex, color: 0x000000, transparent: true, depthWrite: false, toneMapped: false }));
+    dieAO.rotation.x = -Math.PI / 2; dieAO.renderOrder = 1;
+    scene.add(dieAO);
+
+    // dust hanging in the lamp's beam
+    const DUST = small ? 160 : 320;
+    const dustPos = new Float32Array(DUST * 3), dustSeed = new Float32Array(DUST);
+    for (let k = 0; k < DUST; k++) {
+      const r = Math.sqrt(Math.random()) * 2.6, a = Math.random() * Math.PI * 2;
+      dustPos.set([Math.cos(a) * r, 0.2 + Math.random() * 3.2, Math.sin(a) * r * 0.7], k * 3);
+      dustSeed[k] = Math.random() * 100;
+    }
+    const dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+    const dustTex = (() => {
+      const c = mk(64, 64), x = c.getContext("2d"), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, "rgba(255,240,215,1)"); g.addColorStop(0.4, "rgba(255,240,215,0.35)"); g.addColorStop(1, "rgba(255,240,215,0)");
+      x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+      return canvasTex(c);
+    })();
+    const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+      map: dustTex, size: 0.022, sizeAttenuation: true, transparent: true, opacity: 0.55,
+      depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: true,
+    }));
+    scene.add(dust);
+    const stepDust = (t, dt) => {
+      for (let k = 0; k < DUST; k++) {
+        const i = k * 3, s = dustSeed[k];
+        dustPos[i] += Math.sin(t * 0.21 + s) * dt * 0.02;
+        dustPos[i + 2] += Math.cos(t * 0.17 + s * 1.3) * dt * 0.02;
+        dustPos[i + 1] += (Math.sin(t * 0.3 + s) * 0.5 + 0.15) * dt * 0.03;
+        if (dustPos[i + 1] > 3.4) dustPos[i + 1] = 0.2;
+      }
+      dustGeo.attributes.position.needsUpdate = true;
+    };
     const roll = { on: false, t: 0, dur: 1.7, p0: new THREE.Vector3(), p1: new THREE.Vector3(), q1: new THREE.Quaternion(), axis: new THREE.Vector3(), spins: 0, val: 0 };
     let chosen = -1;
     const WORDS = T(["Uno", "Dos", "Tres", "Cuatro", "Cinco", "Seis"], ["One", "Two", "Three", "Four", "Five", "Six"]);
@@ -466,7 +568,10 @@
     }
 
     /* ---------- camera: the height of a die, walking around ---------- */
-    const view = { th: Math.PI * 0.5, vth: 0, h: 1.25, x0: 0, y0: 0, drag: false, moved: 0 };
+    const portrait = innerHeight > innerWidth * 1.15;
+    // on a phone held upright the camera rises and steps back: more felt, less edge
+    const H_MAX = portrait ? 3.6 : 1.6;
+    const view = { th: Math.PI * 0.5, vth: 0, h: portrait ? 3.1 : 1.25, x0: 0, y0: 0, drag: false, moved: 0 };
     let rx = 0, ry = 0, raf = 0, hoverBox = -1;
     const resize = () => {
       const r = vt.getBoundingClientRect();
@@ -503,7 +608,7 @@
         view.moved += Math.abs(dx) + Math.abs(dy);
         view.vth = -dx * 0.0042;
         view.th += view.vth;
-        view.h = Math.min(1.6, Math.max(0.24, view.h + dy * 0.003));
+        view.h = Math.min(H_MAX, Math.max(0.24, view.h + dy * 0.003));
         view.x0 = e.clientX; view.y0 = e.clientY;
         return;
       }
@@ -538,9 +643,9 @@
       if (e.target === noteEl || e.target.closest(".vt3-note-close")) { noteEl.classList.remove("on"); noteEl.setAttribute("aria-hidden", "true"); }
     });
 
-    const R = small ? 6.6 : 7.4;
+    const R = portrait ? 8.4 : small ? 6.6 : 7.4;
     let last = performance.now();
-    const target = new THREE.Vector3(0, small ? -0.1 : 0.32, 0);
+    const target = new THREE.Vector3(0, portrait ? 0.15 : small ? -0.1 : 0.32, 0);
     const frame = (now) => {
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       if (!view.drag) { view.vth *= Math.pow(0.04, dt); view.th += view.vth + dt * 0.045; }
@@ -549,6 +654,13 @@
       camera.position.set(Math.cos(th) * R, h, Math.sin(th) * R * 0.86);
       camera.lookAt(target);
       stepDie(dt);
+      {
+        const hgt = Math.max(0, die.position.y - DS / 2);
+        dieAO.position.set(die.position.x, 0.0015, die.position.z);
+        dieAO.scale.setScalar(1 + hgt * 1.6);
+        dieAO.material.opacity = 0.85 / (1 + hgt * 9);
+      }
+      stepDust(now / 1000, dt);
       glows.forEach((g, k) => {
         const want = k === hoverBox ? 0.16 : k === chosen ? 0.1 + Math.sin(now / 260) * 0.04 : 0;
         g.material.opacity += (want - g.material.opacity) * Math.min(1, dt * 8);

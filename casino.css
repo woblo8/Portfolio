@@ -187,3 +187,18 @@ html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l
   margin-top: 7vh; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--smoke); opacity: 0.6;
 }
+
+/* ---------- phones: header in two rows, one-line hint, chips that fit ---------- */
+@media (max-width: 600px) {
+  .top { flex-wrap: wrap; row-gap: 16px; }
+  .brand { flex: 1 1 100%; gap: 6px; }
+  .brand-role { max-width: none; white-space: nowrap; font-size: 9.5px; letter-spacing: 0.08em; line-height: 1.4; }
+  .menu { width: 100%; justify-content: space-between; gap: 0; }
+  .menu button { white-space: nowrap; }
+  .hint-row { gap: 8px; font-size: 9px; letter-spacing: 0.14em; white-space: nowrap; }
+  .hint-row i { width: 10px; }
+  .hint em { font-size: 11px; }
+  .index { gap: 7px; }
+  .index > button { width: 30px; height: 30px; }
+  .index > button .chip-face { font-size: 9px; }
+}

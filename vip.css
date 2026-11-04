@@ -42,6 +42,17 @@ html.has-cursor .vt3-gl { cursor: none; }
   background: radial-gradient(ellipse 75% 70% at 50% 58%, transparent 55%, rgba(5, 5, 6, 0.85) 100%),
               linear-gradient(rgba(5, 5, 6, 0.9), transparent 22%);
 }
+/* film grain: the image reads as a photograph, not a render */
+.vt3-grain {
+  position: absolute; inset: -50%; pointer-events: none; opacity: 0.07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: vtGrain 0.9s steps(6) infinite;
+}
+@keyframes vtGrain {
+  0% { transform: translate(0, 0); } 20% { transform: translate(-4%, 3%); } 40% { transform: translate(3%, -5%); }
+  60% { transform: translate(-6%, -2%); } 80% { transform: translate(5%, 4%); } 100% { transform: translate(0, 0); }
+}
+.vt3 { overflow: hidden; }
 .vt3-head {
   position: absolute; top: clamp(70px, 11vh, 120px); left: 0; right: 0; text-align: center; pointer-events: none;
   display: grid; justify-items: center; gap: 14px;
@@ -86,6 +97,15 @@ html.has-cursor .vt3-gl { cursor: none; }
   .vt3-head { top: 76px; }
   .vt3-tip { bottom: 128px; font-size: 10px; }
 }
+@media (max-width: 600px) {
+  .index > button.chip-vip { width: 38px; height: 38px; margin-left: 2px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .index > button.chip-vip, .index > button.chip-vip svg { animation: none; }
+}
+@media (max-width: 600px) {
+  .vt3-foot { padding: 0 20px; }
+  .vt3-hint { text-align: center; line-height: 1.7; font-size: 9px; letter-spacing: 0.14em; max-width: 300px; }
+  .vt3-tip { font-size: 9.5px; letter-spacing: 0.12em; }
+  .vt3-head h1 { font-size: 30px; }
 }

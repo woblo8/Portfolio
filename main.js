@@ -512,24 +512,77 @@
 
   let mono = null;
   if (VIP && VIP.name) {
+    // a seal engraved in the floor: a watch-like bezel, their name running
+    // around it, the initials in the middle. Drawn again once the fonts load.
     const words = VIP.name.split(/\s+/).filter(Boolean);
     const letters = (words.length > 1 ? words.map((w) => w[0]).join("").slice(0, 3) : words[0][0]).toUpperCase();
-    const c = mkCanvas(1024);
+    const S = 2048, C = S / 2;
+    const c = mkCanvas(S);
     const x = c.getContext("2d");
-    x.clearRect(0, 0, 1024, 1024);
-    x.strokeStyle = "#fff"; x.fillStyle = "#fff";
-    x.lineWidth = 3;
-    x.beginPath(); x.arc(512, 512, 430, 0, Math.PI * 2); x.stroke();
-    x.lineWidth = 1.5;
-    x.beginPath(); x.arc(512, 512, 412, 0, Math.PI * 2); x.stroke();
-    x.textAlign = "center"; x.textBaseline = "middle";
-    x.font = `600 ${letters.length > 2 ? 250 : letters.length > 1 ? 330 : 440}px "Neue Haas Grotesk", "Inter Tight", Arial, sans-serif`;
-    x.letterSpacing = "-0.04em";
-    x.fillText(letters, 512, 540);
-    x.font = '500 34px "Geist Mono", monospace';
-    x.letterSpacing = "0.4em";
-    x.fillText(VIP.name.toUpperCase().slice(0, 24), 512, 880);
+    const SANS_F = '"Inter Tight", "Neue Haas Grotesk", Arial, sans-serif', MONO_F = '"Geist Mono", ui-monospace, monospace';
+    const ring = (r, w) => { x.lineWidth = w; x.beginPath(); x.arc(C, C, r, 0, Math.PI * 2); x.stroke(); };
+    const diamond = (cx, cy, s, rot = 0) => {
+      x.save(); x.translate(cx, cy); x.rotate(rot);
+      x.beginPath(); x.moveTo(0, -s); x.lineTo(s * 0.62, 0); x.lineTo(0, s); x.lineTo(-s * 0.62, 0); x.closePath(); x.fill();
+      x.restore();
+    };
+    const drawSeal = () => {
+      x.clearRect(0, 0, S, S);
+      x.strokeStyle = x.fillStyle = "#fff";
+      x.textAlign = "center"; x.textBaseline = "middle";
+      // outer bezel: hairline, 120 ticks (every tenth long), hairline
+      ring(968, 3);
+      for (let k = 0; k < 120; k++) {
+        const a = (k / 120) * Math.PI * 2, long = k % 10 === 0;
+        x.lineWidth = long ? 5 : 2.5;
+        x.beginPath();
+        x.moveTo(C + Math.cos(a) * (long ? 896 : 916), C + Math.sin(a) * (long ? 896 : 916));
+        x.lineTo(C + Math.cos(a) * 944, C + Math.sin(a) * 944);
+        x.stroke();
+      }
+      ring(880, 2);
+      // the band of text, spread evenly over the whole circle
+      const band = `${T("MESA PRIVADA", "PRIVATE TABLE")}  ◆  ${VIP.name.toUpperCase().slice(0, 22)}  ◆  WOBLO.IO  ◆  ${T("RESERVADA", "RESERVED")}  ◆  `;
+      const chars = [...band], R = 812;
+      let fs = 50;
+      x.font = `500 ${fs}px ${MONO_F}`;
+      const natural = chars.reduce((s, ch) => s + x.measureText(ch).width, 0);
+      if (natural > Math.PI * 2 * R * 0.78) { fs = Math.floor(fs * (Math.PI * 2 * R * 0.78) / natural); x.font = `500 ${fs}px ${MONO_F}`; }
+      const widths = chars.map((ch) => x.measureText(ch).width);
+      const gap = (Math.PI * 2 * R - widths.reduce((a, b) => a + b, 0)) / chars.length;
+      let a = -Math.PI / 2;
+      chars.forEach((ch, k) => {
+        const mid = a + widths[k] / 2 / R;
+        x.save(); x.translate(C + Math.cos(mid) * R, C + Math.sin(mid) * R); x.rotate(mid + Math.PI / 2);
+        if (ch === "◆") diamond(0, 0, fs * 0.28); else if (ch !== " ") x.fillText(ch, 0, 0);
+        x.restore();
+        a += (widths[k] + gap) / R;
+      });
+      ring(744, 2);
+      ring(722, 6);
+      // the field: initials, a rule, a line of small type
+      const big = letters.length > 2 ? 300 : letters.length > 1 ? 360 : 420;
+      x.font = `400 ${big}px ${SANS_F}`;
+      if ("letterSpacing" in x) x.letterSpacing = letters.length > 1 ? "0.04em" : "0em";
+      x.fillText(letters, C + (letters.length > 1 ? big * 0.02 : 0), C - 40);
+      if ("letterSpacing" in x) x.letterSpacing = "0em";
+      diamond(C, C - 440, 20);
+      x.lineWidth = 2;
+      x.beginPath(); x.moveTo(C - 260, C + 260); x.lineTo(C - 40, C + 260); x.stroke();
+      x.beginPath(); x.moveTo(C + 40, C + 260); x.lineTo(C + 260, C + 260); x.stroke();
+      diamond(C, C + 260, 12);
+      x.font = `500 38px ${MONO_F}`;
+      if ("letterSpacing" in x) x.letterSpacing = "0.42em";
+      x.fillText(`${T("SU MESA", "YOUR TABLE")} · ${new Date().getFullYear()}`, C + 8, C + 350);
+      if ("letterSpacing" in x) x.letterSpacing = "0em";
+    };
+    drawSeal();
     const tex = new THREE.CanvasTexture(c);
+    tex.anisotropy = aniso;
+    if (document.fonts && document.fonts.load) {
+      Promise.all([document.fonts.load(`500 200px "Inter Tight"`), document.fonts.load(`500 40px "Geist Mono"`)])
+        .then(() => { drawSeal(); tex.needsUpdate = true; }).catch(() => {});
+    }
     const monoMat = new THREE.ShaderMaterial({
       uniforms: { map: { value: tex }, uDie: { value: new THREE.Vector3() }, uPulse: { value: 0 } },
       vertexShader: "varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }",
@@ -538,14 +591,16 @@
           float a = texture2D(map, vUv).a;
           float d = distance(vW.xz, uDie.xz);
           float h = clamp(1.0 - (uDie.y + 1.75) / 3.2, 0.25, 1.0);   // lower die, more light on the floor
-          float lit = exp(-d * d / 2.6) * h * 0.4 + uPulse * exp(-d * d / 5.0) * 0.6 + 0.035;
+          float lit = exp(-d * d / 3.2) * h * 0.3 + uPulse * exp(-d * d / 5.0) * 0.5 + 0.03;
           gl_FragColor = vec4(vec3(0.85, 0.68, 0.40) * a * lit, 1.0);
         }`,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
     });
-    mono = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), monoMat);
+    // anamorphic: stretched in depth so that, from the camera's low angle,
+    // the seal reads round instead of a squashed line
+    mono = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6 * 2.3), monoMat);
     mono.rotation.x = -Math.PI / 2;
-    mono.position.set(0, FLOOR_Y + 0.003, -0.3);
+    mono.position.set(0, FLOOR_Y + 0.003, -0.9);
     mono.renderOrder = 2;
     scene.add(mono);
   }
