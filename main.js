@@ -904,7 +904,7 @@
         <h1 class="ph-title r">${esc(SITE.aboutTitle)}</h1>
         <div class="neon-line r"></div>
       </header>
-      <p class="lead r">${esc(SITE.about)}</p>
+      <p class="lead r">${esc(SITE.about).replace(/\n/g, "<br>")}</p>
       <section class="block r"><h2>Disciplines</h2><p>${SITE.disciplines.map(esc).join("<br>")}</p></section>
       <section class="block r"><h2>Tools</h2><p>${SITE.tools.map(esc).join(" · ")}</p></section>`;
   }
@@ -1051,158 +1051,109 @@
   pivot.visible = false;
 
   /* ============================================================
-     RADIOGRAPH — a giant skeletal hand, seen as an X-ray for an
-     instant: it lowers into frame holding the die, opens its
-     fingers, releases it, and the lightbox goes dark.
-     Built procedurally (anatomical proportions, in cm).
+     THE HAND — a sculptural hand (matte white ceramic) enters from
+     the right holding the die, settles, and tosses it.
+     Built procedurally with anatomical proportions (in cm); the grip
+     is solved so every finger rests on the die, never through it.
      ============================================================ */
-  const CM = 0.45; // hand units: centimetres → world (a giant hand)
-  const xrayUniforms = { uOpacity: { value: 0 } };
-  const xrayMat = (core, edge) => new THREE.ShaderMaterial({
-    uniforms: { uOpacity: xrayUniforms.uOpacity, uCore: { value: core }, uEdge: { value: edge } },
-    vertexShader: `
-      varying vec3 vN; varying vec3 vV;
-      void main() {
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vN = normalize(normalMatrix * normal);
-        vV = normalize(-mv.xyz);
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: `
-      uniform float uOpacity; uniform float uCore; uniform float uEdge;
-      varying vec3 vN; varying vec3 vV;
-      void main() {
-        float f = 1.0 - abs(dot(normalize(vN), normalize(vV)));
-        float i = (uCore + uEdge * pow(f, 2.2)) * uOpacity;
-        gl_FragColor = vec4(vec3(i * 0.96, i * 0.98, i), 1.0);
-      }`,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide,
+  const CM = 0.32; // hand units: centimetres → world (a large hand)
+  const HAND_MAT = new THREE.MeshPhysicalMaterial({
+    color: 0xdcd8d0,
+    roughness: 0.52,
+    metalness: 0,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.45,
+    sheen: 0.5,
+    sheenRoughness: 0.7,
+    sheenColor: new THREE.Color(0xffffff),
   });
-  const BONE = xrayMat(0.06, 0.95);   // cortical bone: bright rims, soft core
-  const FLESH = xrayMat(0.012, 0.16); // soft tissue: a faint halo around the bones
 
-  // a long bone: narrow shaft, bulbous ends, rounded caps — along -y from the joint
-  const boneGeoCache = {};
-  function boneGeo(L, r) {
-    const key = `${L.toFixed(2)}_${r.toFixed(2)}`;
-    if (boneGeoCache[key]) return boneGeoCache[key];
-    const pts = [new THREE.Vector2(0, r * 0.55), new THREE.Vector2(r * 0.75, r * 0.32)];
-    const N = 16;
-    for (let i = 0; i < N; i++) {
-      const t = i / (N - 1), k = Math.abs(2 * t - 1);
-      pts.push(new THREE.Vector2(r * (0.56 + 0.44 * Math.pow(k, 3)), -t * L));
+  // a tapered capsule along -y: radius r0 at the joint, r1 at the far end
+  const segGeoCache = {};
+  function segGeo(L, r0, r1) {
+    const key = `${L.toFixed(3)}_${r0.toFixed(3)}_${r1.toFixed(3)}`;
+    if (segGeoCache[key]) return segGeoCache[key];
+    const pts = [];
+    const cap = 7;
+    for (let i = 0; i <= cap; i++) {
+      const a = (Math.PI / 2) * (1 - i / cap);
+      pts.push(new THREE.Vector2(Math.cos(a) * r0, Math.sin(a) * r0));
     }
-    pts.push(new THREE.Vector2(r * 0.75, -L - r * 0.32), new THREE.Vector2(0, -L - r * 0.55));
-    return (boneGeoCache[key] = new THREE.LatheGeometry(pts, 14));
+    for (let i = 1; i < 6; i++) {
+      const t = i / 6;
+      pts.push(new THREE.Vector2(lerp(r0, r1, t), -L * t));
+    }
+    for (let i = 0; i <= cap; i++) {
+      const a = (Math.PI / 2) * (i / cap);
+      pts.push(new THREE.Vector2(Math.cos(a) * r1, -L - Math.sin(a) * r1));
+    }
+    pts.reverse(); // bottom → top, so the normals face outwards
+    const g = new THREE.LatheGeometry(pts, 20);
+    g.computeVertexNormals();
+    return (segGeoCache[key] = g);
   }
-  function addBone(parent, L, r) {
-    const b = new THREE.Mesh(boneGeo(L * CM, r * CM), BONE);
-    const f = new THREE.Mesh(boneGeo(L * CM * 1.02, r * CM * 2.4), FLESH);
-    parent.add(b, f);
+  function addSeg(parent, L, r0, r1, flat = 0.86) {
+    const m = new THREE.Mesh(segGeo(L * CM, r0 * CM, r1 * CM), HAND_MAT);
+    m.scale.z = flat; // fingers are a little flatter than they are wide
+    m.castShadow = true;
+    parent.add(m);
+    return m;
   }
 
   const hand = new THREE.Group();
   hand.visible = false;
   scene.add(hand);
-  const palm = new THREE.Group(); // wrist origin; fingers point down (-y), palm faces the camera (+z)
+  const palm = new THREE.Group(); // wrist origin; fingers point down (-y), palm faces +z
   hand.add(palm);
 
-  // forearm: radius & ulna, running up out of frame
-  [[-1.0, 1.05], [1.25, 0.8]].forEach(([x, r]) => {
-    const g = new THREE.Group();
-    g.position.set(x * CM, 13 * CM, 0);
-    palm.add(g);
-    addBone(g, 13, r);
-  });
-  // carpals: a cluster of eight small bones
-  [[-1.5, -0.6], [-0.4, -0.5], [0.7, -0.5], [1.6, -0.7], [-1.7, -2.0], [-0.6, -2.1], [0.5, -2.1], [1.6, -2.0]].forEach(([x, y]) => {
-    const c = new THREE.Mesh(new THREE.SphereGeometry(0.62 * CM, 16, 12), BONE);
-    c.position.set(x * CM, y * CM, 0);
-    c.scale.set(1, 0.85, 0.8);
-    const fl = new THREE.Mesh(new THREE.SphereGeometry(1.4 * CM, 12, 10), FLESH);
-    fl.position.copy(c.position);
-    palm.add(c, fl);
-  });
+  // palm: a soft slab
+  const palmMesh = new THREE.Mesh(roundedBox(1, 0.34, 6, 2), HAND_MAT);
+  palmMesh.scale.set(8.4 * CM, 9.2 * CM, 2.7 * CM);
+  palmMesh.position.set(0.35 * CM, -5.3 * CM, 0);
+  palmMesh.castShadow = true;
+  palm.add(palmMesh);
+  // wrist and forearm, running up and out of frame
+  const wrist = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), HAND_MAT);
+  wrist.scale.set(3.4 * CM, 2.4 * CM, 1.9 * CM);
+  wrist.position.set(0.3 * CM, -0.6 * CM, 0);
+  wrist.castShadow = true;
+  palm.add(wrist);
+  const forearm = new THREE.Group();
+  forearm.rotation.z = Math.PI; // grows towards +y
+  forearm.position.set(0.3 * CM, -0.4 * CM, 0);
+  palm.add(forearm);
+  addSeg(forearm, 26, 2.9, 3.6, 0.72);
 
-  // digits: [base x, base y, splay (rad), lengths (meta, prox, mid, dist), radii]
+  // digits: base on the palm (cm), outward splay (rad), lengths (meta, prox, mid, dist), radii
   const DIGITS = [
-    { name: "thumb", base: [-1.9, -2.4], splay: 0.62, L: [4.6, 3.2, 2.4], R: [0.48, 0.42, 0.34] },
-    { name: "index", base: [-1.2, -3.0], splay: 0.1, L: [6.8, 4.0, 2.3, 1.8], R: [0.42, 0.38, 0.32, 0.28] },
-    { name: "middle", base: [0.0, -3.1], splay: 0.0, L: [6.4, 4.5, 2.8, 1.9], R: [0.44, 0.4, 0.34, 0.29] },
-    { name: "ring", base: [1.1, -3.0], splay: -0.1, L: [5.8, 4.2, 2.6, 1.9], R: [0.4, 0.37, 0.31, 0.27] },
-    { name: "little", base: [2.1, -2.8], splay: -0.22, L: [5.3, 3.3, 1.8, 1.7], R: [0.36, 0.32, 0.27, 0.24] },
+    { name: "thumb", base: [-2.6, -2.6], splay: -0.62, L: [4.4, 3.2, 2.5], R: [1.25, 1.02, 0.94, 0.86] },
+    { name: "index", base: [-2.2, -9.4], splay: -0.07, L: [0.01, 4.1, 2.4, 2.0], R: [0, 0.96, 0.86, 0.8, 0.72] },
+    { name: "middle", base: [-0.2, -9.7], splay: 0.0, L: [0.01, 4.6, 2.8, 2.1], R: [0, 1.0, 0.9, 0.82, 0.74] },
+    { name: "ring", base: [1.8, -9.5], splay: 0.07, L: [0.01, 4.3, 2.7, 2.0], R: [0, 0.94, 0.84, 0.77, 0.7] },
+    { name: "little", base: [3.6, -9.0], splay: 0.17, L: [0.01, 3.4, 2.0, 1.8], R: [0, 0.82, 0.74, 0.68, 0.62] },
   ];
-  const GAP = 0.3;
+  const GAP = 0.15;
   DIGITS.forEach((d) => {
     const root = new THREE.Group();
     root.position.set(d.base[0] * CM, d.base[1] * CM, 0);
-    root.rotation.z = d.splay;
-    if (d.name === "thumb") root.rotation.y = -0.75; // opposed, comes forward
+    // thumb: rolled so it curls across and in front of the palm (opposition)
+    if (d.name === "thumb") root.rotation.set(0, 0.95, d.splay, "ZYX");
+    else root.rotation.z = d.splay;
     palm.add(root);
     d.root = root;
     d.joints = [];
     let parent = root;
     d.L.forEach((L, k) => {
       const j = new THREE.Group();
-      if (k > 0) j.position.y = -(d.L[k - 1] + GAP) * CM;
+      if (k > 0) j.position.y = -(d.L[k - 1] + (d.L[k - 1] > 0.1 ? GAP : 0)) * CM;
       parent.add(j);
-      addBone(j, L, d.R[k]);
+      if (L > 0.1) addSeg(j, L, d.R[k], d.R[k + 1]);
       d.joints.push(j);
       parent = j;
     });
   });
-
-  // the x-ray draws after the floor and its veil, so nothing cuts through the bones
-  hand.traverse((o) => (o.renderOrder = 10));
-
-  // The hand itself is never seen: only its giant, soft shadow crosses the floor.
-  // Palm volume so the silhouette reads as flesh, not a skeleton.
-  const palmFlesh = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), FLESH);
-  palmFlesh.position.set(0.3 * CM, -6.4 * CM, 0);
-  palmFlesh.scale.set(4.4 * CM, 6.2 * CM, 1.5 * CM);
-  palm.add(palmFlesh);
-  const HAND_SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
-  hand.traverse((o) => {
-    if (!o.isMesh) return;
-    o.material = HAND_SHADOW_ONLY;
-    o.castShadow = true;
-  });
-  // a pool of light on the floor, like a studio spot: the hand's shadow crosses it
-  const poolMat = new THREE.MeshBasicMaterial({
-    map: radial([[0, "rgba(255,255,255,1)"], [0.4, "rgba(255,255,255,0.55)"], [1, "rgba(255,255,255,0)"]]),
-    color: new THREE.Color(0.24, 0.24, 0.25),
-    transparent: true, depthWrite: false, toneMapped: false, opacity: 0,
-  });
-  // shadow theatre: during the intro a backdrop is lit behind the object
-  const BACKDROP_Z = -5;
-  const pool = new THREE.Mesh(new THREE.PlaneGeometry(17, 11), poolMat);
-  pool.position.set(0.6, 1.0, BACKDROP_Z);
-  pool.renderOrder = 1.5;
-  scene.add(pool);
-  const wallShadowMat = new THREE.ShadowMaterial({ opacity: 0, depthWrite: false });
-  const wallShadow = new THREE.Mesh(new THREE.PlaneGeometry(40, 22), wallShadowMat);
-  wallShadow.position.set(0, 1, BACKDROP_Z + 0.002);
-  wallShadow.receiveShadow = true;
-  wallShadow.renderOrder = 2;
-  scene.add(wallShadow);
-  let poolTarget = 0;
-
-  // a light straight above, used only during the intro to cast the hand's shadow
-  const handLight = new THREE.DirectionalLight(0xffffff, 0);
-  handLight.position.set(1.4, 3.2, 14); // from the front: the shadow falls on the backdrop
-  handLight.castShadow = false;
-  handLight.shadow.mapSize.set(2048, 2048);
-  handLight.shadow.camera.left = handLight.shadow.camera.bottom = -11;
-  handLight.shadow.camera.right = handLight.shadow.camera.top = 11;
-  handLight.shadow.camera.near = 2;
-  handLight.shadow.camera.far = 30;
-  handLight.shadow.radius = 9;
-  handLight.shadow.blurSamples = 16;
-  handLight.shadow.bias = -0.0005;
-  scene.add(handLight);
+  // the radius used by the grip solver for each segment
+  DIGITS.forEach((d) => (d.Rsolve = d.L.map((_, k) => Math.max(d.R[k], d.R[k + 1] || 0))));
 
   // curl: 0 = open hand, 1 = gripping the die (per joint angles, in radians).
   // GRIP is solved at start (solveGrip): each joint curls until the finger touches the die.
@@ -1214,14 +1165,14 @@
     little: [0.05, 1.1, 1.15, 0.55],
   };
   const MAX_CURL = {
-    thumb: [0.5, 1.2, 1.1],
+    thumb: [0.9, 1.1, 1.0],
     index: [0.1, 1.5, 1.7, 1.2],
     middle: [0.1, 1.5, 1.7, 1.2],
     ring: [0.1, 1.5, 1.7, 1.2],
     little: [0.1, 1.5, 1.7, 1.2],
   };
   const OPEN = {
-    thumb: [0.05, 0.1, 0.05],
+    thumb: [0.1, 0.12, 0.08],
     index: [0, 0.12, 0.08, 0.04],
     middle: [0, 0.1, 0.08, 0.04],
     ring: [0, 0.12, 0.1, 0.05],
@@ -1242,7 +1193,7 @@
   // its back face resting along the proximal phalanges
   const DIE_HALF_CM = SIZE / 2 / CM;
   const dieAnchor = new THREE.Object3D();
-  dieAnchor.position.set(0.3 * CM, (-9.6 - DIE_HALF_CM - 0.1) * CM, (DIE_HALF_CM + 0.55) * CM);
+  dieAnchor.position.set(0.2 * CM, -6.6 * CM, (1.35 + DIE_HALF_CM + 0.05) * CM);
   palm.add(dieAnchor);
   const HOLD_LOCAL = new Q().setFromEuler(new THREE.Euler(0, 0, 0.08));
 
@@ -1255,12 +1206,12 @@
     const touches = (d, from) => {
       hand.updateMatrixWorld(true);
       for (let k = from; k < d.joints.length; k++) {
-        const L = d.L[k] * CM, r = d.R[k] * CM * 1.05, lim = SIZE / 2 + r;
+        const L = d.L[k] * CM, r = d.Rsolve[k] * CM * 1.04, lim = SIZE / 2 + r;
         for (let s = 0; s <= 10; s++) {
           p.set(0, -L * (s / 10) - (s === 10 ? r * 0.5 : 0), 0);
           d.joints[k].localToWorld(p);
           p.sub(c).applyQuaternion(inv);
-          if (Math.abs(p.x) < lim && Math.abs(p.y) < lim && Math.abs(p.z) < lim) return true;
+          if (L > 0.01 && Math.abs(p.x) < lim && Math.abs(p.y) < lim && Math.abs(p.z) < lim) return true;
         }
       }
       return false;
@@ -1291,24 +1242,24 @@
   const XR_FREEZE = XR_PARAM != null ? parseFloat(XR_PARAM) : null;
   if (XR_PARAM != null) window.__xr = { hand, pivot, camera, THREE };
   const HAND_REST = new V3();
-  const HOLD_AT = new V3(0.9, 0.85, -0.6);           // held in the air, in front of the backdrop
+  const HOLD_AT = new V3(1.0, 0.45, 0.2);           // held in the air, in front of the backdrop
   const HAND_BASE = new THREE.Euler(Math.PI / 2 - 0.08, 0, -Math.PI / 2); // fingers point left, palm faces the floor
   const qBase = new Q(), qMove = new Q(), Z_AXIS = new V3(0, 0, 1);
 
   // Choreography (seconds). Offsets are world units from the resting hold pose.
   // A smooth Hermite spline runs through the keys, so the motion never stops dead.
   const KEYS = [
-    { t: 0.0, v: [7.0, 0.7, -0.3, 0.16] },   // off-frame right
-    { t: 1.2, v: [0.2, 0.06, 0.0, 0.025] },  // glides in, slowing down
-    { t: 1.6, v: [0, 0, 0, 0] },             // settles: a moment to look
-    { t: 1.85, v: [0.45, 0.18, -0.1, 0.06] }, // small backswing, wrist cocks
-    { t: 2.15, v: [-1.15, -0.16, 0.22, -0.12] }, // the toss
-    { t: 2.45, v: [-0.8, 0.05, 0.1, -0.06] }, // follow-through
-    { t: 3.45, v: [8.0, 0.8, -0.3, 0.14] },  // withdraws to the right
+    { t: 0.0, v: [6.6, 1.1, -0.2, 0.1] },     // off-frame right
+    { t: 0.95, v: [0.14, 0.05, 0.0, 0.02] },  // glides in, slowing down
+    { t: 1.25, v: [0, 0, 0, 0] },             // settles: a beat to see it
+    { t: 1.46, v: [0.38, 0.24, -0.05, 0.09] }, // backswing: lifts, wrist cocks
+    { t: 1.74, v: [-1.15, -0.22, 0.2, -0.15] }, // the toss
+    { t: 1.98, v: [-0.85, -0.02, 0.1, -0.08] }, // follow-through
+    { t: 2.85, v: [7.6, 1.5, -0.2, 0.12] },   // withdraws to the right
   ];
-  const XR_END = 3.6;
-  const RELEASE_AT = 2.07;
-  const OPEN_AT = 1.98;
+  const XR_END = 2.95;
+  const RELEASE_AT = 1.69;
+  const OPEN_AT = 1.62;
 
   function sampleKeys(t, out) {
     const n = KEYS.length;
@@ -1335,12 +1286,12 @@
       HAND_REST.z + kv[2]
     );
     qBase.setFromEuler(HAND_BASE);
-    qMove.setFromAxisAngle(Z_AXIS, kv[3] + Math.sin(t * 0.9) * 0.012 * sway);
+    qMove.setFromAxisAngle(Z_AXIS, 0.24 + kv[3] + Math.sin(t * 0.9) * 0.012 * sway);
     hand.quaternion.copy(qMove).multiply(qBase);
     // fingers open one after another, then relax
     poseHand((di) => {
-      const o = smooth(OPEN_AT + di * 0.025, OPEN_AT + 0.26 + di * 0.025, t);
-      return lerp(1, 0.15, o) * (1 - smooth(2.5, 3.1, t) * 0.4);
+      const o = smooth(OPEN_AT + di * 0.02, OPEN_AT + 0.22 + di * 0.02, t);
+      return lerp(1, 0.12, o) * (1 - smooth(2.1, 2.7, t) * 0.5);
     }, smooth(OPEN_AT, OPEN_AT + 0.4, t));
     hand.updateMatrixWorld(true);
   }
@@ -1357,11 +1308,6 @@
     HAND_REST.copy(HOLD_AT).sub(dieAnchor.getWorldPosition(new V3()));
     hand.visible = true;
     pivot.visible = true;
-    key.castShadow = false;      // one clean shadow: the hand's, from straight above
-    handLight.castShadow = true;
-    shadowRecvMat.opacity = 0.6;
-    wallShadowMat.opacity = 0.92;
-    poolTarget = 1;
     S.mode = "hold";
     X.t0 = performance.now();
     X.released = false;
@@ -1377,10 +1323,10 @@
     const a = dieAnchor.getWorldPosition(new V3());
     placeHand(t);
     const b = dieAnchor.getWorldPosition(new V3());
-    const v = b.clone().sub(a).divideScalar(0.03).multiplyScalar(0.6);
-    v.y = Math.min(v.y, 0) + 0.6;
-    v.z = clamp(v.z, -0.5, 0.5);
-    launch(b, v, new V3(rand(-1.5, 1.5), rand(-1.5, 1.5), rand(4, 6)));
+    const v = b.clone().sub(a).divideScalar(0.03).multiplyScalar(0.7);
+    v.y = Math.max(v.y, 0) * 0.4 + 1.6; // a soft arc out of the fingers
+    v.z = clamp(v.z, -0.4, 0.4);
+    launch(b, v, new V3(rand(-1.2, 1.2), rand(-1.2, 1.2), rand(5, 7)));
   }
 
   function updateXray(now) {
@@ -1396,11 +1342,6 @@
     if (t > XR_END && XR_FREEZE == null) {
       X.active = false;
       hand.visible = false;
-      handLight.castShadow = false;
-      key.castShadow = true;
-      shadowRecvMat.opacity = 0.5;
-      wallShadowMat.opacity = 0;
-      poolTarget = 0;
       body.classList.remove("xray-on");
     }
   }
@@ -1546,8 +1487,6 @@
     outlinePulse = damp(outlinePulse, 0, 2.2, dt);
     const hoverRim = hovering && (S.mode === "idle" || S.mode === "drag") ? 0.1 : 0;
     outlineMat.opacity = damp(outlineMat.opacity, Math.max(hoverRim, outlinePulse), 6, dt);
-
-    poolMat.opacity = damp(poolMat.opacity, poolTarget, 1.6, dt);
 
     // contact shadow follows the body and softens with height
     const hgt = Math.max(0, pivot.position.y - REST_Y);

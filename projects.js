@@ -27,7 +27,7 @@ window.PORTFOLIO = {
   cv: "",   // ← mete tu CV en assets/ y pon aquí "assets/cv.pdf"
   aboutTitle: "Objects, systems, worlds.",
   about:
-    "Diseño productos, sistemas visuales y piezas 3D donde la forma y la función se resuelven a la vez. Sustituye este texto por tu manifiesto: dos o tres frases, sin relleno.",
+    "Un dado, seis caras, ninguna al azar.\nLa ambición de abrir nuevas posibilidades. La precisión de darles forma.",
   disciplines: ["Product Design", "3D & Rendering", "Visual Systems", "Prototyping", "UI / Digital"],
   tools: ["Blender", "Figma", "Adobe Suite", "Cinema 4D", "Solidworks", "FL Studio"],
 };
