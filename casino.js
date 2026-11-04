@@ -190,7 +190,7 @@
           : T("Cada tirada del dado en este dispositivo.", "Every roll of the die on this device.")} ${T("Un dado justo da a cada cara", "A fair die gives each face")} 1/6 = ${fair.toFixed(1)} %.</p>
       </div>
       <div class="odds-table" role="table" aria-label="Rolls per project">
-        <div class="odds-row is-head" role="row"><span>${T("Cara", "Face")}</span><span>${T("Proyecto", "Project")}</span><span></span><span>${T("Tiradas", "Rolls")}</span><span>%</span></div>
+        <div class="odds-row is-head" role="row"><span>${T("Cara", "Face")}</span><span>${T("Entrada", "Entry")}</span><span></span><span>${T("Tiradas", "Rolls")}</span><span>%</span></div>
         ${P.map((p, i) => `
         <div class="odds-row" role="row">
           <span>${String(i + 1).padStart(2, "0")}</span>

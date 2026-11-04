@@ -107,7 +107,7 @@
           </div>
           ${S.portrait ? `<img src="${esc(S.portrait)}" alt="">` : ""}
         </section>
-        ${P.filter((p) => !/^PROJECT 0/.test(p.title)).map((p, i) => `
+        ${P.filter((p) => !p.kind).map((p, i) => `
         <article class="project">
           <div class="project-head">
             <span class="mono">${pad(P.indexOf(p))}</span>

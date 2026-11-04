@@ -1,3 +1,6 @@
 {
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/:slug(side-a|ton-618|safelife|sobre-mi|contacto|cv)", "destination": "/" }
+  ]
 }

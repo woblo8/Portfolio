@@ -466,3 +466,48 @@ body.xray-on .hint, body.xray-on .index { opacity: 0 !important; transition-dela
   opacity: 0; transition: opacity 1.6s var(--ease), transform 2.6s var(--ease);
 }
 .ghost-line.on { opacity: 0.9; transform: translate(-50%, -50%) scaleX(1); }
+
+/* ---------- in 10 seconds: what it is, for whom, my part ---------- */
+.tldr {
+  position: relative; z-index: 2; margin: clamp(88px, 13vh, 132px) 0 0; padding: 18px 0 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14); border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  display: grid; grid-template-columns: 150px 1fr; gap: 18px 28px; align-items: start;
+}
+.tldr-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--neon); text-shadow: var(--neon-glow); padding-top: 3px; }
+.tldr dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 32px; }
+.tldr dt { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--smoke); margin-bottom: 8px; }
+.tldr dd { font-size: 14.5px; line-height: 1.5; color: var(--mist); }
+/* on the full-bleed case studies the summary sits on their own background */
+.page.has-layout .tldr { margin-left: var(--gut); margin-right: var(--gut); }
+@media (max-width: 860px) {
+  .tldr { grid-template-columns: 1fr; gap: 14px; margin-top: 84px; }
+  .tldr dl { grid-template-columns: 1fr; gap: 14px; }
+  .tldr dd { font-size: 14px; }
+}
+
+/* ---------- availability: one line, a light that breathes ---------- */
+.avail {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 28px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone);
+}
+.avail i { width: 7px; height: 7px; border-radius: 50%; background: #fff; box-shadow: var(--neon-glow); animation: availPulse 2.4s ease-in-out infinite; }
+.contact .avail { margin: 0 0 26px; }
+@keyframes availPulse { 50% { opacity: 0.35; box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .avail i { animation: none; } }
+
+/* ---------- CV page ---------- */
+.cvp { padding-top: clamp(96px, 16vh, 160px); }
+.cvp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; margin-top: 34px; }
+.cvp-actions .print-link { margin-top: 0; }
+.cvp-frame {
+  margin-top: 48px; height: min(1100px, 130vw); border-radius: 6px; overflow: hidden; background: #111;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 40px 90px rgba(0, 0, 0, 0.6);
+}
+.cvp-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+@media (max-width: 860px) { .cvp-frame { display: none; } } /* phones open the PDF instead */
+.cta {
+  display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px; border-radius: 99px; text-decoration: none;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #050506; background: var(--bone);
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.22); transition: box-shadow 0.4s, transform 0.4s var(--ease);
+}
+.cta:hover { box-shadow: 0 0 34px rgba(255, 255, 255, 0.45); transform: translateY(-2px); }

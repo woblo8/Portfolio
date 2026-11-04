@@ -605,8 +605,14 @@
     S.active = i;
     info.code.textContent = pad(i);
     info.title.textContent = p.title;
-    info.meta.textContent = `${p.category} / ${p.year}`;
+    info.meta.textContent = p.meta || `${p.category} / ${p.year}`;
     info.desc.textContent = p.short;
+    const eb = $("#enterBtn span");
+    if (eb) {
+      eb.dataset.es = p.kind ? "Abrir" : "Entrar al proyecto";
+      eb.dataset.en = p.kind ? "Open" : "Enter project";
+      eb.textContent = T(eb.dataset.es, eb.dataset.en);
+    }
     hasInfo = true;
     body.classList.add("has-info");
     // the chosen face lights its neon edge; the rest of the object falls to deep grey
@@ -871,6 +877,36 @@
   const scrollCueLabel = $("#scrollCue span");
   page.addEventListener("scroll", () => page.classList.toggle("scrolled", page.scrollTop > 60), { passive: true });
   function stopLayout() { if (layoutCleanup) { layoutCleanup(); layoutCleanup = null; } }
+  const ROUTE_OF = { about: "sobre-mi", contact: "contacto", vip: null };
+  const slugIndex = (slug) => P.findIndex((p) => p.slug === slug);
+  let routing = false; // true while we are reacting to the back / forward buttons
+  function route(slug) {
+    if (routing) return;
+    const want = slug ? "/" + slug : "/";
+    if (location.pathname === want) return;
+    history.pushState({ slug: slug || null }, "", want + location.search + location.hash);
+  }
+  addEventListener("popstate", () => {
+    if (!introDone) return;
+    const slug = location.pathname.replace(/^\/+|\/+$/g, "");
+    const i = slug ? slugIndex(slug) : -1;
+    routing = true;
+    try {
+      if (i < 0) { if (overlay === "project") exitProject(); else if (overlay) closePage(); }
+      else if (!(overlay === "project" && S.active === i)) openFace(i);
+    } finally { routing = false; }
+  });
+  // open a face's page directly, without the camera dive (deep links, back / forward)
+  function openFace(i) {
+    hideInfo();
+    S.active = i;
+    S.q.copy(FACES[PROJECT_FACE[i]].q);
+    S.mode = "project";
+    S.camZ = 3.3;
+    setIndex(i);
+    openPage(projectHTML(i), "project", `FACE ${pad(i)} / 06`);
+  }
+
   function openPage(html, kind, tag) {
     stopLayout();
     overlay = kind;
@@ -879,7 +915,9 @@
     pageInner.innerHTML = html;
     hydrateMedia(pageInner);
     const lp = kind === "project" ? P[S.active] : null;
-    const L = lp && lp.layout && window.LAYOUTS && window.LAYOUTS[lp.layout];
+    const role = lp && lp.kind ? lp.kind : kind; // "about" whether it came from the menu or the die
+    const L = lp && !lp.kind && lp.layout && window.LAYOUTS && window.LAYOUTS[lp.layout];
+    route(kind === "project" ? lp.slug : ROUTE_OF[kind]);
     page.classList.toggle("has-layout", !!L);
     [...page.classList].filter((c) => c.startsWith("has-layout-")).forEach((c) => page.classList.remove(c));
     if (L) page.classList.add("has-layout-" + (lp.layout === "ton618" ? "tn" : lp.layout));
@@ -887,8 +925,8 @@
     scrollCueLabel.textContent = L && lp.layout === "sidea" ? T("Desliza para escuchar", "Scroll to play") : T("Desliza", "Scroll");
     if (L) layoutCleanup = L.init(page, pageInner, { project: lp });
     visit = kind === "project" ? { index: S.active, t0: performance.now() } : null;
-    if (kind === "about" && window.initPortrait) layoutCleanup = window.initPortrait(pageInner.querySelector(".about-portrait"));
-    if (kind === "about" && window.CASINO) window.CASINO.mountOdds(pageInner.querySelector("#odds"));
+    if (role === "about" && window.initPortrait) layoutCleanup = window.initPortrait(pageInner.querySelector(".about-portrait"));
+    if (role === "about" && window.CASINO) window.CASINO.mountOdds(pageInner.querySelector("#odds"));
     pageTag.textContent = tag || "";
     page.classList.add("open");
     page.setAttribute("aria-hidden", "false");
@@ -915,6 +953,7 @@
   }
 
   function closePage() {
+    route(null);
     setTimeout(stopLayout, 800); // after the fade
     page.classList.remove("open");
     page.setAttribute("aria-hidden", "true");
@@ -1021,12 +1060,51 @@
     e.stopImmediatePropagation();
   }, true);
 
+  // what it is, who it is for, what I did: for whoever reads only the top of the page
+  function tldrHTML(p) {
+    const s = p.summary;
+    if (!s) return "";
+    return `
+      <aside class="tldr r" aria-label="${T("En 10 segundos", "In 10 seconds")}">
+        <span class="tldr-k">${T("En 10 segundos", "In 10 seconds")}</span>
+        <dl>
+          <div><dt>${T("Qué es", "What")}</dt><dd>${esc(s.what)}</dd></div>
+          <div><dt>${T("Para quién", "For whom")}</dt><dd>${esc(s.who)}</dd></div>
+          <div><dt>${T("Mi parte", "My part")}</dt><dd>${esc(s.me)}</dd></div>
+        </dl>
+      </aside>`;
+  }
+
+  function cvHTML() {
+    return `
+      <section class="cvp">
+        <div class="ph-code r"><b>CV</b><span>/</span><span>${esc(SITE.name)}</span></div>
+        <h1 class="about-title r">${T("Todo en una página.", "All on one page.")}</h1>
+        <div class="neon-line r"></div>
+        ${availHTML()}
+        <div class="cvp-actions r">
+          <a class="cta" href="${esc(SITE.cv)}" target="_blank" rel="noopener">${T("Abrir PDF", "Open PDF")} ↗</a>
+          <a class="print-link" href="${esc(SITE.cv)}" download>${T("Descargar", "Download")} ↓</a>
+          <a class="print-link" href="print.html" target="_blank" rel="noopener">${T("Versión imprimible", "Printable version")} ↗</a>
+        </div>
+        <div class="cvp-frame r"><iframe src="${esc(SITE.cv)}#view=FitH&toolbar=0" title="CV — ${esc(SITE.name)}" loading="lazy"></iframe></div>
+      </section>`;
+  }
+
+  function availHTML() {
+    return SITE.availability ? `<p class="avail r"><i></i>${esc(SITE.availability)}</p>` : "";
+  }
+
   function projectHTML(i) {
     const p = P[i];
     const ni = (i + 1) % P.length;
+    const next = `<button class="next r" data-next="${ni}"><span>${T("Siguiente", "Next")} — ${pad(ni)}</span><strong>${esc(P[ni].title)}</strong></button>`;
+    if (p.kind === "about") return aboutHTML() + next;
+    if (p.kind === "contact") return contactHTML() + next;
+    if (p.kind === "cv") return cvHTML() + next;
     const L = p.layout && window.LAYOUTS && window.LAYOUTS[p.layout];
     if (L) {
-      return L.render(p, i, { esc, pad }) +
+      return tldrHTML(p) + L.render(p, i, { esc, pad }) +
         `<button class="next r" data-next="${ni}"><span>${T("Siguiente", "Next")} — ${pad(ni)}</span><strong>${esc(P[ni].title)}</strong></button>`;
     }
     return `
@@ -1040,6 +1118,7 @@
           <div><dt>${T("Disciplina", "Discipline")}</dt><dd>${p.tags.map(esc).join(" / ")}</dd></div>
         </dl>
       </header>
+      ${tldrHTML(p)}
       <p class="lead r">${esc(p.intro)}</p>
       ${videoBlock(p)}
       <div class="r">${shots(p, 0, 1)}</div>
@@ -1063,6 +1142,7 @@
           <h1 class="about-title r">${esc(SITE.aboutTitle)}</h1>
           <div class="neon-line r"></div>
           <p class="about-lead r">${esc(SITE.about).replace(/\n/g, "<br>")}</p>
+          ${availHTML()}
         </div>
         ${portrait}
       </section>
@@ -1092,6 +1172,7 @@
     const title = esc(SITE.contactTitle || "Let’s talk.").replace(/\n/g, "<br>");
     return `
       <section class="contact">
+        ${availHTML()}
         <h1 class="contact-title r">${title}</h1>
         <div class="neon-line r"></div>
         ${rows}
@@ -1123,6 +1204,8 @@
     if (S.mode === "enter" || S.mode === "exit") return;
     if (overlay === "project") { S.mode = "idle"; S.camZ = baseZ; }
     hideInfo();
+    const face = P.findIndex((p) => p.kind === kind);
+    if (face >= 0) { openFace(face); return; }
     openPage(kind === "about" ? aboutHTML() : contactHTML(), kind, kind);
   });
 
@@ -1537,7 +1620,13 @@
   const RETURNING = false; // the hand plays on every visit
 
   // deep link: ?project=1 opens that project directly (shareable, and handy for testing)
-  const DEEP = (() => { const n = parseInt(new URLSearchParams(location.search).get("project"), 10); return n >= 1 && n <= P.length ? n - 1 : null; })();
+  const DEEP = (() => {
+    const slug = location.pathname.replace(/^\/+|\/+$/g, "");
+    const bySlug = slug ? P.findIndex((p) => p.slug === slug) : -1;
+    if (bySlug >= 0) return bySlug;
+    const n = parseInt(new URLSearchParams(location.search).get("project"), 10);
+    return n >= 1 && n <= P.length ? n - 1 : null;
+  })();
 
   function introThrow() {
     if (DEEP != null) {

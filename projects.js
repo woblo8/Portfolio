@@ -1,6 +1,7 @@
 /* ============================================================
    CONTENIDO DEL PORTFOLIO — edita solo este archivo.
-   El dado tiene 6 caras = 6 proyectos (orden 01 → 06).
+   El dado tiene 6 caras (orden 01 → 06): tres proyectos y tres entradas
+   (Sobre mí, Contacto, CV). slug = la URL de cada cara: woblo.io/side-a
 
    IDIOMAS: cada texto va en español y en inglés con bi("es", "en").
    Si un texto es igual en los dos idiomas, escríbelo normal.
@@ -21,6 +22,7 @@ window.PORTFOLIO = {
   name: "Carlos Infanzón Civantos",
   role: bi("Diseño de producto / 3D / Sistemas visuales", "Product Design / 3D / Visual Systems"),
   tagline: bi("Seis caras. Seis entradas.", "Six faces. Six ways in."),
+  availability: bi("Disponible para proyectos desde hoy", "Available for projects from today"),
   email: "woblo.original@gmail.com",
   linkedin: "https://www.linkedin.com/in/carlos-infanzon-civantos",
   contactTitle: bi("Construyamos algo\nque merezca recordarse.", "Let’s build something\nworth remembering."),
@@ -41,6 +43,13 @@ window.PORTFOLIO = {
 window.PROJECTS = [
   {
     title: "SIDE A",
+    slug: "side-a",
+    // en 10 segundos: qué es, para quién y qué hice yo
+    summary: {
+      what: bi("Una app de música que cambia el scroll infinito por sesiones largas y seleccionadas para trabajar concentrado.", "A music app that swaps endless scrolling for long, curated sessions to work in deep focus."),
+      who: bi("Para quien trabaja en profundidad: creativos, fundadores, estudiantes.", "For people who do deep work: creatives, founders, students."),
+      me: bi("Concepto, flujos, interfaz de escritorio y móvil, y la identidad de las portadas.", "Concept, flows, desktop and mobile UI, and the cover art direction."),
+    },
     folder: "projects/01-side-a",
     category: bi("Producto digital", "Digital Product"),
     year: "2026",
@@ -95,6 +104,13 @@ window.PROJECTS = [
   },
   {
     title: "TON 618",
+    slug: "ton-618",
+    // en 10 segundos: qué es, para quién y qué hice yo
+    summary: {
+      what: bi("Una lámpara de sobremesa inspirada en un quásar: la luz rodea una esfera negra como un eclipse.", "A table lamp inspired by a quasar: light circles a black sphere like an eclipse."),
+      who: bi("Para interiores contemporáneos que buscan una pieza escultórica.", "For contemporary interiors that want a sculptural piece."),
+      me: bi("Concepto, diseño de producto, modelado 3D, render y planos.", "Concept, product design, 3D modelling, rendering and drawings."),
+    },
     folder: "projects/02-ton618",
     category: bi("Producto de iluminación", "Lighting Product"),
     year: "2024",
@@ -145,6 +161,13 @@ window.PROJECTS = [
   },
   {
     title: "SAFELIFE",
+    slug: "safelife",
+    // en 10 segundos: qué es, para quién y qué hice yo
+    summary: {
+      what: bi("Una farola con brazo giratorio que reorienta la luz según cómo se usa la calle.", "A streetlight with a rotating arm that redirects light as the street is used differently."),
+      who: bi("Para ciudades y espacios públicos que cambian a lo largo del día.", "For cities and public spaces that change through the day."),
+      me: bi("Investigación, concepto, modelado 3D y un prototipo impreso en 3D.", "Research, concept, 3D modelling and a 3D-printed prototype."),
+    },
     folder: "projects/03-safelife",
     category: bi("Producto urbano", "Urban Product"),
     year: "2022",
@@ -184,45 +207,48 @@ window.PROJECTS = [
       outro: bi("Luz y movimiento\nen un único objeto urbano.", "Lighting and movement\nbecome a single urban object."),
     },
   },
+  // ---- caras 04–06: no son proyectos, son entradas ----
+  // Cuando tengas otro proyecto, sustituye una de estas por un proyecto normal.
   {
-    title: "3D VISUALS",
-    folder: "projects/04-3d-visuals",
-    category: bi("Selección", "Selected Works"),
-    year: "2023—25",
-    role: bi("Artista 3D", "3D artist"),
-    tags: ["Renders", "Motion", "3D"],
-    motif: "cube",
-    short: bi("Selección de renders y piezas de motion.", "A selection of renders and motion pieces."),
-    intro: bi("Una selección de imágenes y animaciones: luz, material y composición.", "A selection of images and animations: light, material and composition."),
-    sections: [
-      { heading: bi("Selección", "Selection"), text: bi("Breve nota sobre los criterios de la selección.", "A short note on how the selection was made.") },
-    ],
-    images: [],
-  },
-  {
-    title: "PROJECT 05",
-    folder: "projects/05-proyecto-05",
-    category: bi("En curso", "In progress"),
-    year: "2026",
-    role: "—",
-    tags: bi(["Próximamente"], ["Coming soon"]),
+    kind: "about",
+    slug: "sobre-mi",
+    title: bi("SOBRE MÍ", "ABOUT"),
+    category: bi("Entrada", "Entry"),
+    year: "C·I·C",
+    meta: bi("Quién hay detrás del dado", "Who is behind the die"),
+    tags: bi(["Producto", "3D", "Sistemas"], ["Product", "3D", "Systems"]),
     motif: "dot",
-    short: bi("Espacio reservado para un nuevo proyecto.", "Reserved for a new project."),
-    intro: bi("Próximamente.", "Coming soon."),
-    sections: [{ heading: bi("Estado", "Status"), text: bi("En desarrollo.", "In development.") }],
+    short: bi("Diseñador de producto entre lo físico y lo digital: objetos, interfaces y los sistemas que los unen.", "A product designer between the physical and the digital: objects, interfaces and the systems that join them."),
+    intro: "",
+    sections: [],
     images: [],
   },
   {
-    title: "PROJECT 06",
-    folder: "projects/06-proyecto-06",
-    category: bi("En curso", "In progress"),
+    kind: "contact",
+    slug: "contacto",
+    title: bi("CONTACTO", "CONTACT"),
+    category: bi("Entrada", "Entry"),
     year: "2026",
-    role: "—",
-    tags: bi(["Próximamente"], ["Coming soon"]),
+    meta: bi("Disponible para proyectos desde hoy", "Available for projects from today"),
+    tags: bi(["Correo", "LinkedIn", "CV"], ["Email", "LinkedIn", "CV"]),
     motif: "square",
-    short: bi("Espacio reservado para un nuevo proyecto.", "Reserved for a new project."),
-    intro: bi("Próximamente.", "Coming soon."),
-    sections: [{ heading: bi("Estado", "Status"), text: bi("En desarrollo.", "In development.") }],
+    short: bi("Un correo basta. Respondo en menos de 24 horas.", "One email is enough. I reply within 24 hours."),
+    intro: "",
+    sections: [],
+    images: [],
+  },
+  {
+    kind: "cv",
+    slug: "cv",
+    title: "CV",
+    category: bi("Entrada", "Entry"),
+    year: "2026",
+    meta: bi("Currículum · PDF", "Résumé · PDF"),
+    tags: bi(["Experiencia", "Formación", "Herramientas"], ["Experience", "Education", "Tools"]),
+    motif: "cube",
+    short: bi("Todo en una página: experiencia, formación y herramientas.", "Everything on one page: experience, education and tools."),
+    intro: "",
+    sections: [],
     images: [],
   },
 ];

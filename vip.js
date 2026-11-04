@@ -28,7 +28,7 @@
       `Gracias por sentarse a esta mesa. La he preparado para ${name}: tres proyectos, un dado y ninguna prisa. Si alguno le hace clic, la siguiente mano la jugamos juntos.`,
       `Thank you for taking a seat. I set this table for ${name}: three projects, one die and no hurry. If one of them clicks, we play the next hand together.`
     );
-    const order = (g.order || projects.map((_, i) => i)).filter((i) => projects[i] && !/^PROJECT 0/.test(projects[i].title)).slice(0, 3);
+    const order = (g.order || projects.map((_, i) => i)).filter((i) => projects[i] && !projects[i].kind).slice(0, 3);
     ctx = { name, note, order, projects, pad };
     const subject = encodeURIComponent(T(`Mesa privada · ${name}`, `Private table · ${name}`));
     return `
