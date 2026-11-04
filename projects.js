@@ -140,19 +140,44 @@ window.PROJECTS = [
   {
     title: "SAFELIFE",
     folder: "projects/03-safelife",
-    category: "Product",
-    year: "2025",
-    role: "Product designer",
-    tags: ["Product", "3D", "Prototyping"],
+    category: "Urban Product",
+    year: "2022",
+    role: "Product design · 3D · Prototyping",
+    tags: ["Concept", "3D modelling", "Prototyping"],
     motif: "cross",
-    short: "Sistema de producto: de la investigación al prototipo funcional.",
-    intro: "Un producto pensado desde el uso real, iterado en 3D y validado con prototipos físicos.",
-    sections: [
-      { heading: "Problem", text: "Describe aquí el problema de partida en dos o tres frases." },
-      { heading: "Process", text: "Investigación, bocetos, modelado 3D e iteraciones de prototipo." },
-      { heading: "Outcome", text: "Resultado final, decisiones clave y aprendizajes." },
-    ],
+    short: "Una farola que gira para llevar la luz donde la ciudad la necesita.",
+    intro: "Light where the city needs it.",
+    sections: [],
     images: [],
+    // SAFELIFE tiene su propia página: técnica, y la luz se dirige con el scroll.
+    // Archivos en projects/03-safelife/{frames,drawings,renders,process}
+    layout: "safelife",
+    safe: {
+      problem: "La ciudad cambia a lo largo del día; la iluminación urbana se queda fija.",
+      idea: "SAFELIFE explora una estructura de luz capaz de reorientarse cuando cambian los recorridos, la actividad y lo que el espacio necesita.",
+      verbs: [
+        { w: "Adapt", t: "Una estructura ajustable cambia la dirección de la luz." },
+        { w: "Focus", t: "La luz se dirige al área que necesita atención." },
+        { w: "Integrate", t: "Luz y movimiento se convierten en un único objeto urbano." },
+      ],
+      concept: [
+        { img: "process/study-model.jpg", label: "Continuous form", text: "Un solo cuerpo curvo: silueta compacta, pero menos control sobre la dirección de la luz." },
+        { img: "process/sketch-model.jpg", label: "Radial distribution", text: "Varios brazos: más cobertura, pero más componentes y más complejidad visual." },
+        { img: "frames/hero.webp", label: "Selected — Rotating arm", text: "Una estructura horizontal que separa soporte, movimiento y luz, con una silueta clara." },
+      ],
+      prototype: [
+        { img: "process/printing.jpg", label: "01 / Manufacturing", text: "Impresión FDM por piezas: la secuencia de montaje queda a la vista." },
+        { img: "process/assembly.jpg", label: "02 / Assembly", text: "El prototipo aclara cómo se unen soporte, brazo y cuerpo de luz." },
+        { img: "process/gear.jpg", label: "03 / Proportion", text: "El modelo físico permite juzgar grosores, equilibrio y jerarquía." },
+      ],
+      parts: [
+        { n: "01", label: "Fixed support", text: "Estructura vertical anclada al suelo." },
+        { n: "02", label: "Rotation collar", text: "La unión central que permite cambiar la orientación." },
+        { n: "03", label: "Lighting arm", text: "Elemento horizontal entre el soporte y la luminaria." },
+        { n: "04", label: "LED ring", text: "Fuente de luz circular para una iluminación dirigida." },
+      ],
+      outro: "Lighting and movement\nbecome a single urban object.",
+    },
   },
   {
     title: "3D VISUALS",
