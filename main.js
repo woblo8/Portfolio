@@ -396,8 +396,9 @@
     r.globalAlpha = 0.55;
     r.drawImage(design, 0, 0);
     r.globalAlpha = 1;
-    engraveNormals(nrm);
-    [mat.map, mat.emissiveMap, mat.normalMap, mat.roughnessMap].forEach((t) => (t.needsUpdate = true));
+    [mat.map, mat.emissiveMap, mat.roughnessMap].forEach((t) => (t.needsUpdate = true));
+    mat.userData.engrave = () => { drawDesign(design.getContext("2d"), p, i, true); engraveNormals(nrm); mat.normalMap.needsUpdate = true; };
+    if (!mat.userData.soft) mat.userData.engrave();
   }
 
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -428,7 +429,23 @@
   });
   const faceCache = {};
   const repaint = () => { materials.forEach(paintFace); for (const k in faceCache) delete faceCache[k]; };
-  repaint();
+  // the faces are painted while the loader counts, one small task at a time:
+  // a long single task would freeze the page on a slow phone
+  const nextTask = () => new Promise((r) => setTimeout(r, 0));
+  let painting = null;
+  function repaintSoft() {
+    if (painting) return painting;
+    painting = (async () => {
+      for (const m of materials) {
+        m.userData.soft = true;
+        paintFace(m); await nextTask();
+        m.userData.engrave(); await nextTask();
+        m.userData.soft = false;
+      }
+      for (const k in faceCache) delete faceCache[k];
+    })();
+    return painting;
+  }
 
   /* fingerprints: each face has a small clear-coat roughness layer where touch leaves
      a matte mark; it fades back to polish after a few seconds */
@@ -492,8 +509,9 @@
       ]).then(() => document.fonts.ready)
     : Promise.resolve();
   let introStarted = false;
-  fontsLoaded.then(() => { if (!introStarted) repaint(); fontsReady = true; });
-  setTimeout(() => (fontsReady = true), 4500);
+  // the loader only reaches 100 once the faces are painted with the right fonts
+  fontsLoaded.then(() => repaintSoft()).then(() => { fontsReady = true; });
+  setTimeout(() => repaintSoft().then(() => (fontsReady = true)), 4500); // fonts that never arrive
 
   const geo = roundedBox(SIZE, RADIUS);
   const pivot = new THREE.Group();

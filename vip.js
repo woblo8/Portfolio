@@ -686,9 +686,9 @@
       lean1.position.set(-1.62 + 0.235, 0.075, -0.92 + 0.04);
       lean1.rotation.set(0.1, 0.3, 1.18, "YXZ");
       const flat = new THREE.Mesh(chipGeo, kinds[2]);
-      flat.position.set(1.45, 0.019, -0.55); flat.rotation.y = 2.1;
+      flat.position.set(1.95, 0.019, -0.22); flat.rotation.y = 2.1; // clear of the die's landing area
       [lean1, flat].forEach((m) => { m.castShadow = m.receiveShadow = true; scene.add(m); });
-      contacts.push([1.45, -0.55, 0.24, 0.35], [-1.39, -0.88, 0.18, 0.3]);
+      contacts.push([1.95, -0.22, 0.24, 0.35], [-1.39, -0.88, 0.18, 0.3]);
     }
     // one chip lying on the first bet
     const bet = new THREE.Mesh(chipGeo, kinds[0]);
@@ -816,13 +816,82 @@
     const plaqueMat = new THREE.MeshPhysicalMaterial({ map: canvasTex(plaqueFace(ctx.name)), roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.3 });
     const black = new THREE.MeshPhysicalMaterial({ color: 0x020202, roughness: 0.6, clearcoat: 0, envMapIntensity: 0.02 });
     const plaqueGeo = new THREE.BoxGeometry(0.62, 0.22, 0.05);
-    [[1.25, 1.02, 0], [-1.25, -1.02, Math.PI]].forEach(([x, z, ry]) => {
+    // placed clear of the chips, the card and the betting boxes
+    [[2.42, 0.5, -0.55], [-0.72, -1.28, Math.PI]].forEach(([x, z, ry]) => {
       const m = new THREE.Mesh(plaqueGeo, [black, black, black, black, plaqueMat, plaqueMat]); // printed on both faces: never a blank back
       m.position.set(x, 0.115, z);
-      m.rotation.set(ry ? 0.22 : -0.22, ry, 0, "YXZ");
+      m.rotation.set(Math.abs(ry) > 3 ? 0.22 : -0.22, ry, 0, "YXZ");
       m.castShadow = true;
       scene.add(m);
     });
+
+    /* ---------- banknotes left on the felt: a fictional house note, never a real currency ---------- */
+    {
+      const noteTex = (() => {
+        const W = 1024, H = 440, c = mk(W, H), x = c.getContext("2d");
+        // paper: sage cream, a little uneven
+        const g = x.createLinearGradient(0, 0, W, H);
+        g.addColorStop(0, "#d9dccb"); g.addColorStop(0.5, "#cfd3bf"); g.addColorStop(1, "#c5caB4".toLowerCase());
+        x.fillStyle = g; x.fillRect(0, 0, W, H);
+        const ink = "rgba(38,62,52,", inkS = (a) => ink + a + ")";
+        // guilloché: rosettes of fine curves
+        x.lineWidth = 1;
+        for (let k = 0; k < 70; k++) {
+          x.strokeStyle = inkS(0.12);
+          x.beginPath();
+          for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.02) {
+            const r = 120 + 22 * Math.sin(7 * t + k * 0.09);
+            const px = W * 0.5 + Math.cos(t) * r * 1.9, py = H * 0.5 + Math.sin(t) * r * 0.9;
+            t === 0 ? x.moveTo(px, py) : x.lineTo(px, py);
+          }
+          x.stroke();
+        }
+        // borders
+        x.strokeStyle = inkS(0.85); x.lineWidth = 6; x.strokeRect(18, 18, W - 36, H - 36);
+        x.lineWidth = 2; x.strokeRect(32, 32, W - 64, H - 64);
+        for (let i = 0; i < 120; i++) { x.fillStyle = inkS(0.5); x.fillRect(40 + i * 7.9, 40, 3, 10); x.fillRect(40 + i * 7.9, H - 50, 3, 10); }
+        // the centre medallion: a die instead of a portrait
+        x.fillStyle = "rgba(225,228,212,0.95)"; x.beginPath(); x.ellipse(W / 2, H / 2, 120, 130, 0, 0, Math.PI * 2); x.fill();
+        x.strokeStyle = inkS(0.8); x.lineWidth = 3; x.stroke();
+        x.lineWidth = 2; x.strokeRect(W / 2 - 50, H / 2 - 50, 100, 100);
+        x.fillStyle = inkS(0.85);
+        [[-25, -25], [25, -25], [0, 0], [-25, 25], [25, 25]].forEach(([dx, dy]) => { x.beginPath(); x.arc(W / 2 + dx, H / 2 + dy, 8, 0, Math.PI * 2); x.fill(); });
+        // denominations and text
+        x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = inkS(0.9);
+        x.font = `700 92px ${SANS}`;
+        x.fillText("100", 130, 110); x.fillText("100", W - 130, H - 110);
+        x.font = `600 70px ${SANS}`; x.fillStyle = inkS(0.6);
+        x.fillText("100", W - 140, 110); x.fillText("100", 140, H - 110);
+        x.fillStyle = inkS(0.9);
+        x.font = `600 30px ${MONO}`;
+        if ("letterSpacing" in x) x.letterSpacing = "8px";
+        x.fillText("WOBLO RESERVE", W / 2, 70);
+        x.font = `500 22px ${MONO}`;
+        x.fillText(T("CIEN FICHAS · SIN VALOR LEGAL", "ONE HUNDRED CHIPS · NOT LEGAL TENDER"), W / 2, H - 68);
+        return canvasTex(c);
+      })();
+      const paper = new THREE.MeshStandardMaterial({ map: noteTex, roughness: 0.88, side: THREE.DoubleSide, envMapIntensity: 0.15 });
+      // a little curl: paper never lies perfectly flat
+      const noteGeo = (() => {
+        const g = new THREE.PlaneGeometry(0.86, 0.37, 24, 4), p = g.attributes.position;
+        for (let i = 0; i < p.count; i++) { const u = p.getX(i) / 0.43; p.setZ(i, (u * u) * 0.012 + Math.sin(u * 2.2) * 0.004); }
+        g.computeVertexNormals();
+        return g;
+      })();
+      // [x, z, yaw, height] — a fanned pile at the left end, one stray behind the die
+      const notes = [
+        // all clear of the chips, the card, the plaques and where the die lands
+        [-2.47, 0.08, 0.25, 0.004], [-2.41, 0.13, 0.55, 0.008], [-2.35, 0.17, 0.88, 0.012],
+        [1.05, -1.33, 0.25, 0.004],
+      ];
+      notes.forEach(([nx, nz, yaw, y]) => {
+        const m = new THREE.Mesh(noteGeo, paper);
+        m.rotation.set(-Math.PI / 2, 0, yaw);
+        m.position.set(nx, y, nz);
+        m.castShadow = m.receiveShadow = true;
+        scene.add(m);
+      });
+    }
 
     /* ---------- the die: black lacquer, gold pips sunk into each face ---------- */
     const DS = 0.3; // edge length
