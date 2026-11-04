@@ -23,7 +23,7 @@ window.PORTFOLIO = {
   role: bi("Diseño de producto / 3D / Sistemas visuales", "Product Design / 3D / Visual Systems"),
   tagline: bi("Seis caras. Seis entradas.", "Six faces. Six ways in."),
   availability: bi("Disponible todos los días, de 10:00 a 22:00", "Available every day, 10:00 to 22:00 (CET)"),
-  calendly: "https://calendly.com/stoicmacy",          // reservar una llamada
+  calendly: "https://calendly.com/stoicmacy/llamada-30-min", // reservar una llamada de 30 min (Google Meet)
   email: "woblo.original@gmail.com",
   linkedin: "https://www.linkedin.com/in/carlos-infanzon-civantos",
   contactTitle: bi("Construyamos algo\nque merezca recordarse.", "Let’s build something\nworth remembering."),
