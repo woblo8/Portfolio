@@ -1051,50 +1051,48 @@
   pivot.visible = false;
 
   /* ============================================================
-     THE HAND — a sculptural hand (matte white ceramic) enters from
-     the right holding the die, settles, and tosses it.
-     Built procedurally with anatomical proportions (in cm); the grip
-     is solved so every finger rests on the die, never through it.
+     THE HAND — a skeletal hand in solid ivory bone, lit like the
+     die. It sweeps in from the right holding the die, winds up,
+     tosses it and flicks away. Built procedurally (anatomy in cm);
+     the grip is solved so every bone rests on the die.
      ============================================================ */
-  const CM = 0.32; // hand units: centimetres → world (a large hand)
+  const CM = 0.34; // hand units: centimetres → world
   const HAND_MAT = new THREE.MeshPhysicalMaterial({
-    color: 0xdcd8d0,
-    roughness: 0.52,
+    color: 0xe6dfd2,
+    roughness: 0.58,
     metalness: 0,
-    clearcoat: 0.2,
-    clearcoatRoughness: 0.45,
-    sheen: 0.5,
-    sheenRoughness: 0.7,
-    sheenColor: new THREE.Color(0xffffff),
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.5,
+    sheen: 0.4,
+    sheenRoughness: 0.8,
+    sheenColor: new THREE.Color(0xfff8ec),
   });
 
-  // a tapered capsule along -y: radius r0 at the joint, r1 at the far end
-  const segGeoCache = {};
-  function segGeo(L, r0, r1) {
-    const key = `${L.toFixed(3)}_${r0.toFixed(3)}_${r1.toFixed(3)}`;
-    if (segGeoCache[key]) return segGeoCache[key];
+  // a long bone along -y: slender shaft, flared ends (condyles), rounded caps
+  const boneGeoCache = {};
+  function boneGeo(L, r) {
+    const key = `${L.toFixed(3)}_${r.toFixed(3)}`;
+    if (boneGeoCache[key]) return boneGeoCache[key];
     const pts = [];
-    const cap = 7;
-    for (let i = 0; i <= cap; i++) {
-      const a = (Math.PI / 2) * (1 - i / cap);
-      pts.push(new THREE.Vector2(Math.cos(a) * r0, Math.sin(a) * r0));
+    pts.push(new THREE.Vector2(0, r * 0.62));
+    pts.push(new THREE.Vector2(r * 0.62, r * 0.48));
+    pts.push(new THREE.Vector2(r * 0.95, r * 0.12));
+    const N = 18;
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1), k = Math.abs(2 * t - 1);
+      pts.push(new THREE.Vector2(r * (0.5 + 0.5 * Math.pow(k, 2.6)), -t * L));
     }
-    for (let i = 1; i < 6; i++) {
-      const t = i / 6;
-      pts.push(new THREE.Vector2(lerp(r0, r1, t), -L * t));
-    }
-    for (let i = 0; i <= cap; i++) {
-      const a = (Math.PI / 2) * (i / cap);
-      pts.push(new THREE.Vector2(Math.cos(a) * r1, -L - Math.sin(a) * r1));
-    }
-    pts.reverse(); // bottom → top, so the normals face outwards
-    const g = new THREE.LatheGeometry(pts, 20);
+    pts.push(new THREE.Vector2(r * 0.9, -L - r * 0.12));
+    pts.push(new THREE.Vector2(r * 0.6, -L - r * 0.46));
+    pts.push(new THREE.Vector2(0, -L - r * 0.6));
+    pts.reverse(); // bottom → top: outward normals
+    const g = new THREE.LatheGeometry(pts, 18);
     g.computeVertexNormals();
-    return (segGeoCache[key] = g);
+    return (boneGeoCache[key] = g);
   }
-  function addSeg(parent, L, r0, r1, flat = 0.86) {
-    const m = new THREE.Mesh(segGeo(L * CM, r0 * CM, r1 * CM), HAND_MAT);
-    m.scale.z = flat; // fingers are a little flatter than they are wide
+  function addBone(parent, L, r) {
+    const m = new THREE.Mesh(boneGeo(L * CM, r * CM), HAND_MAT);
+    m.scale.z = 0.88;
     m.castShadow = true;
     parent.add(m);
     return m;
@@ -1106,33 +1104,33 @@
   const palm = new THREE.Group(); // wrist origin; fingers point down (-y), palm faces +z
   hand.add(palm);
 
-  // palm: a soft slab
-  const palmMesh = new THREE.Mesh(roundedBox(1, 0.34, 6, 2), HAND_MAT);
-  palmMesh.scale.set(8.4 * CM, 9.2 * CM, 2.7 * CM);
-  palmMesh.position.set(0.35 * CM, -5.3 * CM, 0);
-  palmMesh.castShadow = true;
-  palm.add(palmMesh);
-  // wrist and forearm, running up and out of frame
-  const wrist = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), HAND_MAT);
-  wrist.scale.set(3.4 * CM, 2.4 * CM, 1.9 * CM);
-  wrist.position.set(0.3 * CM, -0.6 * CM, 0);
-  wrist.castShadow = true;
-  palm.add(wrist);
-  const forearm = new THREE.Group();
-  forearm.rotation.z = Math.PI; // grows towards +y
-  forearm.position.set(0.3 * CM, -0.4 * CM, 0);
-  palm.add(forearm);
-  addSeg(forearm, 26, 2.9, 3.6, 0.72);
+  // forearm: radius & ulna, running up and out of frame
+  [[-1.0, 1.15, 0.0], [1.3, 0.9, -0.15]].forEach(([x, r, tilt]) => {
+    const g = new THREE.Group();
+    g.position.set(x * CM, 22 * CM, 0);
+    g.rotation.z = tilt * 0.1;
+    palm.add(g);
+    addBone(g, 21.5, r);
+  });
+  // carpals: eight small rounded bones in two rows
+  [[-1.6, -0.5, 0.75], [-0.45, -0.4, 0.7], [0.7, -0.45, 0.68], [1.75, -0.6, 0.6],
+   [-1.8, -1.9, 0.72], [-0.6, -2.05, 0.74], [0.6, -2.05, 0.72], [1.75, -1.85, 0.66]].forEach(([x, y, r]) => {
+    const c = new THREE.Mesh(new THREE.SphereGeometry(r * CM, 18, 14), HAND_MAT);
+    c.position.set(x * CM, y * CM, 0);
+    c.scale.set(1, 0.82, 0.85);
+    c.castShadow = true;
+    palm.add(c);
+  });
 
-  // digits: base on the palm (cm), outward splay (rad), lengths (meta, prox, mid, dist), radii
+  // digits: base on the carpus (cm), outward splay (rad), lengths (meta, prox, mid, dist), bone radii
   const DIGITS = [
-    { name: "thumb", base: [-2.6, -2.6], splay: -0.62, L: [4.4, 3.2, 2.5], R: [1.25, 1.02, 0.94, 0.86] },
-    { name: "index", base: [-2.2, -9.4], splay: -0.07, L: [0.01, 4.1, 2.4, 2.0], R: [0, 0.96, 0.86, 0.8, 0.72] },
-    { name: "middle", base: [-0.2, -9.7], splay: 0.0, L: [0.01, 4.6, 2.8, 2.1], R: [0, 1.0, 0.9, 0.82, 0.74] },
-    { name: "ring", base: [1.8, -9.5], splay: 0.07, L: [0.01, 4.3, 2.7, 2.0], R: [0, 0.94, 0.84, 0.77, 0.7] },
-    { name: "little", base: [3.6, -9.0], splay: 0.17, L: [0.01, 3.4, 2.0, 1.8], R: [0, 0.82, 0.74, 0.68, 0.62] },
+    { name: "thumb", base: [-2.0, -2.5], splay: -0.6, L: [4.6, 3.2, 2.5], R: [0.62, 0.55, 0.48] },
+    { name: "index", base: [-1.2, -3.0], splay: -0.1, L: [6.8, 4.1, 2.4, 1.9], R: [0.56, 0.5, 0.44, 0.38] },
+    { name: "middle", base: [0.05, -3.1], splay: 0.0, L: [6.5, 4.6, 2.8, 2.0], R: [0.58, 0.52, 0.46, 0.39] },
+    { name: "ring", base: [1.15, -3.0], splay: 0.1, L: [5.9, 4.3, 2.7, 1.9], R: [0.54, 0.49, 0.43, 0.37] },
+    { name: "little", base: [2.1, -2.8], splay: 0.22, L: [5.3, 3.4, 2.0, 1.8], R: [0.48, 0.44, 0.38, 0.33] },
   ];
-  const GAP = 0.15;
+  const GAP = 0.32;
   DIGITS.forEach((d) => {
     const root = new THREE.Group();
     root.position.set(d.base[0] * CM, d.base[1] * CM, 0);
@@ -1145,15 +1143,15 @@
     let parent = root;
     d.L.forEach((L, k) => {
       const j = new THREE.Group();
-      if (k > 0) j.position.y = -(d.L[k - 1] + (d.L[k - 1] > 0.1 ? GAP : 0)) * CM;
+      if (k > 0) j.position.y = -(d.L[k - 1] + GAP) * CM;
       parent.add(j);
-      if (L > 0.1) addSeg(j, L, d.R[k], d.R[k + 1]);
+      addBone(j, L, d.R[k]);
       d.joints.push(j);
       parent = j;
     });
   });
-  // the radius used by the grip solver for each segment
-  DIGITS.forEach((d) => (d.Rsolve = d.L.map((_, k) => Math.max(d.R[k], d.R[k + 1] || 0))));
+  // the radius used by the grip solver for each bone
+  DIGITS.forEach((d) => (d.Rsolve = d.R.slice()));
 
   // curl: 0 = open hand, 1 = gripping the die (per joint angles, in radians).
   // GRIP is solved at start (solveGrip): each joint curls until the finger touches the die.
@@ -1193,7 +1191,7 @@
   // its back face resting along the proximal phalanges
   const DIE_HALF_CM = SIZE / 2 / CM;
   const dieAnchor = new THREE.Object3D();
-  dieAnchor.position.set(0.2 * CM, -6.6 * CM, (1.35 + DIE_HALF_CM + 0.05) * CM);
+  dieAnchor.position.set(0.3 * CM, -7.4 * CM, (0.75 + DIE_HALF_CM) * CM);
   palm.add(dieAnchor);
   const HOLD_LOCAL = new Q().setFromEuler(new THREE.Euler(0, 0, 0.08));
 
@@ -1242,57 +1240,58 @@
   const XR_FREEZE = XR_PARAM != null ? parseFloat(XR_PARAM) : null;
   if (XR_PARAM != null) window.__xr = { hand, pivot, camera, THREE };
   const HAND_REST = new V3();
-  const HOLD_AT = new V3(1.0, 0.45, 0.2);           // held in the air, in front of the backdrop
+  const HOLD_AT = new V3(0.9, 0.55, 0.2);           // held in the air, in front of the backdrop
   const HAND_BASE = new THREE.Euler(Math.PI / 2 - 0.08, 0, -Math.PI / 2); // fingers point left, palm faces the floor
   const qBase = new Q(), qMove = new Q(), Z_AXIS = new V3(0, 0, 1);
 
   // Choreography (seconds). Offsets are world units from the resting hold pose.
   // A smooth Hermite spline runs through the keys, so the motion never stops dead.
   const KEYS = [
-    { t: 0.0, v: [6.6, 1.1, -0.2, 0.1] },     // off-frame right
-    { t: 0.95, v: [0.14, 0.05, 0.0, 0.02] },  // glides in, slowing down
-    { t: 1.25, v: [0, 0, 0, 0] },             // settles: a beat to see it
-    { t: 1.46, v: [0.38, 0.24, -0.05, 0.09] }, // backswing: lifts, wrist cocks
-    { t: 1.74, v: [-1.15, -0.22, 0.2, -0.15] }, // the toss
-    { t: 1.98, v: [-0.85, -0.02, 0.1, -0.08] }, // follow-through
-    { t: 2.85, v: [7.6, 1.5, -0.2, 0.12] },   // withdraws to the right
+    // one continuous gesture, small wrist angles: a rigid skeleton, not a rubber one
+    { t: 0.0, v: [5.8, 1.2, -0.2, 0.12, 0.08, -0.05] },   // off-frame right
+    { t: 0.66, v: [0.05, 0.02, 0.0, 0.01, 0.0, 0.0] },    // glides in and decelerates
+    { t: 0.82, v: [0, 0, 0, 0, 0, 0] },                   // a beat
+    { t: 0.97, v: [0.28, 0.18, -0.05, 0.08, -0.04, 0.02] }, // short wind-up
+    { t: 1.14, v: [-1.05, -0.16, 0.14, -0.1, 0.05, -0.02] }, // the toss
+    { t: 1.3, v: [-0.92, 0.0, 0.08, -0.06, 0.02, -0.01] }, // follow-through, no bounce
+    { t: 2.0, v: [6.2, 1.4, -0.2, 0.1, 0.06, 0.03] },     // withdraws to the right
   ];
-  const XR_END = 2.95;
-  const RELEASE_AT = 1.69;
-  const OPEN_AT = 1.62;
+  const CH = 6;
+  const XR_END = 2.1;
+  const RELEASE_AT = 1.08;
+  const OPEN_AT = 1.03;
 
   function sampleKeys(t, out) {
     const n = KEYS.length;
-    if (t <= KEYS[0].t) { for (let c = 0; c < 4; c++) out[c] = KEYS[0].v[c]; return out; }
-    if (t >= KEYS[n - 1].t) { for (let c = 0; c < 4; c++) out[c] = KEYS[n - 1].v[c]; return out; }
+    if (t <= KEYS[0].t) { for (let c = 0; c < CH; c++) out[c] = KEYS[0].v[c]; return out; }
+    if (t >= KEYS[n - 1].t) { for (let c = 0; c < CH; c++) out[c] = KEYS[n - 1].v[c]; return out; }
     let i = 0;
     while (t > KEYS[i + 1].t) i++;
     const k0 = KEYS[i], k1 = KEYS[i + 1], h = k1.t - k0.t, u = (t - k0.t) / h;
     const h00 = 2 * u ** 3 - 3 * u ** 2 + 1, h10 = u ** 3 - 2 * u ** 2 + u, h01 = -2 * u ** 3 + 3 * u ** 2, h11 = u ** 3 - u ** 2;
     const tan = (j, c) => (j <= 0 || j >= n - 1 ? 0 : (KEYS[j + 1].v[c] - KEYS[j - 1].v[c]) / (KEYS[j + 1].t - KEYS[j - 1].t));
-    for (let c = 0; c < 4; c++) {
+    for (let c = 0; c < CH; c++) {
       out[c] = h00 * k0.v[c] + h10 * h * tan(i, c) + h01 * k1.v[c] + h11 * h * tan(i + 1, c);
     }
     return out;
   }
 
-  const kv = [0, 0, 0, 0];
+  const kv = new Array(CH).fill(0);
+  const eMove = new THREE.Euler();
   function placeHand(t) {
     sampleKeys(t, kv);
-    const sway = 1 - smooth(OPEN_AT, OPEN_AT + 0.5, t);
-    hand.position.set(
-      HAND_REST.x + kv[0],
-      HAND_REST.y + kv[1] + Math.sin(t * 1.35) * 0.035 * sway,
-      HAND_REST.z + kv[2]
-    );
+    hand.position.set(HAND_REST.x + kv[0], HAND_REST.y + kv[1], HAND_REST.z + kv[2]);
     qBase.setFromEuler(HAND_BASE);
-    qMove.setFromAxisAngle(Z_AXIS, 0.24 + kv[3] + Math.sin(t * 0.9) * 0.012 * sway);
+    eMove.set(kv[4], kv[5], 0.24 + kv[3], "XYZ");
+    qMove.setFromEuler(eMove);
     hand.quaternion.copy(qMove).multiply(qBase);
-    // fingers open one after another, then relax
+    // fingers stay locked on the die, then open crisply one after another
+    // (a skeleton has no wobble), and settle half-closed as the hand leaves
+    const release = (di) => smooth(OPEN_AT + di * 0.012, OPEN_AT + 0.11 + di * 0.012, t);
     poseHand((di) => {
-      const o = smooth(OPEN_AT + di * 0.02, OPEN_AT + 0.22 + di * 0.02, t);
-      return lerp(1, 0.12, o) * (1 - smooth(2.1, 2.7, t) * 0.5);
-    }, smooth(OPEN_AT, OPEN_AT + 0.4, t));
+      const opened = lerp(0.02, 0.32, smooth(1.35, XR_END, t));
+      return lerp(1, opened, release(di));
+    }, smooth(OPEN_AT, OPEN_AT + 0.12, t) * 0.5 * (1 - smooth(1.4, XR_END, t)));
     hand.updateMatrixWorld(true);
   }
 
@@ -1323,10 +1322,10 @@
     const a = dieAnchor.getWorldPosition(new V3());
     placeHand(t);
     const b = dieAnchor.getWorldPosition(new V3());
-    const v = b.clone().sub(a).divideScalar(0.03).multiplyScalar(0.7);
-    v.y = Math.max(v.y, 0) * 0.4 + 1.6; // a soft arc out of the fingers
+    const v = b.clone().sub(a).divideScalar(0.03).multiplyScalar(0.62);
+    v.y = Math.max(v.y, 0) * 0.4 + 2.0; // an arc out of the fingers
     v.z = clamp(v.z, -0.4, 0.4);
-    launch(b, v, new V3(rand(-1.2, 1.2), rand(-1.2, 1.2), rand(5, 7)));
+    launch(b, v, new V3(rand(-2, 2), rand(-2, 2), rand(7, 9)));
   }
 
   function updateXray(now) {
@@ -1346,6 +1345,14 @@
     }
   }
 
+  // first visit: the hand. Returning: straight to the object. ?intro forces the hand again.
+  const SEEN_KEY = "woblo:intro-seen";
+  const RETURNING = (() => {
+    const q = new URLSearchParams(location.search);
+    if (q.has("intro") || q.has("xray")) return false;
+    try { return localStorage.getItem(SEEN_KEY) === "1"; } catch (e) { return false; }
+  })();
+
   function introThrow() {
     if (reduce) {
       // no theatre: the die simply drops in
@@ -1356,19 +1363,63 @@
       body.classList.add("name-landed", "ui-in", "intro-done");
       return;
     }
+    // returning visitors: no hand — the object is already there, it rises and presents 01
+    if (RETURNING) {
+      pivot.visible = true;
+      S.from.setFromEuler(new THREE.Euler(-0.5, 0.9, 0.25));
+      S.q.copy(S.from);
+      S.to.copy(FACES[PROJECT_FACE[0]].q);
+      S.target = 0;
+      S.p0.set(0, -0.7, 0);
+      S.mode = "present";
+      S.t0 = performance.now();
+      S.dur = 1500;
+      S.shown = false;
+      introDone = true;
+      body.classList.add("name-landed", "ui-in", "intro-done");
+      return;
+    }
+    try { localStorage.setItem(SEEN_KEY, "1"); } catch (e) { /* private mode: fine */ }
     startXray();
   }
 
   function runLoader(rawDt) {
-    const target = clamp((performance.now() - loadStart) / 1500, 0, fontsReady ? 1 : 0.92);
-    loadShown = Math.min(target, loadShown + rawDt * 1.6);
+    const target = clamp((performance.now() - loadStart) / (RETURNING ? 700 : 1500), 0, fontsReady ? 1 : 0.92);
+    loadShown = Math.min(target, loadShown + rawDt * (RETURNING ? 2.8 : 1.6));
     loaderCount.textContent = String(Math.round(loadShown * 100)).padStart(3, "0");
     loaderLine.style.transform = `scaleX(${loadShown})`;
     if (loadShown >= 1) {
       S.mode = "waiting";
       loader.classList.add("done");
-      setTimeout(introThrow, reduce ? 0 : 900);
+      setTimeout(introThrow, reduce ? 0 : RETURNING ? 450 : 900);
     }
+  }
+
+  /* ---------- cursor ---------- */
+  const cursorEl = $("#cursor");
+  const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const CUR = { x: -100, y: -100, tx: -100, ty: -100, s: 0.1, link: false, seen: false };
+  if (fine) {
+    document.documentElement.classList.add("has-cursor");
+    addEventListener("pointermove", (e) => {
+      CUR.tx = e.clientX; CUR.ty = e.clientY;
+      if (!CUR.seen) { CUR.x = CUR.tx; CUR.y = CUR.ty; CUR.seen = true; }
+      CUR.link = !!(e.target.closest && e.target.closest("a, button, .shot.has-media"));
+    }, { passive: true });
+    document.addEventListener("pointerleave", () => cursorEl.classList.add("is-hidden"));
+    document.addEventListener("pointerenter", () => cursorEl.classList.remove("is-hidden"));
+  }
+  function updateCursor(dt) {
+    if (!fine) return;
+    const k = 1 - Math.exp(-22 * dt);
+    CUR.x += (CUR.tx - CUR.x) * k;
+    CUR.y += (CUR.ty - CUR.y) * k;
+    const overDie = (hovering || drag) && !overlay;
+    const target = drag ? 0.5 : overDie ? 1 : CUR.link ? 0.42 : 0.1;
+    CUR.s = damp(CUR.s, target, 14, dt);
+    cursorEl.classList.toggle("is-die", overDie && !drag);
+    cursorEl.classList.toggle("is-link", !overDie && CUR.link);
+    cursorEl.style.transform = `translate3d(${CUR.x.toFixed(1)}px, ${CUR.y.toFixed(1)}px, 0) scale(${CUR.s.toFixed(3)})`;
   }
 
   /* ---------- loop ---------- */
@@ -1380,6 +1431,7 @@
     const t = clamp((now - S.t0) / S.dur, 0, 1);
 
     updateXray(now);
+    updateCursor(rawDt > 0 ? Math.min(rawDt, 0.05) : 0.016);
 
     switch (S.mode) {
       case "loading":
