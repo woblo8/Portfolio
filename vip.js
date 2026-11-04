@@ -47,13 +47,9 @@
           <span class="vt3-hint">${T("Arrastra para rodear la mesa · Lanza el dado o elige una casilla", "Drag to walk around the table · Roll the die or pick a box")}</span>
           <a class="vt-cta" href="mailto:${esc(site.email)}?subject=${subject}">${T("Hablemos", "Let’s talk")} <span>→</span></a>
         </footer>
-        <div class="vt3-note" role="dialog" aria-hidden="true">
-          <div class="vt3-note-card">
-            <small>${T("Para", "For")} ${esc(name)}</small>
-            <p>${esc(note)}</p>
-            <em>— Carlos</em>
-            <button type="button" class="vt3-note-close">${T("Cerrar", "Close")} ✕</button>
-          </div>
+        <div class="vt3-note" role="dialog" aria-hidden="true" aria-label="${T("Una nota para usted", "A note for you")}">
+          <p class="vt3-sr">${T("Para", "For")} ${esc(name)}. ${esc(note)} — Carlos</p>
+          <button type="button" class="vt3-note-close">${T("Guardar en el sobre", "Back in the envelope")} ✕</button>
         </div>
         <div hidden>${order.map((i) => `<button data-next="${i}"></button>`).join("")}</div>
       </section>`;
@@ -113,13 +109,7 @@
         a -= (w + sp) / r0;
       });
     }
-    // monogram in the centre
-    const words = ctx.name.split(/\s+/).filter(Boolean);
-    const ini = (words.length > 1 ? words.map((w) => w[0]).join("").slice(0, 3) : (words[0] || "W")[0]).toUpperCase();
-    x.lineWidth = 3;
-    x.beginPath(); x.arc(W / 2, H / 2 - 60, 118, 0, Math.PI * 2); x.stroke();
-    x.font = `600 ${ini.length > 1 ? 120 : 150}px ${SANS}`;
-    x.fillText(ini, W / 2, H / 2 - 52);
+    // (no monogram in the centre any more: the envelope lies there)
     // the betting boxes: one per project
     boxes.forEach((b) => {
       x.lineWidth = 4;
@@ -160,6 +150,140 @@
     for (let k = 0; k < 8; k++) x.fillRect(k * 64 + 20, 0, 24, 32);
     return c;
   }
+  /* ---------- the envelope: cotton paper, a gold liner, a red wax seal ----------
+     Drawn once on canvases; the same drawings dress the envelope on the table
+     and the one that opens on screen. */
+  // a pseudo-random that repeats: the seal looks the same every visit
+  const prng = (seed) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  function paperCanvas(w, h, base = [236, 229, 214]) {
+    const c = mk(w, h), x = c.getContext("2d"), r = prng(11);
+    x.fillStyle = `rgb(${base})`; x.fillRect(0, 0, w, h);
+    const img = x.getImageData(0, 0, w, h), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const p = i / 4, px = p % w, py = (p / w) | 0;
+      // cotton: a soft mottle, and faint laid lines every few pixels
+      const n = (r() - 0.5) * 10 + Math.sin(px * 0.045 + Math.sin(py * 0.02) * 3) * 2.2 + (py % 6 === 0 ? -2.5 : 0);
+      d[i] += n; d[i + 1] += n; d[i + 2] += n * 0.9;
+    }
+    x.putImageData(img, 0, 0);
+    for (let k = 0; k < (w * h) / 900; k++) { // a few longer fibres
+      x.strokeStyle = `rgba(150,130,100,${0.05 + r() * 0.06})`; x.lineWidth = 0.6;
+      const px = r() * w, py = r() * h, a = r() * Math.PI;
+      x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * 9, py + Math.sin(a) * 9); x.stroke();
+    }
+    return c;
+  }
+  function waxSeal(S = 512, letter = "W") {
+    const c = mk(S, S), x = c.getContext("2d"), r = prng(7), cx = S / 2, cy = S / 2, R = S * 0.4;
+    // the poured wax: a circle that spread unevenly before it set
+    const blob = () => {
+      x.beginPath();
+      for (let k = 0; k <= 96; k++) {
+        const a = (k / 96) * Math.PI * 2;
+        const rr = R * (1 + Math.sin(a * 5 + 1.3) * 0.025 + Math.sin(a * 11 + 0.4) * 0.018 + Math.sin(a * 3) * 0.03 + (k % 13 === 0 ? 0.035 : 0));
+        k ? x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr) : x.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+      }
+      x.closePath();
+    };
+    x.save(); x.shadowColor = "rgba(0,0,0,0.45)"; x.shadowBlur = S * 0.03; x.shadowOffsetY = S * 0.012;
+    blob(); x.fillStyle = "#7d0a10"; x.fill(); x.restore();
+    blob(); x.save(); x.clip();
+    // body: deep red, lit from the top left like the lamp over the table
+    const g = x.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.1, cx, cy, R * 1.15);
+    g.addColorStop(0, "#c8222b"); g.addColorStop(0.55, "#9c1219"); g.addColorStop(1, "#5a050a");
+    x.fillStyle = g; x.fillRect(0, 0, S, S);
+    // the raised rim the stamp pushed out
+    x.lineWidth = R * 0.12; x.strokeStyle = "rgba(255,120,120,0.16)";
+    x.beginPath(); x.arc(cx - 2, cy - 2, R * 0.82, 0, Math.PI * 2); x.stroke();
+    x.strokeStyle = "rgba(40,0,0,0.35)"; x.lineWidth = R * 0.05;
+    x.beginPath(); x.arc(cx + 2, cy + 3, R * 0.74, 0, Math.PI * 2); x.stroke();
+    // the stamp: a sunk disc, a fine border of beads, the letter in relief
+    const disc = x.createRadialGradient(cx + R * 0.15, cy + R * 0.2, R * 0.05, cx, cy, R * 0.72);
+    disc.addColorStop(0, "#a3141b"); disc.addColorStop(1, "#6e070d");
+    x.fillStyle = disc; x.beginPath(); x.arc(cx, cy, R * 0.7, 0, Math.PI * 2); x.fill();
+    for (let k = 0; k < 48; k++) {
+      const a = (k / 48) * Math.PI * 2, bx = cx + Math.cos(a) * R * 0.6, by = cy + Math.sin(a) * R * 0.6;
+      x.fillStyle = "rgba(255,150,150,0.35)"; x.beginPath(); x.arc(bx - 1, by - 1, R * 0.022, 0, Math.PI * 2); x.fill();
+      x.fillStyle = "rgba(50,0,0,0.45)"; x.beginPath(); x.arc(bx + 1, by + 1, R * 0.02, 0, Math.PI * 2); x.fill();
+    }
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.font = `600 ${R * 0.78}px "Times New Roman", Georgia, serif`;
+    x.fillStyle = "rgba(40,0,0,0.55)"; x.fillText(letter, cx + R * 0.035, cy + R * 0.05);   // shadow side
+    x.fillStyle = "rgba(255,170,170,0.55)"; x.fillText(letter, cx - R * 0.03, cy - R * 0.02);  // lit side
+    x.fillStyle = "#a8161e"; x.fillText(letter, cx, cy + R * 0.015);
+    // wet-looking highlights
+    [[-0.42, -0.5, 0.2, 0.08], [0.3, -0.62, 0.08, 0.04], [-0.62, 0.15, 0.06, 0.12]].forEach(([u, v, a, b]) => {
+      const hg = x.createRadialGradient(cx + u * R, cy + v * R, 0, cx + u * R, cy + v * R, R * a * 2);
+      hg.addColorStop(0, "rgba(255,230,230,0.55)"); hg.addColorStop(1, "rgba(255,230,230,0)");
+      x.fillStyle = hg; x.beginPath(); x.ellipse(cx + u * R, cy + v * R, R * a * 2, R * b * 2, -0.5, 0, Math.PI * 2); x.fill();
+    });
+    for (let k = 0; k < 600; k++) { x.fillStyle = `rgba(${r() < 0.5 ? "255,200,200" : "40,0,0"},0.06)`; x.fillRect(r() * S, r() * S, 2, 2); }
+    x.restore();
+    return c;
+  }
+  // the top of the envelope's body: the pocket's seams, and the dark liner in the V
+  // that only shows once the flap is open. flapK = flap length / envelope depth
+  function envelopeBody(w, h, flapK) {
+    const c = mk(w, h), x = c.getContext("2d");
+    x.drawImage(paperCanvas(w, h), 0, 0);
+    const tipY = h * flapK;
+    // the opening: liner seen inside
+    x.save(); x.beginPath(); x.moveTo(0, 0); x.lineTo(w, 0); x.lineTo(w / 2, tipY * 0.92); x.closePath(); x.clip();
+    x.drawImage(linerCanvas(w, h), 0, 0);
+    const sh = x.createLinearGradient(0, 0, 0, tipY); sh.addColorStop(0, "rgba(0,0,0,0.55)"); sh.addColorStop(1, "rgba(0,0,0,0)");
+    x.fillStyle = sh; x.fillRect(0, 0, w, tipY);
+    x.restore();
+    // the side flaps' and bottom flap's seams: paper over paper
+    x.save();
+    x.shadowColor = "rgba(70,52,30,0.45)"; x.shadowBlur = w * 0.01; x.shadowOffsetY = -w * 0.002;
+    x.strokeStyle = "rgba(120,96,62,0.55)"; x.lineWidth = 2.5;
+    x.beginPath(); x.moveTo(0, 0); x.lineTo(w * 0.47, h * 0.56); x.lineTo(w * 0.53, h * 0.56); x.lineTo(w, 0); x.stroke();
+    x.beginPath(); x.moveTo(0, h); x.lineTo(w * 0.47, h * 0.56); x.moveTo(w, h); x.lineTo(w * 0.53, h * 0.56); x.stroke();
+    x.restore();
+    x.strokeStyle = "rgba(190,150,80,0.85)"; x.lineWidth = Math.max(3, w * 0.005); x.strokeRect(x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth);
+    return c;
+  }
+  // the card inside: black lacquer, gilt border, the note set like an invitation
+  function noteCardCanvas(w, h, name, note) {
+    const c = mk(w, h), x = c.getContext("2d");
+    const g = x.createRadialGradient(w / 2, 0, 0, w / 2, h * 0.2, w * 0.8);
+    g.addColorStop(0, "#1c1913"); g.addColorStop(0.55, "#0c0c0d"); g.addColorStop(1, "#070708");
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.strokeStyle = "rgba(216,181,111,0.05)"; x.lineWidth = 1.5;
+    for (let k = -h; k < w; k += 22) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + h, h); x.stroke(); }
+    x.strokeStyle = "rgba(216,181,111,0.9)"; x.lineWidth = 5; x.strokeRect(40, 40, w - 80, h - 80);
+    x.strokeStyle = "rgba(216,181,111,0.35)"; x.lineWidth = 2; x.strokeRect(62, 62, w - 124, h - 124);
+    const M = w * 0.09;
+    x.textBaseline = "alphabetic";
+    x.fillStyle = "#d8b56f"; x.font = `500 ${Math.round(w * 0.019)}px ${MONO}`;
+    if ("letterSpacing" in x) x.letterSpacing = `${Math.round(w * 0.006)}px`;
+    x.fillText(`${T("PARA", "FOR")} ${name.toUpperCase()}`, M, h * 0.2);
+    if ("letterSpacing" in x) x.letterSpacing = "0px";
+    // the note, wrapped
+    const fs2 = Math.round(w * 0.036);
+    x.fillStyle = "#ecebe7"; x.font = `400 ${fs2}px ${SANS}`;
+    const words = note.split(" "), lines = []; let line = "";
+    words.forEach((wd) => { const t = line ? line + " " + wd : wd; if (x.measureText(t).width > w - M * 2) { lines.push(line); line = wd; } else line = t; });
+    if (line) lines.push(line);
+    const lh = fs2 * 1.42, y0 = h * 0.5 - ((lines.length - 1) * lh) / 2 + fs2 * 0.3;
+    lines.forEach((l, i) => x.fillText(l, M, y0 + i * lh));
+    x.fillStyle = "#f1d8a0"; x.font = `500 ${Math.round(w * 0.022)}px ${MONO}`;
+    if ("letterSpacing" in x) x.letterSpacing = `${Math.round(w * 0.004)}px`;
+    x.fillText("— Carlos", M, h * 0.86);
+    x.textAlign = "right"; x.fillStyle = "rgba(216,181,111,0.6)"; x.font = `500 ${Math.round(w * 0.015)}px ${MONO}`;
+    x.fillText("WOBLO.IO", w - M, h * 0.86);
+    if ("letterSpacing" in x) x.letterSpacing = "0px";
+    return c;
+  }
+  // the liner: black paper with a fine gold lattice, seen when the flap opens
+  function linerCanvas(w, h) {
+    const c = mk(w, h), x = c.getContext("2d");
+    x.fillStyle = "#0d0c0b"; x.fillRect(0, 0, w, h);
+    x.strokeStyle = "rgba(216,181,111,0.55)"; x.lineWidth = 1;
+    for (let k = -h; k < w; k += 14) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + h, h); x.stroke(); x.beginPath(); x.moveTo(k + h, 0); x.lineTo(k, h); x.stroke(); }
+    return c;
+  }
+
   function cardBack() {
     const c = mk(512, 736), x = c.getContext("2d");
     x.fillStyle = "#0b0b0c"; x.fillRect(0, 0, 512, 736);
@@ -699,23 +823,85 @@
     bet.castShadow = true;
     scene.add(bet);
 
-    // the face-down card
-    const cardMat = new THREE.MeshPhysicalMaterial({ map: canvasTex(cardBack()), roughness: 0.4, clearcoat: 0.4 });
-    const edge = new THREE.MeshStandardMaterial({ color: 0xb08d4e, metalness: 0.9, roughness: 0.35 }); // gilt edges
-    const card = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.004, 0.62), [edge, edge, cardMat, edge, edge, edge]);
-    card.position.set(0.15, 0.004, -0.95);
-    card.rotation.y = -0.32;
-    card.castShadow = card.receiveShadow = true;
+    // the note, in an envelope on the felt: a real object. Its flap turns on a hinge and
+    // the wax seal breaks in two. 0.88 × 0.58 at (0, −0.8): the largest that covers no
+    // lettering or line (the die now lands a little further forward to leave it room).
+    const ENV_W = 0.88, ENV_D = 0.58, ENV_T = 0.014, FLAP_L = ENV_D * 0.62, SEAL_R = 0.075;
+    const card = new THREE.Group(); // the envelope; called "card" by the picking, the label and the halo
+    card.position.set(0, 0, -0.8);
     scene.add(card);
+    const ivory = new THREE.Color(0xa49c8c); // ivory under a hot lamp, not white
+    const paperTex = canvasTex(paperCanvas(1024, 680));
+    const paperMat = (extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ map: paperTex, color: ivory, roughness: 0.86, envMapIntensity: 0.08 }, extra));
+    const bodyTop = paperMat({ map: canvasTex(envelopeBody(1408, 928, FLAP_L / ENV_D)) });
+    const envBody = new THREE.Mesh(new THREE.BoxGeometry(ENV_W, ENV_T, ENV_D), [paperMat(), paperMat(), bodyTop, paperMat(), paperMat(), paperMat()]);
+    envBody.position.y = ENV_T / 2 + 0.001;
+    envBody.castShadow = envBody.receiveShadow = true;
+    card.add(envBody);
+    // the flap, hinged on the far edge: cotton paper outside, black and gold liner inside
+    const flapPivot = new THREE.Group();
+    flapPivot.position.set(0, ENV_T + 0.0016, -ENV_D / 2);
+    card.add(flapPivot);
+    const flapShape = new THREE.Shape();
+    flapShape.moveTo(-ENV_W / 2, 0); flapShape.lineTo(ENV_W / 2, 0); flapShape.lineTo(0.04, FLAP_L - 0.022);
+    flapShape.quadraticCurveTo(0, FLAP_L + 0.012, -0.04, FLAP_L - 0.022); flapShape.closePath();
+    const flapGeo = new THREE.ShapeGeometry(flapShape, 16);
+    { const p = flapGeo.attributes.position, uv = flapGeo.attributes.uv;
+      for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / ENV_W + 0.5, 1 - p.getY(i) / ENV_D); }
+    // shape faces up after the turn below: paper is its back side, the liner its front
+    // its paper has a soft shadow along the two cut edges: it reads as a layer on top
+    const flapTex = (() => {
+      const w = 1408, h = 928, c = mk(w, h), x = c.getContext("2d");
+      x.drawImage(paperCanvas(w, h, [242, 236, 222]), 0, 0);
+      const tip = [w / 2, h * (FLAP_L / ENV_D)];
+      x.save(); x.strokeStyle = "rgba(90,70,40,0.5)"; x.lineWidth = 10; x.filter = "blur(6px)";
+      x.beginPath(); x.moveTo(0, 0); x.lineTo(tip[0], tip[1]); x.lineTo(w, 0); x.stroke(); x.restore();
+      x.strokeStyle = "rgba(255,255,255,0.6)"; x.lineWidth = 2;
+      x.beginPath(); x.moveTo(6, 0); x.lineTo(tip[0], tip[1] - 8); x.lineTo(w - 6, 0); x.stroke();
+      return canvasTex(c);
+    })();
+    const flapOut = new THREE.Mesh(flapGeo, paperMat({ side: THREE.BackSide, map: flapTex }));
+    const flapIn = new THREE.Mesh(flapGeo, new THREE.MeshStandardMaterial({ map: canvasTex(linerCanvas(704, 464)), roughness: 0.55, envMapIntensity: 0.2 }));
+    [flapOut, flapIn].forEach((m) => { m.rotation.x = Math.PI / 2; m.castShadow = true; m.receiveShadow = true; flapPivot.add(m); });
+    // the wax seal at the tip, poured across the edge: one half on the flap, one on the body
+    const waxTex = canvasTex(waxSeal(512));
+    const waxCap = new THREE.MeshPhysicalMaterial({ map: waxTex, bumpMap: waxTex, bumpScale: 0.45, transparent: true, alphaTest: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, envMapIntensity: 0.15, side: THREE.DoubleSide });
+    const waxSide = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0x6e0810).convertSRGBToLinear(), roughness: 0.4, clearcoat: 0.4, envMapIntensity: 0.12 });
+    const sealHalf = (towardViewer) => {
+      const g = new THREE.Group();
+      // the top: the drawing of the wax (its edge irregular) on a half-disc
+      const cap = new THREE.Mesh(new THREE.CircleGeometry(SEAL_R * 1.25, 48, towardViewer ? Math.PI : 0, Math.PI), waxCap);
+      cap.rotation.x = -Math.PI / 2; cap.position.y = 0.0072;
+      // its thickness: a half-cylinder of red, a little smaller than the poured edge
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(SEAL_R * 0.94, SEAL_R * 0.98, 0.007, 40, 1, false, towardViewer ? -Math.PI / 2 : Math.PI / 2, Math.PI), waxSide);
+      body.position.y = 0.0035;
+      // the broken face, where the two halves part
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(SEAL_R * 1.9, 0.007), waxSide);
+      face.position.y = 0.0035;
+      g.add(cap, body, face);
+      g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      return g;
+    };
+    const tipZ = -ENV_D / 2 + FLAP_L - 0.035;
+    const sealBody = sealHalf(true); sealBody.position.set(0, ENV_T + 0.0016, tipZ); card.add(sealBody);
+    const sealFlap = sealHalf(false); sealFlap.position.set(0, 0.0004, FLAP_L - 0.035); flapPivot.add(sealFlap);
+    // the card inside, with the note on it: a real texture, readable when it comes to you
+    const noteFace = new THREE.MeshStandardMaterial({ map: canvasTex(noteCardCanvas(2048, 1340, ctx.name, ctx.note)), roughness: 0.78, envMapIntensity: 0.05 }); // satin black: no glare under the lamp
+    const gilt = new THREE.MeshStandardMaterial({ color: 0xb08d4e, metalness: 0.9, roughness: 0.35 });
+    const lacquer = new THREE.MeshStandardMaterial({ color: 0x0a0a0b, roughness: 0.4 });
+    const CARD_W = ENV_W - 0.06, CARD_D = ENV_D - 0.06;
+    const noteCard = new THREE.Mesh(new THREE.BoxGeometry(CARD_W, 0.004, CARD_D), [gilt, gilt, noteFace, lacquer, gilt, gilt]);
+    noteCard.castShadow = true;
+    scene.add(noteCard);
     contacts.push([bet.position.x, bet.position.z, 0.26, 0.4], [card.position.x, card.position.z, 0.42, 0.35]);
     // a gold halo that breathes under the card: something is waiting there
-    const cardHalo = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.1), new THREE.MeshBasicMaterial({
+    const cardHalo = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 1.0), new THREE.MeshBasicMaterial({
       map: (() => { const c = mk(256, 256), x = c.getContext("2d"), g = x.createRadialGradient(128, 128, 30, 128, 128, 128);
         g.addColorStop(0, "rgba(255,215,150,0.9)"); g.addColorStop(0.5, "rgba(255,200,120,0.25)"); g.addColorStop(1, "rgba(255,200,120,0)");
         x.fillStyle = g; x.fillRect(0, 0, 256, 256); return canvasTex(c); })(),
       transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false,
     }));
-    cardHalo.rotation.set(-Math.PI / 2, 0, -0.32);
+    cardHalo.rotation.set(-Math.PI / 2, 0, 0);
     cardHalo.position.set(card.position.x, 0.0015, card.position.z);
     cardHalo.renderOrder = 1;
     scene.add(cardHalo);
@@ -756,7 +942,8 @@
     cigar.userData.ember.getWorldPosition(emberWorld);
 
     // the glass: a heavy tumbler, two fingers of whisky, three cubes of ice
-    const glassPos = onLedge(2.12);
+    // further out on the wood, so the bigger glass clears the leather rail
+    const glassPos = new THREE.Vector3(Math.cos(2.12) * (A + 0.63), LEDGE_Y, Math.sin(2.12) * (B + 0.63));
     const tumbler = new THREE.Group();
     {
       // a transparent shell (not transmission): transmissive objects cannot see each other,
@@ -845,6 +1032,7 @@
       });
     }
     tumbler.position.copy(glassPos);
+    tumbler.scale.setScalar(1.4); // bigger: as wide as the wood between the brass bead and the edge allows
     scene.add(tumbler);
     let iceShake = 0;
 
@@ -1316,7 +1504,8 @@
       roll.p0.copy(die.position);
       // land somewhere free: between the monogram and the bets
       let x, z;
-      do { x = (Math.random() * 2 - 1) * 1.5; z = -0.55 + Math.random() * 0.45; } while (Math.abs(x - die.position.x) < 0.6);
+      // land clear of the envelope behind it (which ends at z = -0.51)
+      do { x = (Math.random() * 2 - 1) * 1.5; z = -0.3 + Math.random() * 0.35; } while (Math.abs(x - die.position.x) < 0.6);
       roll.p1.set(x, DS / 2, z);
       roll.val = 1 + Math.floor(Math.random() * 6);
       roll.q1.copy(restQ(roll.val, Math.random() * Math.PI * 2));
@@ -1424,7 +1613,7 @@
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
       if (ray.intersectObject(die, false).length) return { die: true };
-      if (ray.intersectObject(card, false).length) return { card: true };
+      if (ray.intersectObject(card, true).length) return { card: true };
       const hit = ray.intersectObject(felt, false)[0];
       if (!hit) return {};
       const px = (hit.point.x / (2 * A) + 0.5) * pw, py = (hit.point.z / (2 * B) + 0.5) * ph;
@@ -1444,6 +1633,7 @@
     const setTip = (txt) => { tip.textContent = txt || ""; tip.classList.toggle("on", !!txt); };
 
     const down = (e) => {
+      if (NOTE.cam > 0) return;
       view.drag = true; view.moved = 0; view.x0 = e.clientX; view.y0 = e.clientY;
       canvas.classList.add("is-drag");
     };
@@ -1460,7 +1650,7 @@
         view.x0 = e.clientX; view.y0 = e.clientY;
         return;
       }
-      if (roll.on) return;
+      if (roll.on || NOTE.cam > 0) return;
       if (e.target !== canvas) { hoverBox = -1; if (chosen < 0) setTip(""); return; }
       const p = pick(e);
       hoverBox = p.box != null ? p.box : -1;
@@ -1478,7 +1668,7 @@
       if (view.moved > 6) return;
       const p = pick(e);
       if (p.die) { rolledOnce = true; throwDie(); return; }
-      if (p.card) { noteSeen = true; noteEl.classList.add("on"); noteEl.setAttribute("aria-hidden", "false"); return; }
+      if (p.card) { noteSeen = true; openNote(); return; }
       if (p.box != null && p.box >= 0) {
         const btn = vt.querySelector(`[data-next="${boxes[p.box].i}"]`);
         if (btn) btn.click();
@@ -1487,9 +1677,115 @@
     canvas.addEventListener("pointerdown", down);
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
-    noteEl.addEventListener("click", (e) => {
-      if (e.target === noteEl || e.target.closest(".vt3-note-close")) { noteEl.classList.remove("on"); noteEl.setAttribute("aria-hidden", "true"); }
+    /* ---------- the envelope opens, in the scene itself ----------
+       The camera comes down to the envelope, the seal breaks, the flap turns on its
+       hinge, the card slides out of the top and rises to face you. Closing is the
+       same story played backwards. Five numbers drive it all (0 → 1). */
+    const motionK = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0.35 : 1;
+    const NOTE = { cam: 0, crack: 0, flap: 0, slide: 0, lift: 0, open: false, busy: false, tweens: [] };
+    const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+    const tweenTo = (key, to, dur, ease = easeIO) => new Promise((res) => {
+      NOTE.tweens = NOTE.tweens.filter((t) => t.key !== key);
+      NOTE.tweens.push({ key, from: NOTE[key], to, t: 0, dur: Math.max(0.01, dur * motionK), ease, res });
     });
+    const stepTweens = (dt) => {
+      NOTE.tweens = NOTE.tweens.filter((t) => {
+        t.t = Math.min(1, t.t + dt / t.dur);
+        NOTE[t.key] = t.from + (t.to - t.from) * t.ease(t.t);
+        if (t.t >= 1) { t.res(); return false; }
+        return true;
+      });
+    };
+    const rustle = (v = 1) => {
+      const S2 = window.CASINO && window.CASINO.sound;
+      if (!S2 || !S2.on) return;
+      const a = S2.audio(); if (!a) return;
+      for (let k = 0; k < 5; k++) S2.burst(a, a.currentTime + k * 0.04 + Math.random() * 0.03, { freq: 2600 + Math.random() * 2400, type: "bandpass", q: 0.9, gain: 0.03 * v, dur: 0.06 });
+    };
+    async function openNote() {
+      if (NOTE.busy || NOTE.open) return;
+      NOTE.busy = true; noteSeen = true;
+      vt.classList.add("is-note"); setTip("");
+      await tweenTo("cam", 1, 1.5);                       // down to the envelope
+      tweenTo("crack", 1, 0.35, easeOut);                 // the wax gives
+      rustle(0.6);
+      await tweenTo("flap", 1, 1.35);                     // the flap turns on its hinge
+      rustle(1);
+      await tweenTo("slide", 1, 1.3);                     // the card comes out of the top
+      await tweenTo("lift", 1, 1.5);                      // and rises to face you
+      noteEl.classList.add("on", "reading"); noteEl.setAttribute("aria-hidden", "false");
+      noteEl.querySelector(".vt3-note-close").focus({ preventScroll: true });
+      NOTE.open = true; NOTE.busy = false;
+    }
+    async function closeNote() {
+      if (NOTE.busy || !NOTE.open) return;
+      NOTE.busy = true;
+      noteEl.classList.remove("on", "reading"); noteEl.setAttribute("aria-hidden", "true");
+      await tweenTo("lift", 0, 1.3);                      // back down over the envelope
+      rustle(0.8);
+      await tweenTo("slide", 0, 1.2);                     // slides back in
+      await tweenTo("flap", 0, 1.25);                     // the flap folds down
+      await tweenTo("crack", 0, 0.3, easeOut);            // and the seal closes on itself
+      await tweenTo("cam", 0, 1.5);                       // back to walking round the table
+      vt.classList.remove("is-note");
+      NOTE.open = false; NOTE.busy = false;
+    }
+    noteEl.addEventListener("click", (e) => { if (e.target === noteEl || e.target.closest(".vt3-note-close")) closeNote(); });
+    const noteKey = (e) => { if (e.key === "Escape" && NOTE.open) closeNote(); };
+    addEventListener("keydown", noteKey);
+
+    // where the camera stands to watch the envelope, and where the card ends up to be read
+    const notePose = (() => {
+      const pos = new THREE.Vector3(), look = new THREE.Vector3(), readPos = new THREE.Vector3(), readQ = new THREE.Quaternion();
+      const m = new THREE.Matrix4(), qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2), up = new THREE.Vector3(0, 1, 0);
+      return () => {
+        const half = THREE.MathUtils.degToRad(camera.fov / 2), t = Math.tan(half), asp = camera.aspect;
+        // the envelope and its open flap: about 1.1 wide and 1.0 deep, seen from 50° above
+        const fitW = 1.15 / (2 * t * asp), fitD = 0.95 / (2 * t);
+        const dist = Math.max(fitW, fitD) * 1.08, a = THREE.MathUtils.degToRad(50);
+        look.set(card.position.x, 0.02, card.position.z - 0.14);
+        pos.set(look.x, look.y + Math.sin(a) * dist, look.z + Math.cos(a) * dist);
+        // the card, square to the lens, filling most of the view
+        const dir = look.clone().sub(pos).normalize();
+        const rd = Math.max((CARD_W / 0.8) / (2 * t * asp), (CARD_D / 0.66) / (2 * t));
+        readPos.copy(pos).addScaledVector(dir, rd);
+        readQ.setFromRotationMatrix(m.lookAt(pos, readPos, up)); // its +Z points back at the camera
+        readQ.multiply(qx);
+        return { pos, look, readPos, readQ };
+      };
+    })();
+    const orbitPos = new THREE.Vector3(), orbitLook = new THREE.Vector3(), camLook = new THREE.Vector3();
+    const cardIn = new THREE.Vector3(), cardOut = new THREE.Vector3(), envQ = new THREE.Quaternion();
+    function stepNote(dt) {
+      stepTweens(dt);
+      const P = notePose();
+      // camera: from the orbit to the envelope
+      if (NOTE.cam > 0) {
+        camera.position.lerpVectors(orbitPos, P.pos, NOTE.cam);
+        camLook.lerpVectors(orbitLook, P.look, NOTE.cam);
+        camera.lookAt(camLook);
+      }
+      // the seal parts a hair, then the flap carries its half away
+      sealFlap.position.y = 0.0004 + NOTE.crack * 0.002;
+      sealFlap.rotation.x = -NOTE.crack * 0.06;
+      flapPivot.rotation.x = -NOTE.flap * Math.PI * 0.94;
+      // the card: inside → out through the top → up to the lens
+      card.updateMatrixWorld();
+      cardIn.set(0, ENV_T / 2 + 0.001, 0).applyMatrix4(card.matrixWorld);
+      cardOut.set(0, ENV_T + 0.006 + Math.sin(NOTE.slide * Math.PI) * 0.03, -ENV_D * 0.82 * NOTE.slide).applyMatrix4(card.matrixWorld);
+      card.getWorldQuaternion(envQ);
+      noteCard.position.copy(NOTE.slide > 0 ? cardOut : cardIn);
+      if (NOTE.lift > 0) {
+        const k = NOTE.lift;
+        noteCard.position.lerpVectors(cardOut, P.readPos, k);
+        noteCard.position.y += Math.sin(k * Math.PI) * 0.12; // an arc, not a straight line
+        noteCard.quaternion.slerpQuaternions(envQ, P.readQ, k);
+      } else {
+        noteCard.quaternion.copy(envQ);
+      }
+      noteCard.visible = NOTE.slide > 0.001 || NOTE.lift > 0; // hidden inside the closed envelope
+    }
 
     const R = portrait ? 8.4 : small ? 6.6 : 7.4;
     let last = performance.now();
@@ -1502,11 +1798,15 @@
         slow.n = raw > 34 ? slow.n + 1 : Math.max(0, slow.n - 1);
         if (slow.n > 75) { composer = null; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.25)); resize(); if (window.PERF) window.PERF.goLite(); }
       }
-      if (!view.drag) { view.vth *= Math.pow(0.04, dt); view.th += view.vth + dt * 0.045; }
-      const th = view.th + rx * 0.08;
-      const h = view.h - ry * 0.12;
-      camera.position.set(Math.cos(th) * R, h, Math.sin(th) * R * 0.86);
+      // the slow walk round the table pauses while the note is out
+      if (!view.drag && NOTE.cam === 0) { view.vth *= Math.pow(0.04, dt); view.th += view.vth + dt * 0.045; }
+      const th = view.th + rx * 0.08 * (1 - NOTE.cam);
+      const h = view.h - ry * 0.12 * (1 - NOTE.cam);
+      orbitPos.set(Math.cos(th) * R, h, Math.sin(th) * R * 0.86);
+      orbitLook.copy(target);
+      camera.position.copy(orbitPos);
       camera.lookAt(target);
+      stepNote(Math.min(0.25, raw / 1000)); // real time: the note takes as long on a slow device
       stepDie(dt);
       {
         const hgt = Math.max(0, die.position.y - DS / 2);
@@ -1515,11 +1815,13 @@
         dieAO.material.opacity = 0.85 / (1 + hgt * 9);
       }
       stepDust(now / 1000, dt);
+      dust.material.opacity = 0.4 * (1 - NOTE.lift * 0.85); // the air clears while you read
       stepLamp(now / 1000, dt);
       cardHalo.material.opacity = noteSeen ? 0.06 : 0.14 + Math.sin(now / 520) * 0.08;
       // the labels stay until you have done the thing once
       placeLabel(labels.die, die, DS * 1.6, !roll.on && !rolledOnce);
-      placeLabel(labels.card, card, 0.12, !noteSeen);
+      placeLabel(labels.card, card, 0.12, !noteSeen && NOTE.cam === 0);
+      if (NOTE.cam > 0) labels.die.classList.remove("on");
       stepSmoke(now / 1000, dt);
       smoke.material.uniforms.uScale.value = renderer.getPixelRatio();
       if (iceShake > 0.001) {
@@ -1530,7 +1832,9 @@
           m.rotation.set(m.userData.rot.x + w * 0.25, m.userData.rot.y + w * 0.4, m.userData.rot.z);
         });
       }
-      if (bokeh) bokeh.uniforms.focus.value = camera.position.distanceTo(die.position) * 0.6 + camera.position.distanceTo(target) * 0.4;
+      if (bokeh) bokeh.uniforms.focus.value = NOTE.cam > 0
+        ? camera.position.distanceTo(noteCard.visible ? noteCard.position : card.position) // the lens follows the note
+        : camera.position.distanceTo(die.position) * 0.6 + camera.position.distanceTo(target) * 0.4;
       stepAmbience(now / 1000);
       glows.forEach((g, k) => {
         const want = k === hoverBox ? 0.16 : k === chosen ? 0.1 + Math.sin(now / 260) * 0.04 : 0;
@@ -1540,7 +1844,7 @@
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    window.__vt = { scene, camera, view, renderer, throwDie, roll, get composer() { return composer; } };
+    window.__vt = { scene, camera, view, renderer, throwDie, roll, openNote: () => openNote(), closeNote: () => closeNote(), get composer() { return composer; } };
 
     return () => {
       disposed = true;
@@ -1550,6 +1854,7 @@
       removeEventListener("resize", resize);
       removeEventListener("pointermove", move);
       removeEventListener("pointerup", up);
+      removeEventListener("keydown", noteKey);
       scene.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
