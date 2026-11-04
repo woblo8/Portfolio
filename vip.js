@@ -819,9 +819,10 @@
     const black = new THREE.MeshPhysicalMaterial({ color: 0x020202, roughness: 0.6, clearcoat: 0, envMapIntensity: 0.02 });
     const plaqueGeo = new THREE.BoxGeometry(0.62, 0.22, 0.05);
     // placed clear of the chips, the card and the betting boxes
-    [[2.42, 0.5, -0.55], [-0.72, -1.28, Math.PI]].forEach(([x, z, ry]) => {
+    // a single plaque, standing on the far wooden ledge: readable from the front, covers nothing on the felt
+    [[0, -(B + 0.54), 0]].forEach(([x, z, ry]) => {
       const m = new THREE.Mesh(plaqueGeo, [black, black, black, black, plaqueMat, plaqueMat]); // printed on both faces: never a blank back
-      m.position.set(x, 0.115, z);
+      m.position.set(x, 0.105 + 0.115, z);
       m.rotation.set(Math.abs(ry) > 3 ? 0.22 : -0.22, ry, 0, "YXZ");
       m.castShadow = true;
       scene.add(m);
@@ -927,12 +928,27 @@
         x.restore();
         x.strokeStyle = ink; x.lineWidth = 6; x.beginPath(); x.ellipse(ox, oy, 236, 276, 0, 0, Math.PI * 2); x.stroke();
         x.lineWidth = 2; x.beginPath(); x.ellipse(ox, oy, 250, 290, 0, 0, Math.PI * 2); x.stroke();
+        // the blue security ribbon, woven into the paper
+        {
+          const rx = W * 0.285, rw = 30;
+          const rg = x.createLinearGradient(rx - rw / 2, 0, rx + rw / 2, 0);
+          rg.addColorStop(0, "rgba(40,90,170,0.55)"); rg.addColorStop(0.5, "rgba(90,150,230,0.85)"); rg.addColorStop(1, "rgba(40,90,170,0.55)");
+          x.fillStyle = rg; x.fillRect(rx - rw / 2, 0, rw, H);
+          x.fillStyle = "rgba(230,240,255,0.75)"; x.font = `700 16px ${SERIF}`; x.textAlign = "center";
+          for (let y = 30; y < H; y += 60) x.fillText(y % 120 ? "◆" : "100", rx, y);
+        }
+        // the copper inkwell: a die in metallic ink, below the portrait
+        {
+          const cx = W * 0.72, cy = H * 0.6, s = 62; // where the green house seal was
+          const cg = x.createLinearGradient(cx - s, cy - s, cx + s, cy + s);
+          cg.addColorStop(0, "rgba(176,110,58,0.95)"); cg.addColorStop(0.5, "rgba(214,150,90,0.95)"); cg.addColorStop(1, "rgba(120,70,40,0.95)");
+          x.fillStyle = cg; x.beginPath(); x.ellipse(cx, cy, s * 1.25, s, 0, 0, Math.PI * 2); x.fill();
+          engravedDie(x, cx, cy - 4, s * 0.55, "rgba(70,38,18,0.9)");
+        }
         // the seal, far left, and the house seal on the right
         rosette(x, W * 0.17, H * 0.5, 120, "rgba(28,36,30,0.55)");
         x.fillStyle = "rgba(214,218,198,0.95)"; x.beginPath(); x.arc(W * 0.17, H * 0.5, 62, 0, Math.PI * 2); x.fill();
         x.fillStyle = ink; x.font = `700 74px ${SERIF}`; x.textAlign = "center"; x.fillText("W", W * 0.17, H * 0.5 + 4);
-        rosette(x, W * 0.72, H * 0.6, 92, "rgba(40,92,62,0.6)", 28);
-        x.fillStyle = green; x.font = `700 40px ${SERIF}`; x.fillText("◆", W * 0.72, H * 0.6);
         // lettering
         x.fillStyle = ink; x.textAlign = "center";
         x.font = `600 30px ${SERIF}`; if ("letterSpacing" in x) x.letterSpacing = "10px";
@@ -992,8 +1008,9 @@
         return m;
       })();
       const tf = canvasTex(front), tb = canvasTex(back);
-      const matF = new THREE.MeshStandardMaterial({ map: tf, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.FrontSide });
-      const matB = new THREE.MeshStandardMaterial({ map: tb, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.BackSide });
+      const noFight = { polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }; // the print is pulled forward too
+      const matF = new THREE.MeshStandardMaterial({ ...noFight, map: tf, bumpMap: tf, bumpScale: 0.35, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.FrontSide });
+      const matB = new THREE.MeshStandardMaterial({ ...noFight, map: tb, bumpMap: tb, bumpScale: 0.35, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.BackSide });
       // the paper: a soft curl along its length, and optionally folded in half
       const noteGeo = (fold) => {
         const g = new THREE.PlaneGeometry(NW, NH, 64, 10), p = g.attributes.position;
@@ -1014,11 +1031,13 @@
       // [x, z, yaw, height, folded] — placed by a check against every chip, card, plaque,
       // betting box and the die's landing zone: nothing goes through anything
       const notes = [
-        [0.0, 1.3, 0.0, 0.003, false],      // the player's money, in front
-        [0.1, 1.28, -0.05, 0.006, false],
-        [-2.6, 0.1, 2.4, 0.003, true],      // folded ones, left about the table
-        [0.95, -1.2, 1.8, 0.003, true],
-        [2.6, -0.15, 3.0, 0.003, true],
+        // only at the two ends of the oval: the one place with no lettering, no box and no chip
+        [2.6, -0.1, 1.35, 0.010, true],     // right: a loose little pile, as if left in a hurry
+        [2.55, -0.05, 1.62, 0.017, true],
+        [2.64, 0.02, 1.15, 0.024, true],
+        [2.58, 0.05, 1.9, 0.031, true],
+        [-2.58, -0.05, 1.55, 0.010, true],  // left: two, crossed
+        [-2.62, -0.2, 0.45, 0.017, true],
       ];
       notes.forEach(([nx, nz, yaw, y, isFolded]) => {
         const geo = isFolded ? folded : flat;
