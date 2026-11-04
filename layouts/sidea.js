@@ -151,11 +151,44 @@
     ringFg.style.strokeDasharray = `${RING}`;
 
     let playing = true, angle = 0, last = performance.now(), raf = 0, current = -1, played = 0;
+
+    // the music: late-night jazz, fading in as you enter, looping softly
+    const VOL = 0.5;
+    const music = new Audio("assets/audio/sidea-jazz.mp3");
+    music.loop = true; music.preload = "auto"; music.volume = 0;
+    let fadeRaf = 0;
+    const fadeTo = (target, ms, then) => {
+      cancelAnimationFrame(fadeRaf);
+      const from = music.volume, t0 = performance.now();
+      const step = (now) => {
+        const k = clamp((now - t0) / ms, 0, 1);
+        music.volume = clamp(from + (target - from) * k * k * (3 - 2 * k), 0, 1);
+        if (k < 1) fadeRaf = requestAnimationFrame(step); else if (then) then();
+      };
+      fadeRaf = requestAnimationFrame(step);
+    };
+    const setPlaying = (on) => {
+      playing = on;
+      root.classList.toggle("is-paused", !on);
+      playBtn.setAttribute("aria-label", on ? "Pause" : "Play");
+    };
+    const startMusic = () => {
+      const p = music.play();
+      if (p && p.catch) p.catch(() => setPlaying(false)); // the browser wants a click first: show Play
+      fadeTo(VOL, 2600);
+    };
+    const stopMusic = (ms = 700) => fadeTo(0, ms, () => music.pause());
+    startMusic();
     playBtn.addEventListener("click", () => {
-      playing = !playing;
-      root.classList.toggle("is-paused", !playing);
-      playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
+      setPlaying(!playing);
+      if (playing) startMusic(); else stopMusic();
     });
+    // a hidden tab is silent; it picks up again when you come back
+    const onVis = () => {
+      if (document.hidden) { if (!music.paused) stopMusic(300); }
+      else if (playing) startMusic();
+    };
+    document.addEventListener("visibilitychange", onVis);
 
     // progress of a pinned (sticky) section: 0 when it reaches the top, 1 when it leaves
     const pinned = (el) => {
@@ -231,7 +264,11 @@
       raf = requestAnimationFrame(frame);
     }
     raf = requestAnimationFrame(frame);
-    const stop = () => cancelAnimationFrame(raf);
+    const stop = () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", onVis);
+      fadeTo(0, 900, () => { music.pause(); music.removeAttribute("src"); music.load(); });
+    };
     stop.receipt = () => `Track ${String(Math.max(0, current) + 1).padStart(2, "0")}`;
     return stop;
   }
