@@ -760,6 +760,8 @@
     const lp = kind === "project" ? P[S.active] : null;
     const L = lp && lp.layout && window.LAYOUTS && window.LAYOUTS[lp.layout];
     page.classList.toggle("has-layout", !!L);
+    [...page.classList].filter((c) => c.startsWith("has-layout-")).forEach((c) => page.classList.remove(c));
+    if (L) page.classList.add("has-layout-" + (lp.layout === "ton618" ? "tn" : lp.layout));
     page.classList.remove("scrolled");
     scrollCueLabel.textContent = L ? "Scroll to play" : "Scroll";
     if (L) layoutCleanup = L.init(page, pageInner, { project: lp });
