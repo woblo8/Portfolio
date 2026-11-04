@@ -209,8 +209,9 @@
   if (window.VIP) {
     const n = window.VIP.name;
     setTimeout(() => say(n
-      ? T(`Bienvenidos, ${n}. La mesa es suya.`, `Welcome, ${n}. The table is yours.`)
+      ? T(`Bienvenidos, ${n}. Su ficha le espera.`, `Welcome, ${n}. Your chip is waiting.`)
       : T("Bienvenido a la mesa privada.", "Welcome to the private table."), 4200), 3200);
+    D.on("table", () => { say(T("Su mesa está lista.", "Your table is ready."), 2400); chip(1); setTimeout(() => chip(0.7), 110); });
   }
 
   /* ---------- ES / EN ---------- */

@@ -510,6 +510,46 @@
   scene.add(floor);
 
 
+  let mono = null;
+  if (VIP && VIP.name) {
+    const words = VIP.name.split(/\s+/).filter(Boolean);
+    const letters = (words.length > 1 ? words.map((w) => w[0]).join("").slice(0, 3) : words[0][0]).toUpperCase();
+    const c = mkCanvas(1024);
+    const x = c.getContext("2d");
+    x.clearRect(0, 0, 1024, 1024);
+    x.strokeStyle = "#fff"; x.fillStyle = "#fff";
+    x.lineWidth = 3;
+    x.beginPath(); x.arc(512, 512, 430, 0, Math.PI * 2); x.stroke();
+    x.lineWidth = 1.5;
+    x.beginPath(); x.arc(512, 512, 412, 0, Math.PI * 2); x.stroke();
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.font = `600 ${letters.length > 2 ? 250 : letters.length > 1 ? 330 : 440}px "Neue Haas Grotesk", "Inter Tight", Arial, sans-serif`;
+    x.letterSpacing = "-0.04em";
+    x.fillText(letters, 512, 540);
+    x.font = '500 34px "Geist Mono", monospace';
+    x.letterSpacing = "0.4em";
+    x.fillText(VIP.name.toUpperCase().slice(0, 24), 512, 880);
+    const tex = new THREE.CanvasTexture(c);
+    const monoMat = new THREE.ShaderMaterial({
+      uniforms: { map: { value: tex }, uDie: { value: new THREE.Vector3() }, uPulse: { value: 0 } },
+      vertexShader: "varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }",
+      fragmentShader: `uniform sampler2D map; uniform vec3 uDie; uniform float uPulse; varying vec2 vUv; varying vec3 vW;
+        void main(){
+          float a = texture2D(map, vUv).a;
+          float d = distance(vW.xz, uDie.xz);
+          float h = clamp(1.0 - (uDie.y + 1.75) / 3.2, 0.25, 1.0);   // lower die, more light on the floor
+          float lit = exp(-d * d / 2.6) * h * 0.4 + uPulse * exp(-d * d / 5.0) * 0.6 + 0.035;
+          gl_FragColor = vec4(vec3(0.85, 0.68, 0.40) * a * lit, 1.0);
+        }`,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+    });
+    mono = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), monoMat);
+    mono.rotation.x = -Math.PI / 2;
+    mono.position.set(0, FLOOR_Y + 0.003, -0.3);
+    mono.renderOrder = 2;
+    scene.add(mono);
+  }
+
   const shadowRecvMat = new THREE.ShadowMaterial({ opacity: 0.5, depthWrite: false });
   const shadowRecv = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), shadowRecvMat);
   shadowRecv.rotation.x = -Math.PI / 2;
@@ -587,6 +627,17 @@
     b.addEventListener("click", () => goTo(i));
     indexNav.appendChild(b);
   });
+  if (VIP && VIP.name) {
+    const b = document.createElement("button");
+    b.className = "chip-vip";
+    const rim = `${VIP.name.toUpperCase()} · `.repeat(Math.max(1, Math.ceil(24 / (VIP.name.length + 3))));
+    b.innerHTML = `<svg viewBox="0 0 60 60" aria-hidden="true"><defs><path id="vipRim" d="M30,30 m-23,0 a23,23 0 1,1 46,0 a23,23 0 1,1 -46,0"/></defs>
+      <text><textPath href="#vipRim" textLength="144" lengthAdjust="spacingAndGlyphs">${esc(rim)}</textPath></text></svg>
+      <span class="chip-face">★</span><span class="chip-price">${T("Su mesa", "Your table")} · ${esc(VIP.name)}</span>`;
+    b.setAttribute("aria-label", T(`Mesa privada de ${VIP.name}`, `${VIP.name}'s private table`));
+    b.addEventListener("click", openTable);
+    indexNav.appendChild(b);
+  }
   const setIndex = (i) => [...indexNav.children].forEach((b, j) => b.classList.toggle("is-active", j === i));
 
   function showInfo(i) {
@@ -752,6 +803,7 @@
   let lastRipple = 0;
   function impact(v) {
     emit("impact", { v });
+    if (mono) mono.material.uniforms.uPulse.value = Math.min(1, mono.material.uniforms.uPulse.value + v / 6);
     const now = performance.now();
     if (!reduce && now - lastRipple > 140) { lastRipple = now; spawnRipple(B.p.x, B.p.z, v); }
     if (reduce) return;
@@ -892,6 +944,15 @@
       io.observe(el);
     });
     setTimeout(() => $("#backBtn").focus({ preventScroll: true }), 300);
+  }
+
+  function openTable() {
+    if (!introDone || !window.VIP_TABLE || S.mode === "enter" || S.mode === "exit") return;
+    if (overlay === "project") { S.mode = "idle"; S.camZ = baseZ; }
+    hideInfo();
+    openPage(window.VIP_TABLE.html({ vip: VIP, projects: P, site: SITE, esc, pad }), "vip", T("Mesa privada", "Private table"));
+    window.VIP_TABLE.init(pageInner);
+    emit("table");
   }
 
   function closePage() {
@@ -1819,6 +1880,10 @@
     updateGhost(now, dt);
     fadePrints(dt);
     updateRipples(dt);
+    if (mono) {
+      mono.material.uniforms.uDie.value.copy(pivot.position);
+      mono.material.uniforms.uPulse.value *= Math.exp(-dt * 2.2);
+    }
     dustMat.uniforms.uTime.value = time;
     dustMat.uniforms.uLight.value.copy(key.position);
     dustMat.uniforms.uDir.value.copy(key.position).negate().normalize();
