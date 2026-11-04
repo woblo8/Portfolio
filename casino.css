@@ -248,3 +248,5 @@ html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l
 .receipt .vc .vc-title { font-family: var(--sans); font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
 .receipt .vc .vc-amount { font-family: var(--sans); font-weight: 600; font-size: 30px; letter-spacing: -0.04em; }
 .vt-receipt { filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5)); }
+/* the ticket stands above «La casa», never on it (on a phone the tab lives up top) */
+@media (min-width: 861px) { .receipt { bottom: calc(var(--gut) + 58px); } }
