@@ -24,11 +24,12 @@
     const shot = (f, cap, cls = "") =>
       `<figure class="sa-frame ${cls}" data-zoom><img src="${scr(f)}" alt="${esc(cap)}" data-cap="${esc(cap)}" loading="lazy"></figure>`;
     let track = 0;
-    const T = () => `data-track="${track++}"`;
+    // numbers the sections for the player; not T(), which translates
+    const TRK = () => `data-track="${track++}"`;
 
     return `
 <div class="sa">
-  <section class="sa-hero" ${T()}>
+  <section class="sa-hero" ${TRK()}>
     <div class="sa-hero-meta"><b>PROJECT ${pad(i)}</b><span>/</span><span>${esc(p.category)}</span><span>/</span><span>${esc(p.year)}</span></div>
     <h1 class="sa-title" aria-label="${esc(p.title)}"><span>SIDE</span><span>A</span></h1>
     <p class="sa-tag">${esc(p.intro)}</p>
@@ -43,7 +44,7 @@
     </dl>
   </section>
 
-  <section class="sa-lyrics" data-sa="lyrics" ${T()}>
+  <section class="sa-lyrics" data-sa="lyrics" ${TRK()}>
     <div class="sa-sticky">
       <span class="sa-kicker">${T("Pista", "Track")} 01 — ${T("Intención", "Intention")}</span>
       <p class="sa-lyric">${words(d.statement)}</p>
@@ -52,7 +53,7 @@
   </section>
 
   ${d.chapters.map((c, k) => `
-  <section class="sa-chapter ${c.screens ? "is-pair" : ""}" ${T()}>
+  <section class="sa-chapter ${c.screens ? "is-pair" : ""}" ${TRK()}>
     <header class="sa-chapter-head r">
       <span class="sa-kicker">${T("Pista", "Track")} ${String(k + 2).padStart(2, "0")} — ${esc(c.kicker)}</span>
       <h2>${esc(c.title)}</h2>
@@ -63,7 +64,7 @@
     </div>
   </section>
   ${k === 0 ? `
-  <section class="sa-covers" data-sa="covers" ${T()}>
+  <section class="sa-covers" data-sa="covers" ${TRK()}>
     <div class="sa-sticky">
       <header class="sa-covers-head">
         <span class="sa-kicker">${T("Interludio — Sesiones", "Interlude — Sessions")}</span>
@@ -84,7 +85,7 @@
     </div>
   </section>` : ""}`).join("")}
 
-  <section class="sa-focus" data-sa="focus" ${T()}>
+  <section class="sa-focus" data-sa="focus" ${TRK()}>
     <div class="sa-sticky">
       <span class="sa-kicker">${T("Pista", "Track")} ${String(d.chapters.length + 2).padStart(2, "0")} — Focus</span>
       <div class="sa-dial">
@@ -104,13 +105,13 @@
     </div>
   </section>
 
-  <section class="sa-chapter is-pair" ${T()}>
+  <section class="sa-chapter is-pair" ${TRK()}>
     <div class="sa-chapter-media r" data-rise>
       ${d.focus.screens.map((f) => shot(f, d.focus.caption)).join("")}
     </div>
   </section>
 
-  <section class="sa-mobile" ${T()}>
+  <section class="sa-mobile" ${TRK()}>
     <header class="sa-chapter-head r">
       <span class="sa-kicker">${T("Pista", "Track")} ${String(d.chapters.length + 3).padStart(2, "0")} — ${T("Móvil", "Mobile")}</span>
       <h2>${T("La misma calma, en el bolsillo.", "The same calm, in your pocket.")}</h2>
@@ -120,7 +121,7 @@
     </div>
   </section>
 
-  <section class="sa-outro" ${T()}>
+  <section class="sa-outro" ${TRK()}>
     <p class="sa-outro-line">${esc(d.outro).replace(/\n/g, "<br>")}</p>
   </section>
 
