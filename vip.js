@@ -836,17 +836,46 @@
     const paperTex = canvasTex(paperCanvas(1024, 680));
     const paperMat = (extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ map: paperTex, color: ivory, roughness: 0.86, envMapIntensity: 0.08 }, extra));
     const bodyTop = paperMat({ map: canvasTex(envelopeBody(1408, 928, FLAP_L / ENV_D)) });
-    const envBody = new THREE.Mesh(new THREE.BoxGeometry(ENV_W, ENV_T, ENV_D), [paperMat(), paperMat(), bodyTop, paperMat(), paperMat(), paperMat()]);
+    // built in layers, like a real one: the back panel and sides, the liner at the bottom,
+    // the card lying on it, and on top the pocket with its V cut, through which the card shows.
+    // The top edge is open: the mouth the card comes out of
+    const none = new THREE.MeshBasicMaterial({ visible: false });
+    const envBody = new THREE.Mesh(new THREE.BoxGeometry(ENV_W, ENV_T, ENV_D), [paperMat(), paperMat(), none, paperMat(), paperMat(), none]);
     envBody.position.y = ENV_T / 2 + 0.001;
     envBody.castShadow = envBody.receiveShadow = true;
     env.add(envBody);
+    const V_DEPTH = FLAP_L * 0.92; // how far the V of the pocket reaches down
+    const liner = new THREE.Mesh(new THREE.PlaneGeometry(ENV_W - 0.004, ENV_D - 0.004), new THREE.MeshStandardMaterial({
+      map: canvasTex((() => { const c = linerCanvas(704, 464), x = c.getContext("2d");
+        const g = x.createLinearGradient(0, 0, 0, 464); g.addColorStop(0, "rgba(0,0,0,0.6)"); g.addColorStop(0.5, "rgba(0,0,0,0.1)"); g.addColorStop(1, "rgba(0,0,0,0)");
+        x.fillStyle = g; x.fillRect(0, 0, 704, 464); return c; })()),
+      roughness: 0.6, envMapIntensity: 0.15,
+    }));
+    liner.rotation.x = -Math.PI / 2; liner.position.y = 0.0042; liner.receiveShadow = true;
+    env.add(liner);
+    // the pocket: the rectangle less the V, as one outline (shape y = −z: far edge at +D/2)
+    const pocketShape = new THREE.Shape();
+    pocketShape.moveTo(-ENV_W / 2, ENV_D / 2); pocketShape.lineTo(0, ENV_D / 2 - V_DEPTH); pocketShape.lineTo(ENV_W / 2, ENV_D / 2);
+    pocketShape.lineTo(ENV_W / 2, -ENV_D / 2); pocketShape.lineTo(-ENV_W / 2, -ENV_D / 2); pocketShape.closePath();
+    const pocketGeo = new THREE.ShapeGeometry(pocketShape, 8);
+    { const p = pocketGeo.attributes.position, uv = pocketGeo.attributes.uv;
+      for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / ENV_W + 0.5, p.getY(i) / ENV_D + 0.5); }
+    const pocket = new THREE.Mesh(pocketGeo, bodyTop);
+    pocket.rotation.x = -Math.PI / 2; pocket.position.y = ENV_T + 0.001;
+    pocket.castShadow = pocket.receiveShadow = true;
+    env.add(pocket);
     // the flap, hinged on the far edge as an envelope lies in front of you. Once the
     // envelope is held up, it opens back over the top and folds behind (225°): the card
     // then slides up out of the mouth in front of it, touching nothing
     const FLAP_OPEN = -1.25 * Math.PI;
+    const HINGE_Y = 0.003, SPINE = ENV_T + 0.0026 - HINGE_Y; // from the bottom layer up over the edge
     const flapPivot = new THREE.Group();
-    flapPivot.position.set(0, ENV_T + 0.0016, -ENV_D / 2);
+    flapPivot.position.set(0, HINGE_Y, -ENV_D / 2 - 0.002);
     env.add(flapPivot);
+    const spine = new THREE.Mesh(new THREE.PlaneGeometry(ENV_W, SPINE), paperMat({ side: THREE.DoubleSide }));
+    spine.position.y = SPINE / 2;
+    spine.castShadow = true;
+    flapPivot.add(spine);
     const flapShape = new THREE.Shape();
     flapShape.moveTo(-ENV_W / 2, 0); flapShape.lineTo(ENV_W / 2, 0); flapShape.lineTo(0.04, FLAP_L - 0.022);
     flapShape.quadraticCurveTo(0, FLAP_L + 0.012, -0.04, FLAP_L - 0.022); flapShape.closePath();
@@ -868,7 +897,7 @@
     })();
     const flapOut = new THREE.Mesh(flapGeo, paperMat({ side: THREE.BackSide, map: flapTex }));
     const flapIn = new THREE.Mesh(flapGeo, new THREE.MeshStandardMaterial({ map: canvasTex(linerCanvas(704, 464)), roughness: 0.55, envMapIntensity: 0.2, side: THREE.FrontSide }));
-    [flapOut, flapIn].forEach((m) => { m.rotation.x = Math.PI / 2; m.castShadow = true; m.receiveShadow = true; flapPivot.add(m); });
+    [flapOut, flapIn].forEach((m) => { m.rotation.x = Math.PI / 2; m.position.y = SPINE; m.castShadow = true; m.receiveShadow = true; flapPivot.add(m); });
     // the wax seal at the tip, poured across the edge: one half on the flap, one on the body
     const waxTex = canvasTex(waxSeal(512));
     const waxCap = new THREE.MeshPhysicalMaterial({ map: waxTex, bumpMap: waxTex, bumpScale: 0.45, transparent: true, alphaTest: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, envMapIntensity: 0.15, side: THREE.DoubleSide });
@@ -890,12 +919,12 @@
     };
     const tipZ = -ENV_D / 2 + FLAP_L - 0.035;
     const sealBody = sealHalf(true); sealBody.position.set(0, ENV_T + 0.0016, tipZ); env.add(sealBody);
-    const sealFlap = sealHalf(false); sealFlap.position.set(0, 0.0004, FLAP_L - 0.035); flapPivot.add(sealFlap);
+    const sealFlap = sealHalf(false); sealFlap.position.set(0, SPINE + 0.0004, FLAP_L - 0.035); flapPivot.add(sealFlap);
     // the card inside, with the note on it: a real texture, readable when it comes to you
     // the mouth of the envelope: whatever of the card is still behind it is not drawn
     renderer.localClippingEnabled = true;
     const mouth = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0); // placed every frame at the envelope's top edge
-    const clip = { clippingPlanes: [mouth], clipShadows: true }; // its hidden part casts no shadow either
+    const clip = {}; // (no clipping: the pocket covers the card, the mouth is open)
     const noteTex = canvasTex(noteCardCanvas(2048, 1340, ctx.name, ctx.note));
     // satin black: no glare under the lamp. While it is read, its own light (below) and a faint
     // glow in the ink keep it legible however it faces the lamp
@@ -1805,12 +1834,12 @@
       env.position.set(0, HOLD.y * r + Math.sin(r * Math.PI) * 0.06, HOLD.z * r);
       env.rotation.x = HOLD.tilt * easeIO(r);
       // the seal parts a hair, then the flap carries its half up and over
-      sealFlap.position.y = 0.0004 + NOTE.crack * 0.002;
+      sealFlap.position.y = SPINE + 0.0004 + NOTE.crack * 0.002;
       sealFlap.rotation.x = -NOTE.crack * 0.06;
       flapPivot.rotation.x = NOTE.flap * FLAP_OPEN;
       // the card: inside → up out of the mouth (in front of the folded-back flap) → to the lens
       env.updateMatrixWorld(true);
-      const lift0 = ENV_T + 0.0016 + 0.0034; // just above the hinge: the flap is always behind it
+      const lift0 = 0.0082; // between the liner and the pocket; the flap's hinge is below it, so the open flap is always behind
       cardIn.set(0, lift0, 0).applyMatrix4(env.matrixWorld);
       cardOut.set(0, lift0, -(ENV_D / 2 + CARD_D / 2 + 0.02) * NOTE.slide).applyMatrix4(env.matrixWorld);
       env.getWorldQuaternion(envQ);
@@ -1826,13 +1855,13 @@
           a * cardOut.y + b * ctrl.y + c * P.readPos.y,
           a * cardOut.z + b * ctrl.z + c * P.readPos.z);
         noteCard.quaternion.slerpQuaternions(envQ, P.readQ, easeIO(Math.min(1, k * 1.15)));
-        mouth.constant = 1e3; // fully out: nothing to hide any more
+
       } else {
         noteCard.position.copy(cardOut);
         noteCard.quaternion.copy(envQ);
-        mouth.setFromNormalAndCoplanarPoint(mouthN, mouthP);
+
       }
-      noteCard.visible = NOTE.slide > 0.001 || NOTE.lift > 0; // nothing to draw inside the closed envelope
+      noteCard.visible = true; // inside, it shows through the V of the pocket
       // light on the card as it comes up: the table lamp only grazes a card held upright
       const lit = Math.max(NOTE.slide * 0.45, NOTE.lift);
       noteLight.intensity = 2.0 * lit;
