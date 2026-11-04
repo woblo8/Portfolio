@@ -40,7 +40,7 @@ html.has-cursor .vt3-gl { cursor: none; }
 .vt3-veil {
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse 75% 70% at 50% 58%, transparent 55%, rgba(5, 5, 6, 0.85) 100%),
-              linear-gradient(rgba(5, 5, 6, 0.9), transparent 22%);
+              linear-gradient(rgba(5, 5, 6, 0.55), transparent 16%);
 }
 /* film grain: the image reads as a photograph, not a render */
 .vt3-grain {
@@ -54,7 +54,7 @@ html.has-cursor .vt3-gl { cursor: none; }
 }
 .vt3 { overflow: hidden; }
 .vt3-head {
-  position: absolute; top: clamp(70px, 11vh, 120px); left: 0; right: 0; text-align: center; pointer-events: none;
+  position: absolute; top: clamp(96px, 15vh, 160px); left: 0; right: 0; text-align: center; pointer-events: none;
   display: grid; justify-items: center; gap: 14px;
 }
 .vt-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); text-shadow: 0 0 10px rgba(216, 181, 111, 0.45); }
@@ -94,7 +94,7 @@ html.has-cursor .vt3-gl { cursor: none; }
 .vt3-note-card em { font-style: normal; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: #555; }
 .vt3-note-close { justify-self: end; font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #111; }
 @media (max-width: 860px) {
-  .vt3-head { top: 76px; }
+  .vt3-head { top: 96px; }
   .vt3-tip { bottom: 128px; font-size: 10px; }
 }
 @media (max-width: 600px) {

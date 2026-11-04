@@ -181,12 +181,27 @@
     return c;
   }
 
+  const EX = "https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/";
+  const POST_URLS = ["shaders/CopyShader.js", "shaders/LuminosityHighPassShader.js", "postprocessing/EffectComposer.js",
+    "postprocessing/RenderPass.js", "postprocessing/ShaderPass.js", "postprocessing/UnrealBloomPass.js"].map((p) => EX + p);
+  const loaded = new Set();
+  const addScript = (src) => new Promise((res) => {
+    if (loaded.has(src)) return res(true);
+    const s = document.createElement("script");
+    s.src = src; s.onload = () => { loaded.add(src); res(true); }; s.onerror = () => res(false);
+    document.head.appendChild(s);
+  });
+  // one after the other: each file needs the ones before it
+  const loadChain = async (urls) => { for (const u of urls) if (!(await addScript(u))) return false; return true; };
+
   const loadScript = (src) => new Promise((res) => {
     if (THREE.RoomEnvironment) return res(true);
     const s = document.createElement("script");
     s.src = src; s.onload = () => res(true); s.onerror = () => res(false);
     document.head.appendChild(s);
   });
+
+  const portraitView = () => innerHeight > innerWidth * 1.15;
 
   /* ---------- the scene ---------- */
   function init(root) {
@@ -211,19 +226,72 @@
     scene.fog = new THREE.FogExp2(0x050506, 0.075);
     const camera = new THREE.PerspectiveCamera(small ? 44 : 30, 1, 0.05, 60);
 
-    // light: one lamp above the table, the room in darkness
-    const lamp = new THREE.SpotLight(0xfff1d6, 3.1, 0, 0.62, 0.85, 1.2);
-    lamp.position.set(0, 7.5, 0.4);
+    // light: one lamp hanging over the table, the room in darkness.
+    // A tighter cone than before: a bright centre that falls off to black at the rail.
+    // hung so the glowing rim of the shade just enters the top of the frame,
+    // behind the welcome: same camera numbers as the view below
+    const LAMP_Y = (() => {
+      const pv = portraitView(), h0 = pv ? 3.1 : 1.25, R0 = pv ? 8.4 : small ? 6.6 : 7.4, ty = pv ? 0.15 : small ? -0.1 : 0.32;
+      const half = THREE.MathUtils.degToRad(small ? 44 : 30) / 2;
+      const D = R0 * 0.86; // nearest point of the orbit, where the lamp sits highest on screen
+      const ang = Math.atan((ty - h0) / D) + Math.atan(0.9 * Math.tan(half));
+      return h0 + D * Math.tan(ang) + 0.25;
+    })();
+    const lamp = new THREE.SpotLight(0xffecc8, 3.8, 0, 0.86, 0.85, 1.2);
+    lamp.position.set(0, LAMP_Y - 0.2, 0);
     lamp.target.position.set(0, 0, 0);
     lamp.castShadow = true;
     lamp.shadow.mapSize.set(small ? 1024 : 2048, small ? 1024 : 2048);
     lamp.shadow.bias = -0.0004;
-    lamp.shadow.radius = 4;
+    lamp.shadow.camera.near = 0.5;
+    lamp.shadow.camera.far = 8;
     scene.add(lamp, lamp.target);
-    scene.add(new THREE.AmbientLight(0x8fb0a0, 0.05));
-    const fill = new THREE.PointLight(0xffe2b0, 0.35, 12, 2);
+    scene.add(new THREE.AmbientLight(0x8fb0a0, 0.025));
+    const fill = new THREE.PointLight(0xffe2b0, 0.16, 12, 2);
     fill.position.set(0, 1.4, 4.6);
     scene.add(fill);
+
+    // the lamp itself: a black metal shade, warm inside, a hot disc of light below
+    const lampGroup = new THREE.Group();
+    {
+      const shadeOut = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0x0b0b0c).convertSRGBToLinear(), roughness: 0.35, metalness: 0.6, clearcoat: 0.6, envMapIntensity: 0.6, side: THREE.FrontSide });
+      const shadeIn = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd9a0).multiplyScalar(2.2), side: THREE.BackSide, fog: false });
+      const g = new THREE.CylinderGeometry(0.28, 0.95, 0.5, 64, 1, true);
+      const outer = new THREE.Mesh(g, shadeOut);
+      const inner = new THREE.Mesh(g, shadeIn);
+      inner.scale.setScalar(0.985);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.012, 8, 96), new THREE.MeshStandardMaterial({ color: 0xc9a465, metalness: 1, roughness: 0.3 }));
+      rim.rotation.x = Math.PI / 2; rim.position.y = -0.25;
+      const bulb = new THREE.Mesh(new THREE.CircleGeometry(0.88, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff1d8).multiplyScalar(2.6), side: THREE.DoubleSide, fog: false }));
+      bulb.rotation.x = Math.PI / 2; bulb.position.y = -0.1;
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.12, 24), shadeOut);
+      cap.position.y = 0.3;
+      const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 6, 6), shadeOut);
+      cord.position.y = 3.3;
+      [outer, inner, rim, bulb, cap, cord].forEach((m) => { m.castShadow = false; lampGroup.add(m); });
+      lampGroup.position.y = LAMP_Y;
+      scene.add(lampGroup);
+    }
+
+    // bloom: the gold and the brass glow where the lamp catches them.
+    // Rendered in half float so the highlights keep their energy; tone mapping
+    // and sRGB are applied in the last pass, since render targets skip them.
+    let composer = null, bloom = null;
+    loadChain(POST_URLS).then((ok) => {
+      if (!ok || disposed || !THREE.EffectComposer || !THREE.UnrealBloomPass) return;
+      const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
+      composer = new THREE.EffectComposer(renderer, rt);
+      composer.addPass(new THREE.RenderPass(scene, camera));
+      bloom = new THREE.UnrealBloomPass(new THREE.Vector2(2, 2), 0.3, 0.32, 0.95);
+      composer.addPass(bloom);
+      composer.addPass(new THREE.ShaderPass({
+        uniforms: { tDiffuse: { value: null } },
+        vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+        // #include must start its own line
+        fragmentShader: "uniform sampler2D tDiffuse;\nvarying vec2 vUv;\nvoid main() {\ngl_FragColor = texture2D(tDiffuse, vUv);\n#include <tonemapping_fragment>\n#include <encodings_fragment>\n}",
+      }));
+      resize();
+    });
 
     const pmrem = new THREE.PMREMGenerator(renderer);
     loadScript(ENV_URL).then((ok) => {
@@ -306,9 +374,10 @@
     }
     const rail = new THREE.Mesh(new THREE.TubeGeometry(new Oval(A + 0.2, B + 0.2, 0.06), 420, 0.19, 32, true),
       new THREE.MeshPhysicalMaterial({
-        color: 0x150805, roughness: 0.55, metalness: 0,
-        normalMap: tex("assets/table/leather_n.jpg", false, 90, 2), normalScale: new THREE.Vector2(0.55, 0.55),
-        clearcoat: 0.12, clearcoatRoughness: 0.5, envMapIntensity: 0.1,
+        // colours here are linear: an sRGB oxblood, converted, so it stays truly dark
+        color: new THREE.Color(0x2a0d0a).convertSRGBToLinear(), roughness: 0.42, metalness: 0,
+        normalMap: tex("assets/table/leather_n.jpg", false, 90, 2), normalScale: new THREE.Vector2(0.5, 0.5),
+        clearcoat: 0.35, clearcoatRoughness: 0.35, envMapIntensity: 0.25,
       }));
     rail.scale.y = 0.72;
     rail.castShadow = rail.receiveShadow = true;
@@ -340,11 +409,9 @@
     }
     // a brass bead between the leather and the wood
     const brass = new THREE.MeshStandardMaterial({ color: 0xc9a465, metalness: 1, roughness: 0.28, envMapIntensity: 1 });
-    const bead = new THREE.Mesh(new THREE.TubeGeometry(new Oval(A + 0.405, B + 0.405, 0.1), 420, 0.014, 10, true), brass);
+    const bead = new THREE.Mesh(new THREE.TubeGeometry(new Oval(A + 0.405, B + 0.405, 0.118), 600, 0.014, 12, true), brass);
     bead.castShadow = true;
     scene.add(bead);
-    const inlay = new THREE.Mesh(new THREE.TubeGeometry(new Oval(A + 0.68, B + 0.68, 0.1), 420, 0.007, 6, true), brass);
-    scene.add(inlay);
 
     // lacquered wood: the drink ledge and the body of the table
     const woodMat = (dark) => new THREE.MeshPhysicalMaterial({
@@ -365,6 +432,23 @@
     body.position.y = -0.9;
     body.receiveShadow = true;
     scene.add(body);
+    // the table stands on something: a pedestal on a dark carpet
+    {
+      const FLOOR = -2.4;
+      const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 1.15, FLOOR * -1 - 0.9, 64), woodMat(true));
+      ped.position.y = (FLOOR - 0.9) / 2;
+      ped.scale.z = 0.62;
+      ped.castShadow = ped.receiveShadow = true;
+      const foot = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.12, 64), woodMat(true));
+      foot.position.y = FLOOR + 0.06; foot.scale.z = 0.62;
+      foot.receiveShadow = true;
+      const floor = new THREE.Mesh(new THREE.CircleGeometry(14, 64), new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0x12100e).convertSRGBToLinear(), roughness: 0.95, envMapIntensity: 0,
+      }));
+      floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR;
+      floor.receiveShadow = true;
+      scene.add(ped, foot, floor);
+    }
 
     // chips: stacks of black and ivory, their name on the gold ones
     const chipGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.036, 64, 1);
@@ -503,8 +587,9 @@
     const DUST = small ? 160 : 320;
     const dustPos = new Float32Array(DUST * 3), dustSeed = new Float32Array(DUST);
     for (let k = 0; k < DUST; k++) {
-      const r = Math.sqrt(Math.random()) * 2.6, a = Math.random() * Math.PI * 2;
-      dustPos.set([Math.cos(a) * r, 0.2 + Math.random() * 3.2, Math.sin(a) * r * 0.7], k * 3);
+      // only inside the cone of the lamp, where light would catch it
+      const y = 0.25 + Math.random() * (LAMP_Y - 0.6), r = Math.sqrt(Math.random()) * (0.9 + (LAMP_Y - y) * 0.75), a = Math.random() * Math.PI * 2;
+      dustPos.set([Math.cos(a) * r, y, Math.sin(a) * r * 0.7], k * 3);
       dustSeed[k] = Math.random() * 100;
     }
     const dustGeo = new THREE.BufferGeometry();
@@ -516,7 +601,7 @@
       return canvasTex(c);
     })();
     const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
-      map: dustTex, size: 0.022, sizeAttenuation: true, transparent: true, opacity: 0.55,
+      map: dustTex, size: 0.016, sizeAttenuation: true, transparent: true, opacity: 0.4,
       depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: true,
     }));
     scene.add(dust);
@@ -526,7 +611,7 @@
         dustPos[i] += Math.sin(t * 0.21 + s) * dt * 0.02;
         dustPos[i + 2] += Math.cos(t * 0.17 + s * 1.3) * dt * 0.02;
         dustPos[i + 1] += (Math.sin(t * 0.3 + s) * 0.5 + 0.15) * dt * 0.03;
-        if (dustPos[i + 1] > 3.4) dustPos[i + 1] = 0.2;
+        if (dustPos[i + 1] > LAMP_Y - 0.35) dustPos[i + 1] = 0.25;
       }
       dustGeo.attributes.position.needsUpdate = true;
     };
@@ -576,6 +661,7 @@
     const resize = () => {
       const r = vt.getBoundingClientRect();
       renderer.setSize(r.width, r.height, false);
+      if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(r.width, r.height); }
       camera.aspect = r.width / r.height;
       camera.updateProjectionMatrix();
     };
@@ -665,11 +751,11 @@
         const want = k === hoverBox ? 0.16 : k === chosen ? 0.1 + Math.sin(now / 260) * 0.04 : 0;
         g.material.opacity += (want - g.material.opacity) * Math.min(1, dt * 8);
       });
-      renderer.render(scene, camera);
+      if (composer) composer.render(dt); else renderer.render(scene, camera);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    window.__vt = { scene, camera, view, renderer, throwDie, roll };
+    window.__vt = { scene, camera, view, renderer, throwDie, roll, get composer() { return composer; } };
 
     return () => {
       disposed = true;
@@ -682,6 +768,7 @@
         const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
         ms.forEach((m) => { Object.values(m).forEach((v) => v && v.isTexture && v.dispose()); m.dispose(); });
       });
+      if (composer) { composer.renderTarget1.dispose(); composer.renderTarget2.dispose(); if (bloom) bloom.dispose(); }
       if (scene.environment) scene.environment.dispose();
       pmrem.dispose();
       renderer.dispose();
