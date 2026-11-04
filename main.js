@@ -1973,11 +1973,15 @@
     CUR.x = CUR.tx; // no lag: the point sits exactly on the pointer
     CUR.y = CUR.ty;
     const overDie = (hovering || drag) && !overlay;
-    const target = cursorEl.classList.contains("is-roulette") ? 0.62 : drag ? 0.5 : overDie ? 1 : CUR.link ? 0.42 : 0.1;
+    // at rest a small glass bead (big enough for the glass to read), larger over links and the die
+    const target = cursorEl.classList.contains("is-roulette") ? 0.62 : drag ? 0.5 : overDie ? 1 : CUR.link ? 0.46 : 0.24;
     CUR.s = damp(CUR.s, target, 14, dt);
+    // it breathes: a slow swell of a few percent, about one breath every 3.6 s
+    CUR.t = (CUR.t || 0) + dt;
+    const breath = reduce ? 1 : 1 + Math.sin(CUR.t * (Math.PI * 2) / 3.6) * 0.06;
     cursorEl.classList.toggle("is-die", overDie && !drag);
     cursorEl.classList.toggle("is-link", !overDie && CUR.link);
-    cursorEl.style.transform = `translate3d(${CUR.x.toFixed(1)}px, ${CUR.y.toFixed(1)}px, 0) scale(${CUR.s.toFixed(3)})`;
+    cursorEl.style.transform = `translate3d(${CUR.x.toFixed(1)}px, ${CUR.y.toFixed(1)}px, 0) scale(${(CUR.s * breath).toFixed(3)})`;
   }
 
   /* ---------- loop ---------- */
