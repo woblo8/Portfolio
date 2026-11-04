@@ -152,12 +152,17 @@
   let receiptTimer = 0;
   const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   function printReceipt({ index, title, secs, detail }) {
-    const now = new Date();
-    const stamp = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    receipt.innerHTML = `
-      <span class="rc-head">woblo.io · ${T("mesa", "table")} ${String(index + 1).padStart(2, "0")}</span>
-      <b>${title} · ${mmss(secs)} · ${detail}</b>
-      <span class="rc-foot">${stamp} · ${T("gracias por jugar", "thank you for playing")}</span>`;
+    // printed like a slot machine's cash-out ticket: what you spent here is time
+    const V = window.VOUCHER, n = String(index + 1).padStart(2, "0");
+    const m = Math.floor(secs / 60), sec = secs % 60;
+    const spelled = T(
+      `${V.words(m)} ${m === 1 ? "MINUTO" : "MINUTOS"} Y ${V.words(sec)} ${sec === 1 ? "SEGUNDO" : "SEGUNDOS"}`,
+      `${V.words(m)} ${m === 1 ? "MINUTE" : "MINUTES"} AND ${V.words(sec)} ${sec === 1 ? "SECOND" : "SECONDS"}`);
+    receipt.innerHTML = V.html(V.make({
+      sub: `${T("MESA", "TABLE")} ${n} · ${title}`,
+      rows: [[T("VISITA", "VISIT"), detail]],
+      words: spelled, amount: mmss(secs), asset: `${T("CARA", "FACE")} # ${n}`,
+    }));
     receipt.classList.remove("on");
     void receipt.offsetWidth;
     receipt.classList.add("on");

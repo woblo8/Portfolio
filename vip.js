@@ -1961,32 +1961,21 @@
   function showReceipt(name, rolls) {
     const old = document.querySelector(".vt-receipt");
     if (old) old.remove();
-    const now = new Date();
-    const date = now.toLocaleDateString(T("es-ES", "en-GB"), { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
-    const time = now.toLocaleTimeString(T("es-ES", "en-GB"), { hour: "2-digit", minute: "2-digit" });
-    const no = String(Math.floor(now.getTime() / 1000) % 100000).padStart(5, "0");
+    const V = window.VOUCHER;
     const W = T(["UNO", "DOS", "TRES", "CUATRO", "CINCO", "SEIS"], ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"]);
-    const lines = rolls.slice(-8).map((r, i) => [String(i + 1).padStart(2, "0"), `${W[r.val - 1]} → ${r.title.toUpperCase()}`]);
     const sum = rolls.reduce((s, r) => s + r.val, 0);
-    const head = ["WOBLO.IO", T("MESA PRIVADA", "PRIVATE TABLE")];
-    const meta = [[T("INVITADO", "GUEST"), name.toUpperCase()], [T("FECHA", "DATE"), `${date} · ${time}`], [T("TICKET", "TICKET"), `Nº ${no}`]];
-    const foot = [T(`TIRADAS ${rolls.length} · SUMA ${sum}`, `ROLLS ${rolls.length} · TOTAL ${sum}`), T("LA CASA AGRADECE SU VISITA", "THE HOUSE THANKS YOU"), "carlos · woblo.io"];
-
+    const v = V.make({
+      sub: `${T("MESA PRIVADA", "PRIVATE TABLE")} · ${name.toUpperCase()}`,
+      rows: rolls.slice(-5).map((r, i) => [`${T("TIRADA", "ROLL")} ${String(i + 1).padStart(2, "0")}`, `${W[r.val - 1]} → ${r.title.toUpperCase()}`]),
+      words: `${V.words(sum)} ${T(sum === 1 ? "PUNTO" : "PUNTOS", sum === 1 ? "POINT" : "POINTS")}`,
+      amount: `${sum} ${T("PTS", "PTS")}`,
+      asset: `${T("TIRADAS", "ROLLS")} # ${rolls.length}`,
+    });
     const el = document.createElement("aside");
     el.className = "vt-receipt";
     el.setAttribute("role", "dialog");
-    el.setAttribute("aria-label", T("Recibo de la mesa", "Table receipt"));
-    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-    el.innerHTML = `
-      <div class="vtr-paper">
-        <div class="vtr-head">${head.map(esc).join("<br>")}</div>
-        <div class="vtr-rule"></div>
-        ${meta.map(([k, v]) => `<div class="vtr-row"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("")}
-        <div class="vtr-rule"></div>
-        ${lines.map(([k, v]) => `<div class="vtr-row"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("")}
-        <div class="vtr-rule"></div>
-        <div class="vtr-foot">${foot.map(esc).join("<br>")}</div>
-      </div>
+    el.setAttribute("aria-label", T("Ticket de la mesa", "Table ticket"));
+    el.innerHTML = `${V.html(v)}
       <div class="vtr-actions">
         <button type="button" class="vtr-dl">${T("Descargar", "Download")} ↓</button>
         <button type="button" class="vtr-x" aria-label="${T("Cerrar", "Close")}">✕</button>
@@ -1998,41 +1987,15 @@
     el.addEventListener("pointerleave", () => { clearTimeout(timer); timer = setTimeout(close, 6000); });
     function close() { el.classList.remove("on"); setTimeout(() => el.remove(), 700); }
     el.querySelector(".vtr-x").addEventListener("click", close);
-    el.querySelector(".vtr-dl").addEventListener("click", () => {
-      // drawn again on a canvas, at print size, so it saves as a clean image
-      const S = 2, w = 380, rowH = 22;
-      const rows = [...meta, null, ...lines];
-      const h = 64 + head.length * 22 + 24 + rows.length * rowH + 24 + foot.length * 20 + 40;
-      const c = document.createElement("canvas"); c.width = w * S; c.height = h * S;
-      const x = c.getContext("2d"); x.scale(S, S);
-      x.fillStyle = "#ecebe7"; x.fillRect(0, 0, w, h); // same paper as the site's receipt
-      // the torn bottom edge
-      x.fillStyle = "#050506";
-      for (let i = 0; i < w; i += 12) { x.beginPath(); x.moveTo(i, h); x.lineTo(i + 6, h - 6); x.lineTo(i + 12, h); x.fill(); }
-      x.fillStyle = "#050506"; x.textBaseline = "middle";
-      const mono = (sz, wgt = 500) => `${wgt} ${sz}px "Geist Mono", ui-monospace, monospace`;
-      const rule = (yy) => { x.save(); x.strokeStyle = "rgba(0,0,0,0.35)"; x.setLineDash([3, 3]); x.beginPath(); x.moveTo(24, yy); x.lineTo(w - 24, yy); x.stroke(); x.restore(); };
-      let y = 40;
-      x.textAlign = "center"; x.font = mono(14);
-      head.forEach((t) => { x.fillText(t, w / 2, y); y += 22; });
-      y += 4; rule(y); y += 20;
-      x.font = mono(11);
-      rows.forEach((r) => {
-        if (!r) { rule(y - 6); y += 6; return; }
-        x.textAlign = "left"; x.fillStyle = "#6b6b70"; x.fillText(r[0], 24, y);
-        x.textAlign = "right"; x.fillStyle = "#050506"; x.fillText(r[1], w - 24, y);
-        y += rowH;
-      });
-      rule(y); y += 22;
-      x.textAlign = "center"; x.fillStyle = "#6b6b70";
-      foot.forEach((t) => { x.fillText(t, w / 2, y); y += 20; });
+    el.querySelector(".vtr-dl").addEventListener("click", async () => {
+      const c = await V.canvas(v, 2);
       c.toBlob((blob) => {
         if (!blob) return;
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `woblo-mesa-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${no}.png`;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `woblo-ticket-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${v.number}.png`;
+        document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 4000);
       }, "image/png");
     });
   }
