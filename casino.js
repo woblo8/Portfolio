@@ -73,6 +73,27 @@
     const a = audio(); if (!a) return;
     burst(a, a.currentTime, { freq: 5200, type: "highpass", q: 0.8, gain: 0.12 * v, dur: 0.018 });
   }
+  // a glass tick for every button and link: two bright partials, gone in a few milliseconds
+  function glass(v = 1) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime, base = 3400 + Math.random() * 500;
+    [[base, 0.022], [base * 2.76, 0.009]].forEach(([f, g]) => {
+      const o = a.createOscillator(), gn = a.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(f, t);
+      gn.gain.setValueAtTime(0.0001, t);
+      gn.gain.exponentialRampToValueAtTime(g * v, t + 0.002);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      o.connect(gn).connect(a.destination); o.start(t); o.stop(t + 0.1);
+    });
+    burst(a, t, { freq: 7000, type: "highpass", q: 0.7, gain: 0.012 * v, dur: 0.012 }); // the click of the touch
+  }
+  document.addEventListener("pointerdown", (e) => {
+    if (!SND.on || e.button > 0) return;
+    const el = e.target.closest && e.target.closest("button, a, [role=button], summary, label[for]");
+    if (!el || el.id === "soundBtn" || el.disabled) return;
+    glass(el.closest(".index") ? 0.8 : 1);
+  }, { capture: true, passive: true });
+
   function setSound(on) {
     SND.on = on;
     soundBtn.setAttribute("aria-pressed", String(on));
@@ -204,7 +225,7 @@
     requestAnimationFrame(() => el.classList.add("is-drawn"));
   }
   // the private table borrows the same synthesiser (and the same on/off)
-  window.CASINO = { mountOdds, sound: { audio, burst, chip, thud, tick, get on() { return SND.on; } } };
+  window.CASINO = { mountOdds, sound: { audio, burst, chip, thud, tick, glass, get on() { return SND.on; } } };
 
   /* ---------- private table ---------- */
   if (window.VIP) {
