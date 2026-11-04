@@ -508,3 +508,10 @@ body.xray-on .hint, body.xray-on .index { opacity: 0 !important; transition-dela
 
 /* lite mode (slow device): keep the look, drop the moving film grain */
 html.lite .grain, html.lite .vt3-grain { animation: none; }
+/* the hours, and right after them the way to book one */
+.avail { flex-wrap: wrap; row-gap: 10px; }
+.avail-book {
+  margin-left: 14px; padding-left: 14px; border-left: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff; text-decoration: none; text-shadow: var(--neon-glow); transition: opacity 0.3s;
+}
+.avail-book:hover { opacity: 0.7; }

@@ -45,7 +45,10 @@
         <span class="vt3-label" data-label="card"><b>${T("Ábrela", "Open me")}</b></span>
         <footer class="vt3-foot">
           <span class="vt3-hint">${T("Arrastra para rodear la mesa · Lanza el dado o elige una casilla", "Drag to walk around the table · Roll the die or pick a box")}</span>
-          <a class="vt-cta" href="mailto:${esc(site.email)}?subject=${subject}">${T("Hablemos", "Let’s talk")} <span>→</span></a>
+          <div class="vt3-ctas">
+            <a class="vt-cta" href="mailto:${esc(site.email)}?subject=${subject}">${T("Hablemos", "Let’s talk")} <span>→</span></a>
+            ${site.calendly ? `<a class="vt-cta is-ghost" href="${esc(site.calendly)}" target="_blank" rel="noopener">${T("Reservar llamada", "Book a call")} <span>↗</span></a>` : ""}
+          </div>
         </footer>
         <div class="vt3-note" role="dialog" aria-hidden="true" aria-label="${T("Una nota para usted", "A note for you")}">
           <p class="vt3-sr">${T("Para", "For")} ${esc(name)}. ${esc(note)} — Carlos</p>

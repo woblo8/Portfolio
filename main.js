@@ -1142,8 +1142,8 @@
     const s = p.summary;
     if (!s) return "";
     return `
-      <aside class="tldr r" aria-label="${T("En 10 segundos", "In 10 seconds")}">
-        <span class="tldr-k">${T("En 10 segundos", "In 10 seconds")}</span>
+      <aside class="tldr r" aria-label="${T("En síntesis", "In brief")}">
+        <span class="tldr-k">${T("En síntesis", "In brief")}</span>
         <dl>
           <div><dt>${T("Qué es", "What")}</dt><dd>${esc(s.what)}</dd></div>
           <div><dt>${T("Para quién", "For whom")}</dt><dd>${esc(s.who)}</dd></div>
@@ -1153,7 +1153,10 @@
   }
 
   function availHTML() {
-    return SITE.availability ? `<p class="avail r"><i></i>${esc(SITE.availability)}</p>` : "";
+    if (!SITE.availability) return "";
+    // the hours, and the way to take one of them
+    const book = SITE.calendly ? `<a class="avail-book" href="${esc(SITE.calendly)}" target="_blank" rel="noopener">${T("Reservar una llamada", "Book a call")} ↗</a>` : "";
+    return `<p class="avail r"><i></i>${esc(SITE.availability)}${book}</p>`;
   }
 
   function projectHTML(i) {
