@@ -27,7 +27,8 @@
   const emit = (name, data) => (bus[name] || []).forEach((fn) => { try { fn(data); } catch (e) { /* never break the object */ } });
 
   /* ---------- static text ---------- */
-  $("#brandName").textContent = SITE.name;
+  // the accent of Infanzón lives apart from its letter: it floats
+  $("#brandName").innerHTML = esc(SITE.name).replace(/[óÓ]/, (c) => `<span class="acc">${c === "ó" ? "o" : "O"}<i class="acc-mark" aria-hidden="true">´</i></span>`);
   $("#brandRole").textContent = SITE.role;
   $("#tagline").textContent = SITE.tagline;
 
@@ -692,7 +693,7 @@
   }
 
   function launch(p, v, w) {
-    emit("throw");
+    emit("throw", { v: v.length() });
     hideInfo();
     B.p.copy(p);
     B.v.copy(v);
@@ -1075,6 +1076,7 @@
         <div class="neon-line r"></div>
         ${rows}
         <a class="print-link r" href="print.html" target="_blank" rel="noopener"><span>${T("¿Prefieres papel?", "Prefer paper?")}</span>${T("Versión imprimible", "Printable version")} ↗</a>
+        <p class="fine r">${T("Ningún dado fue dañado en el diseño de esta web.", "No dice were harmed in the making of this website.")}</p>
       </section>`;
   }
 

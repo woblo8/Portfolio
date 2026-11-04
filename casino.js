@@ -109,14 +109,18 @@
   }
 
   /* ---------- double or nothing ---------- */
+  let doubling = false;
   $("#againBtn").addEventListener("click", () => {
+    doubling = true;
     if (D.throwPower(1.55)) say(T("Doble o nada.", "Double or nothing."), 1800);
   });
 
   /* ---------- the table reacts to the object ---------- */
-  D.on("throw", () => {
+  D.on("throw", (e) => {
     body.classList.remove("can-again");
-    say("Rien ne va plus.", 1700);
+    const hard = !doubling && e && e.v > 6.6; // a wild drag, not the double or nothing
+    doubling = false;
+    say(hard ? T("Con calma. Es de cristal.", "Easy. It’s glass.") : "Rien ne va plus.", hard ? 2400 : 1700);
   });
   D.on("impact", ({ v }) => thud(Math.min(1, v / 7)));
   D.on("enter", () => { say("Les jeux sont faits.", 2200); chip(0.7); });

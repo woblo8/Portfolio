@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>404 — Carlos Infanzón Civantos</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@500;600&display=swap" rel="stylesheet" />
+  <style>
+    @font-face { font-family: "Neue Haas Grotesk"; src: url("/fonts/NeueHaasGrotesk-Bold.woff2") format("woff2"); font-weight: 600; }
+    :root { --bone: #ecebe7; --smoke: #8c8c92; --glow: 0 0 10px rgba(255,255,255,.55), 0 0 2px #fff;
+      --sans: "Neue Haas Grotesk", "Inter Tight", "Helvetica Neue", Arial, sans-serif; --mono: "Geist Mono", ui-monospace, monospace; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { background: #050506; color: var(--bone); font-family: var(--sans); -webkit-font-smoothing: antialiased;
+      display: grid; place-items: center; padding: 16px; overflow: hidden; }
+    body::after { content: ""; position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse at 50% 38%, rgba(255,255,255,.06), transparent 60%); }
+    main { text-align: center; display: grid; justify-items: center; gap: 34px; }
+    .k { font-family: var(--mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--smoke); }
+    /* a face that cannot exist: seven pips */
+    .face { width: 168px; height: 168px; border-radius: 26px; position: relative;
+      box-shadow: inset 0 0 0 1.5px #fff, 0 0 26px rgba(255,255,255,.22), inset 0 0 20px rgba(255,255,255,.08);
+      animation: float 5s ease-in-out infinite; }
+    .face i { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: var(--glow);
+      transform: translate(-50%, -50%); }
+    .face i:last-child { animation: odd 2.6s steps(1) infinite; }
+    @keyframes float { 50% { transform: translateY(-8px) rotate(-3deg); } }
+    @keyframes odd { 0%, 88% { opacity: 1; } 90% { opacity: .15; } 94% { opacity: 1; } 96% { opacity: .3; } }
+    h1 { font-size: clamp(38px, 7vw, 84px); font-weight: 600; letter-spacing: -.05em; line-height: .92; text-transform: uppercase; max-width: 12ch; }
+    a { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #fff; text-decoration: none;
+      border: 1px solid rgba(255,255,255,.6); border-radius: 99px; padding: 13px 22px; transition: box-shadow .4s, border-color .4s; }
+    a:hover { border-color: #fff; box-shadow: 0 0 18px rgba(255,255,255,.35), inset 0 0 10px rgba(255,255,255,.12); }
+    @media (prefers-reduced-motion: reduce) { .face, .face i:last-child { animation: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <span class="k">Error 404 · <span id="k">cara 07 / 06</span></span>
+    <div class="face" aria-hidden="true">
+      <i style="left:25%;top:25%"></i><i style="left:75%;top:25%"></i>
+      <i style="left:25%;top:50%"></i><i style="left:75%;top:50%"></i>
+      <i style="left:25%;top:75%"></i><i style="left:75%;top:75%"></i>
+      <i style="left:50%;top:50%"></i>
+    </div>
+    <h1 id="t">Esta cara no existe.</h1>
+    <a href="/" id="a">Tire otra vez ↻</a>
+  </main>
+  <script>
+    (() => {
+      let lang = null;
+      try { lang = localStorage.getItem("woblo:lang"); } catch (e) {}
+      if (!lang) lang = (navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en";
+      if (lang !== "en") return;
+      document.documentElement.lang = "en";
+      document.getElementById("k").textContent = "face 07 / 06";
+      document.getElementById("t").textContent = "This face doesn’t exist.";
+      document.getElementById("a").textContent = "Roll again ↻";
+    })();
+  </script>
+</body>
+</html>

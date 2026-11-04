@@ -176,3 +176,14 @@ html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l
   .index > button .chip-price { display: none; }
   .receipt { bottom: 140px; }
 }
+
+/* ---------- letters that play ---------- */
+.acc { position: relative; display: inline-block; }
+.acc-mark {
+  position: absolute; left: 52%; top: -0.12em; font-style: normal; line-height: 1;
+  transform: translate(-50%, -1.2px); will-change: transform; pointer-events: none;
+}
+.fine {
+  margin-top: 7vh; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--smoke); opacity: 0.6;
+}
