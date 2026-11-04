@@ -34,30 +34,37 @@ body.can-again.has-info .info .again:hover { color: #fff; text-shadow: var(--neo
 .info .again span { display: inline-block; transition: transform 0.8s var(--ease); }
 .info .again:hover span { transform: rotate(-200deg); }
 
-/* chips as the index */
-.index { gap: 10px; align-items: flex-end; }
+/* chips as the index: rings of neon */
+.index { gap: 12px; align-items: flex-end; }
 .index > button {
-  position: relative; width: 36px; height: 36px; padding: 0; border-radius: 50%;
-  background:
-    radial-gradient(circle, #1d1d20 0 50%, rgba(255, 255, 255, 0.16) 51% 53%, transparent 54%),
-    repeating-conic-gradient(from 7deg, #2c2c30 0 12deg, #121214 12deg 30deg);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 3px 0 #0a0a0b, 0 6px 10px rgba(0, 0, 0, 0.6);
-  transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease);
+  position: relative; width: 34px; height: 34px; padding: 0; border-radius: 50%; background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease);
 }
-.index > button .chip-face { position: relative; z-index: 2; font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; color: var(--mist); }
-.index > button::before, .index > button::after {
-  content: ""; position: absolute; inset: 0; left: 0; right: 0; bottom: 0; height: auto; border-radius: 50%; z-index: -1;
-  background: repeating-conic-gradient(from 7deg, #232327 0 12deg, #0f0f11 12deg 30deg);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 0 #0a0a0b;
-  opacity: 0; transform: none; transition: transform 0.45s var(--ease), opacity 0.3s;
+/* the notches of a casino chip, drawn as a dashed ring of light */
+.index > button::before {
+  content: ""; position: absolute; inset: 3px; border-radius: 50%; z-index: 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.5) 0 6deg, transparent 6deg 45deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 calc(50% - 2px), #000 calc(50% - 1.5px));
+          mask: radial-gradient(circle, transparent 0 calc(50% - 2px), #000 calc(50% - 1.5px));
+  opacity: 0.45; transform: none; transition: opacity 0.5s, transform 1.2s var(--ease);
 }
-.index > button:hover { transform: translateY(-10px); }
-.index > button:hover::before { opacity: 1; transform: translateY(5px); }
-.index > button:hover::after { opacity: 1; transform: translateY(10px); }
-.index > button.is-active { box-shadow: inset 0 0 0 1px #fff, 0 0 14px rgba(255, 255, 255, 0.3), 0 3px 0 #0a0a0b, 0 6px 10px rgba(0, 0, 0, 0.6); }
-.index > button.is-active::after { opacity: 0; }
-.index > button.is-active:hover::after { opacity: 1; }
-.index > button.is-active .chip-face { color: #fff; }
+.index > button::after { display: none; }
+.index > button .chip-face {
+  position: relative; z-index: 1; font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; color: var(--smoke);
+  transition: color 0.4s, text-shadow 0.4s;
+}
+.index > button:hover {
+  transform: translateY(-6px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 0 14px rgba(255, 255, 255, 0.35), inset 0 0 10px rgba(255, 255, 255, 0.12);
+}
+.index > button:hover::before { opacity: 1; transform: rotate(45deg); }
+.index > button:hover .chip-face { color: #fff; text-shadow: var(--neon-glow); }
+.index > button.is-active {
+  box-shadow: inset 0 0 0 1.5px #fff, 0 0 18px rgba(255, 255, 255, 0.45), 0 0 4px #fff, inset 0 0 12px rgba(255, 255, 255, 0.18);
+}
+.index > button.is-active::before { opacity: 1; }
+.index > button.is-active .chip-face { color: #fff; text-shadow: var(--neon-glow); }
 
 /* cards in Contact */
 .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2vw; margin-top: 7vh; max-width: 900px; }
@@ -134,7 +141,7 @@ body.can-again.has-info .info .again:hover { color: #fff; text-shadow: var(--neo
 /* private table */
 .brand-vip { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #d8b56f; text-shadow: 0 0 10px rgba(216, 181, 111, 0.45); }
 .brand-vip:empty { display: none; }
-body.vip .index > button.is-active { box-shadow: inset 0 0 0 1px #d8b56f, 0 0 14px rgba(216, 181, 111, 0.35), 0 3px 0 #0a0a0b, 0 6px 10px rgba(0, 0, 0, 0.6); }
+body.vip .index > button.is-active { box-shadow: inset 0 0 0 1.5px #d8b56f, 0 0 18px rgba(216, 181, 111, 0.45), inset 0 0 12px rgba(216, 181, 111, 0.15); }
 
 /* the receipt */
 .receipt {
