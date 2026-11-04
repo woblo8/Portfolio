@@ -364,26 +364,44 @@
 
   function paintFace(mat) {
     const { p, i, alb, glow, nrm, rgh } = mat.userData;
+    // the three entries (About, Contact, CV) are the negative of the projects:
+    // a bone-white face with the engraving in black
+    const inv = !!p.kind;
     drawDesign(design.getContext("2d"), p, i);
     const a = alb.getContext("2d");
     const g = a.createLinearGradient(0, 0, TEX, TEX);
-    g.addColorStop(0, "#1f1f22");
-    g.addColorStop(1, "#141416");
+    g.addColorStop(0, inv ? "#e4e3df" : "#1f1f22");
+    g.addColorStop(1, inv ? "#cfcec9" : "#141416");
     a.globalAlpha = 1;
     a.fillStyle = g;
     a.fillRect(0, 0, TEX, TEX);
     a.globalAlpha = 0.04;
     a.fillStyle = a.createPattern(noise, "repeat");
     a.fillRect(0, 0, TEX, TEX);
-    a.globalAlpha = 0.16;
-    a.drawImage(design, 0, 0);
+    if (inv) {
+      // white minus white = black: the design is printed dark on the light face
+      a.globalCompositeOperation = "difference";
+      a.globalAlpha = 0.92;
+      a.drawImage(design, 0, 0);
+      a.globalCompositeOperation = "source-over";
+    } else {
+      a.globalAlpha = 0.16;
+      a.drawImage(design, 0, 0);
+    }
     a.globalAlpha = 1;
     // glow layer: only the engraving lights up, never the frame of the face
     const e = glow.getContext("2d");
     e.fillStyle = "#000";
     e.fillRect(0, 0, TEX, TEX);
     drawDesign(design.getContext("2d"), p, i, false);
-    e.drawImage(design, 0, 0);
+    if (inv) {
+      // the negative glows: the face lights up, the letters stay dark
+      e.fillStyle = "#fff"; e.fillRect(0, 0, TEX, TEX);
+      e.globalCompositeOperation = "difference"; e.drawImage(design, 0, 0); e.globalCompositeOperation = "source-over";
+      e.globalAlpha = 0.55; e.fillStyle = "#000"; e.fillRect(0, 0, TEX, TEX); e.globalAlpha = 1; // softer than the engraving glow
+    } else {
+      e.drawImage(design, 0, 0);
+    }
     drawDesign(design.getContext("2d"), p, i, true);
     const r = rgh.getContext("2d");
     r.globalAlpha = 1;
@@ -634,6 +652,7 @@
 
   P.forEach((p, i) => {
     const b = document.createElement("button");
+    if (p.kind) b.classList.add("chip-inv"); // entries: the white chips
     b.innerHTML = `<span class="chip-face">${pad(i)}</span><span class="chip-price">${pad(i)} · ${esc(p.year)} · ${esc(p.category).toUpperCase()}</span>`;
     b.setAttribute("aria-label", `${pad(i)} — ${p.title}`);
     b.title = p.title;

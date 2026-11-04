@@ -683,8 +683,10 @@
     // a loose chip leaning against the ivory stack, another lying flat on its own
     {
       const lean1 = new THREE.Mesh(chipGeo, kinds[0]);
-      lean1.position.set(-1.62 + 0.235, 0.075, -0.92 + 0.04);
-      lean1.rotation.set(0.1, 0.3, 1.18, "YXZ");
+      // tilted 1 rad, its top edge resting on the ivory stack, its bottom edge on the felt
+      const tilt = 1.0, rr = 0.2, hh = 0.018;
+      lean1.rotation.set(0, 0, -tilt);
+      lean1.position.set(-1.62 + rr + Math.cos(tilt) * rr + 0.012, Math.sin(tilt) * rr + Math.cos(tilt) * hh, -0.92);
       const flat = new THREE.Mesh(chipGeo, kinds[2]);
       flat.position.set(1.95, 0.019, -0.22); flat.rotation.y = 2.1; // clear of the die's landing area
       [lean1, flat].forEach((m) => { m.castShadow = m.receiveShadow = true; scene.add(m); });
@@ -825,71 +827,210 @@
       scene.add(m);
     });
 
-    /* ---------- banknotes left on the felt: a fictional house note, never a real currency ---------- */
+    /* ---------- banknotes left on the felt ----------
+       Dollar-like in size, paper and engraving, but a fictional house note
+       ("WOBLO RESERVE · NOT LEGAL TENDER"), never a copy of a real currency.
+       Scale: a chip is 0.4 across (≈ 39 mm), so a note is 1.56 × 0.66 (156 × 66 mm). */
     {
-      const noteTex = (() => {
-        const W = 1024, H = 440, c = mk(W, H), x = c.getContext("2d");
-        // paper: sage cream, a little uneven
-        const g = x.createLinearGradient(0, 0, W, H);
-        g.addColorStop(0, "#d9dccb"); g.addColorStop(0.5, "#cfd3bf"); g.addColorStop(1, "#c5caB4".toLowerCase());
-        x.fillStyle = g; x.fillRect(0, 0, W, H);
-        const ink = "rgba(38,62,52,", inkS = (a) => ink + a + ")";
-        // guilloché: rosettes of fine curves
-        x.lineWidth = 1;
-        for (let k = 0; k < 70; k++) {
-          x.strokeStyle = inkS(0.12);
+      const NW = 1.56, NH = 0.66;
+      const SERIF = '"Times New Roman", Georgia, "Iowan Old Style", serif';
+      const paper = (x, W, H, tint) => {
+        x.fillStyle = tint; x.fillRect(0, 0, W, H);
+        // fibres: short red and blue threads, like currency paper
+        for (let k = 0; k < 900; k++) {
+          const px = Math.random() * W, py = Math.random() * H, a = Math.random() * Math.PI, l = 6 + Math.random() * 14;
+          x.strokeStyle = Math.random() < 0.5 ? "rgba(170,40,40,0.18)" : "rgba(40,60,160,0.16)"; x.lineWidth = 1;
+          x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + Math.cos(a) * l * 0.5 + 3, py + Math.sin(a) * l * 0.5, px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke();
+        }
+        // grain
+        const img = x.getImageData(0, 0, W, H), d = img.data;
+        for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - 0.5) * 14; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+        x.putImageData(img, 0, 0);
+      };
+      const wear = (x, W, H) => {
+        // handled: edges darker, a soft crease down the middle, a little grime
+        const v = x.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.62);
+        v.addColorStop(0, "rgba(60,55,35,0)"); v.addColorStop(1, "rgba(60,55,35,0.22)");
+        x.fillStyle = v; x.fillRect(0, 0, W, H);
+        const c = x.createLinearGradient(W / 2 - 24, 0, W / 2 + 24, 0);
+        c.addColorStop(0, "rgba(0,0,0,0)"); c.addColorStop(0.48, "rgba(0,0,0,0.10)"); c.addColorStop(0.52, "rgba(255,255,255,0.12)"); c.addColorStop(1, "rgba(0,0,0,0)");
+        x.fillStyle = c; x.fillRect(W / 2 - 24, 0, 48, H);
+        for (let k = 0; k < 6; k++) { const px = Math.random() * W, py = Math.random() * H, r = 30 + Math.random() * 90; const g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, "rgba(70,60,40,0.07)"); g.addColorStop(1, "rgba(70,60,40,0)"); x.fillStyle = g; x.fillRect(px - r, py - r, r * 2, r * 2); }
+      };
+      // fine lathe work: the wavy bands that make money look like money
+      const lathe = (x, x0, y0, w, h, ink, n = 9, amp = 0.35, waves = 26) => {
+        x.save(); x.beginPath(); x.rect(x0, y0, w, h); x.clip();
+        x.lineWidth = 1.1; x.strokeStyle = ink;
+        for (let k = 0; k < n; k++) for (const s of [1, -1]) {
           x.beginPath();
-          for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.02) {
-            const r = 120 + 22 * Math.sin(7 * t + k * 0.09);
-            const px = W * 0.5 + Math.cos(t) * r * 1.9, py = H * 0.5 + Math.sin(t) * r * 0.9;
+          for (let t = 0; t <= 1.0001; t += 0.004) {
+            const px = x0 + t * w, py = y0 + h / 2 + s * Math.sin(t * Math.PI * 2 * waves + k * 0.7) * h * amp + (k - n / 2) * (h / n) * 0.6;
             t === 0 ? x.moveTo(px, py) : x.lineTo(px, py);
           }
           x.stroke();
         }
-        // borders
-        x.strokeStyle = inkS(0.85); x.lineWidth = 6; x.strokeRect(18, 18, W - 36, H - 36);
-        x.lineWidth = 2; x.strokeRect(32, 32, W - 64, H - 64);
-        for (let i = 0; i < 120; i++) { x.fillStyle = inkS(0.5); x.fillRect(40 + i * 7.9, 40, 3, 10); x.fillRect(40 + i * 7.9, H - 50, 3, 10); }
-        // the centre medallion: a die instead of a portrait
-        x.fillStyle = "rgba(225,228,212,0.95)"; x.beginPath(); x.ellipse(W / 2, H / 2, 120, 130, 0, 0, Math.PI * 2); x.fill();
-        x.strokeStyle = inkS(0.8); x.lineWidth = 3; x.stroke();
-        x.lineWidth = 2; x.strokeRect(W / 2 - 50, H / 2 - 50, 100, 100);
-        x.fillStyle = inkS(0.85);
-        [[-25, -25], [25, -25], [0, 0], [-25, 25], [25, 25]].forEach(([dx, dy]) => { x.beginPath(); x.arc(W / 2 + dx, H / 2 + dy, 8, 0, Math.PI * 2); x.fill(); });
-        // denominations and text
-        x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = inkS(0.9);
-        x.font = `700 92px ${SANS}`;
-        x.fillText("100", 130, 110); x.fillText("100", W - 130, H - 110);
-        x.font = `600 70px ${SANS}`; x.fillStyle = inkS(0.6);
-        x.fillText("100", W - 140, 110); x.fillText("100", 140, H - 110);
-        x.fillStyle = inkS(0.9);
-        x.font = `600 30px ${MONO}`;
-        if ("letterSpacing" in x) x.letterSpacing = "8px";
-        x.fillText("WOBLO RESERVE", W / 2, 70);
-        x.font = `500 22px ${MONO}`;
-        x.fillText(T("CIEN FICHAS · SIN VALOR LEGAL", "ONE HUNDRED CHIPS · NOT LEGAL TENDER"), W / 2, H - 68);
-        return canvasTex(c);
+        x.restore();
+      };
+      const rosette = (x, cx, cy, r, ink, petals = 36) => {
+        x.save(); x.strokeStyle = ink; x.lineWidth = 1;
+        for (let k = 0; k < petals; k++) {
+          x.beginPath();
+          for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.03) {
+            const rr = r * (0.55 + 0.45 * Math.abs(Math.sin(t * 6 + (k / petals) * Math.PI)));
+            const px = cx + Math.cos(t + k * 0.05) * rr, py = cy + Math.sin(t + k * 0.05) * rr;
+            t === 0 ? x.moveTo(px, py) : x.lineTo(px, py);
+          }
+          x.stroke();
+        }
+        x.restore();
+      };
+      // engraved die, drawn with hatching instead of fills, like an intaglio vignette
+      const engravedDie = (x, cx, cy, s, ink) => {
+        x.save(); x.strokeStyle = ink; x.lineWidth = 1.2;
+        const top = [[cx, cy - s * 0.9], [cx + s * 0.85, cy - s * 0.45], [cx, cy], [cx - s * 0.85, cy - s * 0.45]];
+        const left = [[cx - s * 0.85, cy - s * 0.45], [cx, cy], [cx, cy + s], [cx - s * 0.85, cy + s * 0.55]];
+        const right = [[cx, cy], [cx + s * 0.85, cy - s * 0.45], [cx + s * 0.85, cy + s * 0.55], [cx, cy + s]];
+        const poly = (pts) => { x.beginPath(); pts.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.closePath(); };
+        const hatch = (pts, gap, ang) => { x.save(); poly(pts); x.clip(); for (let k = -s * 3; k < s * 3; k += gap) { x.beginPath(); x.moveTo(cx - s * 2, cy + k); x.lineTo(cx + s * 2, cy + k + Math.tan(ang) * s * 4); x.stroke(); } x.restore(); };
+        hatch(left, 5, 0.5); hatch(right, 9, -0.3); hatch(top, 16, 0.1);
+        x.lineWidth = 2.4; [top, left, right].forEach((p) => { poly(p); x.stroke(); });
+        x.fillStyle = ink;
+        [[0, -0.45]].forEach(([u, v]) => { x.beginPath(); x.ellipse(cx + u * s, cy + v * s, s * 0.13, s * 0.07, 0, 0, Math.PI * 2); x.fill(); });
+        [[-0.6, 0.0], [-0.25, 0.55]].forEach(([u, v]) => { x.beginPath(); x.ellipse(cx + u * s, cy + v * s, s * 0.08, s * 0.11, 0.5, 0, Math.PI * 2); x.fill(); });
+        [[0.25, 0.0], [0.6, 0.55], [0.42, 0.28]].forEach(([u, v]) => { x.beginPath(); x.ellipse(cx + u * s, cy + v * s, s * 0.08, s * 0.11, -0.5, 0, Math.PI * 2); x.fill(); });
+        x.restore();
+      };
+      const W = 2048, H = Math.round(W * NH / NW);
+      const front = (() => {
+        const c = mk(W, H), x = c.getContext("2d");
+        paper(x, W, H, "#d5d8c4"); // the grey-green of worn currency paper
+        const ink = "rgba(28,36,30,0.9)", inkL = "rgba(28,36,30,0.35)", green = "rgba(40,92,62,0.92)";
+        // a pale green wash, as on newer notes
+        const wash = x.createRadialGradient(W * 0.62, H * 0.5, 40, W * 0.62, H * 0.5, W * 0.5);
+        wash.addColorStop(0, "rgba(150,190,150,0.18)"); wash.addColorStop(1, "rgba(150,190,150,0)");
+        x.fillStyle = wash; x.fillRect(0, 0, W, H);
+        // frame: outer rule, lathe band, inner rule
+        x.strokeStyle = ink; x.lineWidth = 5; x.strokeRect(34, 34, W - 68, H - 68);
+        lathe(x, 44, 44, W - 88, 46, inkL); lathe(x, 44, H - 90, W - 88, 46, inkL);
+        lathe(x, 44, 90, 46, H - 180, inkL, 6, 0.3, 8);
+        x.save(); x.translate(W - 90, 90); lathe(x, 0, 0, 46, H - 180, inkL, 6, 0.3, 8); x.restore();
+        x.lineWidth = 2; x.strokeRect(96, 96, W - 192, H - 192);
+        // microtext along the inner frame
+        x.fillStyle = "rgba(28,36,30,0.55)"; x.font = `500 13px ${MONO}`; x.textBaseline = "middle";
+        x.fillText("WOBLO RESERVE · NOT LEGAL TENDER · ".repeat(14), 110, 108);
+        // the portrait oval, left of centre: an engraved die where a face would be
+        const ox = W * 0.42, oy = H * 0.52;
+        x.save(); x.beginPath(); x.ellipse(ox, oy, 230, 270, 0, 0, Math.PI * 2); x.clip();
+        x.fillStyle = "rgba(214,218,198,1)"; x.fillRect(ox - 240, oy - 280, 480, 560);
+        for (let k = 0; k < 80; k++) { x.strokeStyle = "rgba(28,36,30,0.12)"; x.beginPath(); x.ellipse(ox, oy, 230 - k * 2.6, 270 - k * 3, 0, 0, Math.PI * 2); x.stroke(); }
+        engravedDie(x, ox, oy + 10, 120, ink);
+        x.restore();
+        x.strokeStyle = ink; x.lineWidth = 6; x.beginPath(); x.ellipse(ox, oy, 236, 276, 0, 0, Math.PI * 2); x.stroke();
+        x.lineWidth = 2; x.beginPath(); x.ellipse(ox, oy, 250, 290, 0, 0, Math.PI * 2); x.stroke();
+        // the seal, far left, and the house seal on the right
+        rosette(x, W * 0.17, H * 0.5, 120, "rgba(28,36,30,0.55)");
+        x.fillStyle = "rgba(214,218,198,0.95)"; x.beginPath(); x.arc(W * 0.17, H * 0.5, 62, 0, Math.PI * 2); x.fill();
+        x.fillStyle = ink; x.font = `700 74px ${SERIF}`; x.textAlign = "center"; x.fillText("W", W * 0.17, H * 0.5 + 4);
+        rosette(x, W * 0.72, H * 0.6, 92, "rgba(40,92,62,0.6)", 28);
+        x.fillStyle = green; x.font = `700 40px ${SERIF}`; x.fillText("◆", W * 0.72, H * 0.6);
+        // lettering
+        x.fillStyle = ink; x.textAlign = "center";
+        x.font = `600 30px ${SERIF}`; if ("letterSpacing" in x) x.letterSpacing = "10px";
+        x.fillText("WOBLO RESERVE NOTE", W * 0.5, 150);
+        x.font = `700 84px ${SERIF}`; if ("letterSpacing" in x) x.letterSpacing = "6px";
+        x.fillText("THE HOUSE OF WOBLO", W * 0.56, 236);
+        x.font = `600 46px ${SERIF}`; if ("letterSpacing" in x) x.letterSpacing = "14px";
+        x.fillText(T("CIEN FICHAS", "ONE HUNDRED CHIPS"), W * 0.58, H - 150);
+        if ("letterSpacing" in x) x.letterSpacing = "0px";
+        // corner denominations: three in ink, the big one in green
+        x.font = `700 120px ${SERIF}`;
+        x.fillText("100", 220, 210); x.fillText("100", W - 230, 210); x.fillText("100", 220, H - 170);
+        x.fillStyle = green; x.font = `700 230px ${SERIF}`;
+        x.fillText("100", W - 300, H - 150);
+        // serials and signatures
+        x.fillStyle = green; x.font = `600 44px ${MONO}`; if ("letterSpacing" in x) x.letterSpacing = "4px";
+        x.fillText("WB 0618 2026 A", W * 0.24, H * 0.24); x.fillText("WB 0618 2026 A", W * 0.86, H * 0.38);
+        if ("letterSpacing" in x) x.letterSpacing = "0px";
+        x.fillStyle = ink; x.font = `italic 400 40px ${SERIF}`;
+        x.fillText("C. Infanzón", W * 0.62, H * 0.79); x.fillText("The Croupier", W * 0.26, H * 0.79);
+        x.fillRect(W * 0.53, H * 0.81, 220, 2); x.fillRect(W * 0.17, H * 0.81, 220, 2);
+        wear(x, W, H);
+        return c;
       })();
-      const paper = new THREE.MeshStandardMaterial({ map: noteTex, roughness: 0.88, side: THREE.DoubleSide, envMapIntensity: 0.15 });
-      // a little curl: paper never lies perfectly flat
-      const noteGeo = (() => {
-        const g = new THREE.PlaneGeometry(0.86, 0.37, 24, 4), p = g.attributes.position;
-        for (let i = 0; i < p.count; i++) { const u = p.getX(i) / 0.43; p.setZ(i, (u * u) * 0.012 + Math.sin(u * 2.2) * 0.004); }
+      const back = (() => {
+        const c = mk(W, H), x = c.getContext("2d");
+        paper(x, W, H, "#cdd4bf");
+        const g = "rgba(38,92,60,0.9)", gL = "rgba(38,92,60,0.35)";
+        x.strokeStyle = g; x.lineWidth = 5; x.strokeRect(34, 34, W - 68, H - 68);
+        lathe(x, 44, 44, W - 88, 60, gL, 12); lathe(x, 44, H - 104, W - 88, 60, gL, 12);
+        x.lineWidth = 2; x.strokeRect(110, 110, W - 220, H - 220);
+        // a building on a real note; here, the lamp: TON 618, in line engraving
+        const cx = W / 2, cy = H / 2 + 20;
+        x.save(); x.beginPath(); x.rect(cx - 420, cy - 230, 840, 460); x.clip();
+        for (let k = 0; k < 60; k++) { x.strokeStyle = "rgba(38,92,60,0.12)"; x.beginPath(); x.moveTo(cx - 420, cy - 230 + k * 8); x.lineTo(cx + 420, cy - 230 + k * 8); x.stroke(); }
+        x.fillStyle = "rgba(205,212,191,1)"; x.beginPath(); x.arc(cx, cy, 150, 0, Math.PI * 2); x.fill();
+        x.strokeStyle = g; x.lineWidth = 1.2;
+        for (let k = 0; k < 40; k++) { x.beginPath(); x.arc(cx, cy, 150 - k * 3.6, Math.PI * (0.1 + k * 0.004), Math.PI * (0.9 - k * 0.004)); x.stroke(); }
+        x.lineWidth = 5; x.beginPath(); x.ellipse(cx, cy, 300, 46, 0, 0, Math.PI * 2); x.stroke();
+        x.lineWidth = 2; x.beginPath(); x.ellipse(cx, cy, 330, 58, 0, 0, Math.PI * 2); x.stroke();
+        x.restore();
+        x.strokeStyle = g; x.lineWidth = 3; x.strokeRect(cx - 420, cy - 230, 840, 460);
+        x.fillStyle = g; x.textAlign = "center"; x.textBaseline = "middle";
+        x.font = `700 84px ${SERIF}`; if ("letterSpacing" in x) x.letterSpacing = "8px";
+        x.fillText("THE HOUSE OF WOBLO", W / 2, 200);
+        x.font = `600 40px ${SERIF}`; if ("letterSpacing" in x) x.letterSpacing = "12px";
+        x.fillText(T("EN EL DISEÑO CONFIAMOS", "IN DESIGN WE TRUST"), W / 2, H - 190);
+        x.font = `600 30px ${SERIF}`;
+        x.fillText(T("CIEN FICHAS", "ONE HUNDRED CHIPS"), W / 2, H - 140);
+        if ("letterSpacing" in x) x.letterSpacing = "0px";
+        x.font = `700 300px ${SERIF}`; x.fillText("100", 330, H / 2 + 20); x.fillText("100", W - 330, H / 2 + 20);
+        x.font = `700 110px ${SERIF}`; x.fillText("100", 210, 200); x.fillText("100", W - 210, H - 190);
+        wear(x, W, H);
+        // seen from below, the back is mirrored: pre-flip it so it reads the right way round
+        const m = mk(W, H), mx = m.getContext("2d");
+        mx.translate(W, 0); mx.scale(-1, 1); mx.drawImage(c, 0, 0);
+        return m;
+      })();
+      const tf = canvasTex(front), tb = canvasTex(back);
+      const matF = new THREE.MeshStandardMaterial({ map: tf, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.FrontSide });
+      const matB = new THREE.MeshStandardMaterial({ map: tb, color: 0xc8c8c0, roughness: 0.86, envMapIntensity: 0.12, side: THREE.BackSide });
+      // the paper: a soft curl along its length, and optionally folded in half
+      const noteGeo = (fold) => {
+        const g = new THREE.PlaneGeometry(NW, NH, 64, 10), p = g.attributes.position;
+        for (let i = 0; i < p.count; i++) {
+          const x0 = p.getX(i), y0 = p.getY(i), u = x0 / (NW / 2), v = y0 / (NH / 2);
+          let x = x0, z = u * u * 0.012 + v * v * 0.006 + Math.sin(u * 3.1 + v) * 0.003;
+          if (fold && x0 > 0) {
+            // the right half folded back over the left, not quite pressed flat
+            const phi = Math.PI - 0.07 - (1 - Math.abs(v)) * 0.03;
+            x = Math.cos(phi) * x0; z = Math.sin(phi) * x0 + 0.004 + z * 0.4;
+          }
+          p.setXYZ(i, x, y0, z);
+        }
         g.computeVertexNormals();
         return g;
-      })();
-      // [x, z, yaw, height] — a fanned pile at the left end, one stray behind the die
+      };
+      const flat = noteGeo(false), folded = noteGeo(true);
+      // [x, z, yaw, height, folded] — placed by a check against every chip, card, plaque,
+      // betting box and the die's landing zone: nothing goes through anything
       const notes = [
-        // all clear of the chips, the card, the plaques and where the die lands
-        [-2.47, 0.08, 0.25, 0.004], [-2.41, 0.13, 0.55, 0.008], [-2.35, 0.17, 0.88, 0.012],
-        [1.05, -1.33, 0.25, 0.004],
+        [0.0, 1.3, 0.0, 0.003, false],      // the player's money, in front
+        [0.1, 1.28, -0.05, 0.006, false],
+        [-2.6, 0.1, 2.4, 0.003, true],      // folded ones, left about the table
+        [0.95, -1.2, 1.8, 0.003, true],
+        [2.6, -0.15, 3.0, 0.003, true],
       ];
-      notes.forEach(([nx, nz, yaw, y]) => {
-        const m = new THREE.Mesh(noteGeo, paper);
-        m.rotation.set(-Math.PI / 2, 0, yaw);
-        m.position.set(nx, y, nz);
-        m.castShadow = m.receiveShadow = true;
-        scene.add(m);
+      notes.forEach(([nx, nz, yaw, y, isFolded]) => {
+        const geo = isFolded ? folded : flat;
+        [matF, matB].forEach((mt) => {
+          const m = new THREE.Mesh(geo, mt);
+          m.rotation.set(-Math.PI / 2, 0, -yaw); // same yaw convention as the placement check
+          // a folded note lies on its left half: shift it so that half is centred where it was placed
+          const off = isFolded ? NW / 4 : 0;
+          m.position.set(nx + Math.cos(yaw) * off, y, nz + Math.sin(yaw) * off);
+          m.castShadow = m.receiveShadow = true;
+          scene.add(m);
+        });
       });
     }
 
