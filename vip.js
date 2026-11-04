@@ -195,6 +195,137 @@
   // one after the other: each file needs the ones before it
   const loadChain = async (urls) => { for (const u of urls) if (!(await addScript(u))) return false; return true; };
 
+  /* ---------- the lounge: a whole room, out of focus, far behind ----------
+     Painted once on a canvas as a 360° strip (seamless left to right):
+     other tables under their lamps, a backlit bar, chandeliers, columns,
+     and the bokeh of a hundred small lights. Kept small, so the texture
+     itself does the blurring when stretched. */
+  function loungeStrip() {
+    const W = 3072, H = 768, HZ = H * 0.58;
+    const c = mk(W, H), x = c.getContext("2d");
+    let seed = 7;
+    const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const wrap = (fn) => { fn(0); x.save(); x.translate(-W, 0); fn(-W); x.restore(); x.save(); x.translate(W, 0); fn(W); x.restore(); };
+    // the room in the dark: ceiling, a warm band at eye level, the floor
+    const bg = x.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#050506"); bg.addColorStop(0.42, "#0d0a09"); bg.addColorStop(0.58, "#1a120c");
+    bg.addColorStop(0.7, "#0b0908"); bg.addColorStop(1, "#050505");
+    x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    // paintings on the far wall: dark canvases in thin gilt frames,
+    // each with a brass picture light washing down over it
+    const paintings = [[0.15, 150, 104], [0.47, 96, 128], [0.665, 120, 86]];
+    paintings.forEach(([u, w, h]) => wrap(() => {
+      const cx = W * u, top = HZ - 255;
+      x.fillStyle = "rgba(70,52,30,0.9)"; x.fillRect(cx - w / 2 - 5, top - 5, w + 10, h + 10);   // frame
+      const art = x.createLinearGradient(cx - w / 2, top, cx + w / 2, top + h);
+      art.addColorStop(0, "#1a1410"); art.addColorStop(0.5, "#2a1d14"); art.addColorStop(1, "#120f0d");
+      x.fillStyle = art; x.fillRect(cx - w / 2, top, w, h);
+      // a suggestion of a picture: a few soft strokes of muted colour
+      for (let k = 0; k < 5; k++) {
+        x.fillStyle = `rgba(${["120,70,40", "60,80,70", "150,120,80", "90,40,35", "40,50,60"][(k + Math.round(u * 10)) % 5]},${0.25 + r() * 0.2})`;
+        x.beginPath(); x.ellipse(cx - w / 2 + r() * w, top + r() * h, 8 + r() * w * 0.25, 6 + r() * h * 0.2, r() * 3, 0, Math.PI * 2); x.fill();
+      }
+      x.fillStyle = "rgba(200,160,90,0.8)"; x.fillRect(cx - w * 0.22, top - 16, w * 0.44, 4);          // picture light
+    }));
+    // a low chesterfield against the wall, between two tables
+    wrap(() => {
+      const cx = W * 0.3, w = 230, base = HZ - 6;
+      x.fillStyle = "#0d0907";
+      x.beginPath();
+      x.moveTo(cx - w / 2, base); x.lineTo(cx - w / 2, base - 44);
+      x.quadraticCurveTo(cx - w / 2, base - 58, cx - w / 2 + 16, base - 58);                 // rolled arm
+      x.lineTo(cx - w / 2 + 16, base - 70); x.lineTo(cx + w / 2 - 16, base - 70);           // the back
+      x.lineTo(cx + w / 2 - 16, base - 58); x.quadraticCurveTo(cx + w / 2, base - 58, cx + w / 2, base - 44);
+      x.lineTo(cx + w / 2, base); x.closePath(); x.fill();
+      // the leather catching a lamp: a line along the back and the arms, buttons in rows
+      x.strokeStyle = "rgba(150,80,45,0.55)"; x.lineWidth = 2;
+      x.beginPath(); x.moveTo(cx - w / 2 + 16, base - 69); x.lineTo(cx + w / 2 - 16, base - 69); x.stroke();
+      x.strokeStyle = "rgba(150,80,45,0.35)";
+      x.beginPath(); x.moveTo(cx - w / 2 + 2, base - 46); x.quadraticCurveTo(cx - w / 2 + 2, base - 56, cx - w / 2 + 16, base - 56); x.stroke();
+      x.beginPath(); x.moveTo(cx + w / 2 - 2, base - 46); x.quadraticCurveTo(cx + w / 2 - 2, base - 56, cx + w / 2 - 16, base - 56); x.stroke();
+      x.fillStyle = "rgba(160,100,60,0.35)";
+      for (let row = 0; row < 2; row++) for (let k = 0; k < 9; k++) x.fillRect(cx - w / 2 + 30 + k * 21 + (row % 2) * 10, base - 62 + row * 8, 2, 2);
+      x.fillStyle = "rgba(120,70,40,0.4)"; x.fillRect(cx - w / 2 + 6, base - 28, w - 12, 2);   // the seat edge
+    });
+
+    x.globalCompositeOperation = "lighter";
+    const glow = (cx, cy, rx, ry, col, a) => {
+      x.save(); x.translate(cx, cy); x.scale(1, ry / rx);
+      const g = x.createRadialGradient(0, 0, 0, 0, 0, rx);
+      g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`);
+      x.fillStyle = g; x.beginPath(); x.arc(0, 0, rx, 0, Math.PI * 2); x.fill(); x.restore();
+    };
+    // a long bar, backlit shelves of bottles
+    wrap(() => {
+      const bx = W * 0.56, bw = W * 0.26;
+      glow(bx + bw / 2, HZ - 40, bw * 0.6, 70, "255,170,90", 0.22);
+      for (let row = 0; row < 3; row++) {
+        const y = HZ - 92 + row * 26;
+        for (let k = 0; k < 70; k++) {
+          const px = bx + r() * bw, hh = 6 + r() * 12;
+          x.fillStyle = `rgba(${r() < 0.2 ? "140,200,170" : "255,190,120"},${0.08 + r() * 0.16})`;
+          x.fillRect(px, y - hh, 2 + r() * 3, hh);
+        }
+        x.fillStyle = "rgba(255,200,140,0.10)"; x.fillRect(bx, y + 1, bw, 2);
+      }
+      glow(bx + bw / 2, HZ + 6, bw * 0.55, 10, "255,200,140", 0.25); // the bar top catching light
+    });
+    // the picture lights wash warm over each canvas; a floor lamp beside the sofa
+    paintings.forEach(([u, w, h]) => wrap(() => {
+      const cx = W * u, top = HZ - 255;
+      glow(cx, top + h * 0.25, w * 0.75, h * 0.7, "255,205,140", 0.16);
+      glow(cx, top - 14, w * 0.3, 6, "255,225,170", 0.5);
+    }));
+    wrap(() => {
+      const lx = W * 0.3 + 140, ly = HZ - 92;
+      glow(lx, ly, 26, 18, "255,210,150", 0.45);
+      glow(lx - 60, HZ - 40, 150, 50, "255,180,110", 0.1);   // its light on the sofa and the floor
+    });
+    // other tables, each under its own lamp
+    [0.08, 0.24, 0.4, 0.9].forEach((u, i) => wrap(() => {
+      const cx = W * u, s = 0.7 + (i % 2) * 0.35;
+      const cone = x.createLinearGradient(0, HZ - 150 * s, 0, HZ);
+      cone.addColorStop(0, "rgba(255,225,170,0.0)"); cone.addColorStop(1, "rgba(255,225,170,0.10)");
+      x.fillStyle = cone;
+      x.beginPath(); x.moveTo(cx - 14 * s, HZ - 150 * s); x.lineTo(cx + 14 * s, HZ - 150 * s); x.lineTo(cx + 95 * s, HZ); x.lineTo(cx - 95 * s, HZ); x.fill();
+      glow(cx, HZ - 150 * s, 26 * s, 10 * s, "255,220,160", 0.5);
+      glow(cx, HZ + 4, 105 * s, 16 * s, "40,160,95", 0.32);   // the green of the felt
+      glow(cx, HZ + 2, 70 * s, 8 * s, "255,230,180", 0.14);
+    }));
+    // chandeliers: clusters of small flames high up
+    [0.16, 0.48, 0.74].forEach((u) => wrap(() => {
+      const cx = W * u, cy = H * 0.14;
+      glow(cx, cy, 120, 60, "255,200,130", 0.12);
+      for (let k = 0; k < 26; k++) { const a = r() * Math.PI * 2, rr = r() * 60; glow(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.4, 5 + r() * 7, 5 + r() * 7, "255,215,150", 0.35); }
+    }));
+    // bokeh: out-of-focus lights read as discs with an edge, brighter at the rim
+    const disc = (cx, cy, rad, col, a) => {
+      const g = x.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      g.addColorStop(0, `rgba(${col},${a * 0.55})`); g.addColorStop(0.82, `rgba(${col},${a * 0.75})`);
+      g.addColorStop(0.93, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`);
+      x.fillStyle = g; x.beginPath(); x.arc(cx, cy, rad, 0, Math.PI * 2); x.fill();
+    };
+    for (let k = 0; k < 190; k++) {
+      const px = r() * W, py = HZ - 200 + Math.pow(r(), 0.8) * 250, rad = 5 + Math.pow(r(), 2.4) * 30;
+      const col = r() < 0.1 ? "150,200,255" : r() < 0.3 ? "255,238,205" : "255,180,100";
+      const a = 0.1 + r() * 0.22;
+      wrap(() => disc(px, py, rad, col, a));
+    }
+    // columns: dark shapes in front of the glow, a thin edge of light
+    x.globalCompositeOperation = "source-over";
+    [0.02, 0.32, 0.52, 0.86].forEach((u) => wrap(() => {
+      const cx = W * u, w = 46;
+      const g = x.createLinearGradient(cx - w / 2, 0, cx + w / 2, 0);
+      g.addColorStop(0, "rgba(4,4,5,0.95)"); g.addColorStop(0.85, "rgba(8,7,7,0.95)"); g.addColorStop(1, "rgba(60,44,30,0.6)");
+      x.fillStyle = g; x.fillRect(cx - w / 2, 0, w, H);
+    }));
+    // soften everything once more, where the browser can
+    const out = mk(W, H), o = out.getContext("2d");
+    if ("filter" in o) o.filter = "blur(2.5px)";
+    o.drawImage(c, 0, 0);
+    return out;
+  }
+
   const loadScript = (src) => new Promise((res) => {
     if (THREE.RoomEnvironment) return res(true);
     const s = document.createElement("script");
@@ -226,6 +357,18 @@
     scene.background = new THREE.Color(0x050506);
     scene.fog = new THREE.FogExp2(0x050506, 0.075);
     const camera = new THREE.PerspectiveCamera(small ? 44 : 30, 1, 0.05, 60);
+
+    // the lounge, far away and out of focus, barely there
+    const lounge = new THREE.Mesh(new THREE.CylinderGeometry(24, 24, 9, 96, 1, true), new THREE.MeshBasicMaterial({
+      // 4 rounds of the strip: its pixels come out square on a cylinder this wide
+      map: (() => { const t = new THREE.CanvasTexture(loungeStrip()); t.encoding = THREE.sRGBEncoding; t.wrapS = THREE.RepeatWrapping; t.repeat.x = 4; return t; })(),
+      side: THREE.BackSide, transparent: true, opacity: 0.3,
+      color: new THREE.Color(2.4, 2.2, 2.0), // the strip is painted dark; lifted here
+      fog: false, depthWrite: false, toneMapped: false,
+    }));
+    lounge.position.y = 1.2;
+    lounge.renderOrder = -1;
+    scene.add(lounge);
 
     // light: one lamp hanging over the table, the room in darkness.
     // A tighter cone than before: a bright centre that falls off to black at the rail.
