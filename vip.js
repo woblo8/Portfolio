@@ -1962,14 +1962,13 @@
     const old = document.querySelector(".vt-receipt");
     if (old) old.remove();
     const V = window.VOUCHER;
-    const W = T(["UNO", "DOS", "TRES", "CUATRO", "CINCO", "SEIS"], ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"]);
     const sum = rolls.reduce((s, r) => s + r.val, 0);
     const v = V.make({
       sub: `${T("MESA PRIVADA", "PRIVATE TABLE")} · ${name.toUpperCase()}`,
-      rows: rolls.slice(-5).map((r, i) => [`${T("TIRADA", "ROLL")} ${String(i + 1).padStart(2, "0")}`, `${W[r.val - 1]} → ${r.title.toUpperCase()}`]),
       words: `${V.words(sum)} ${T(sum === 1 ? "PUNTO" : "PUNTOS", sum === 1 ? "POINT" : "POINTS")}`,
-      amount: `${sum} ${T("PTS", "PTS")}`,
-      asset: `${T("TIRADAS", "ROLLS")} # ${rolls.length}`,
+      amount: `${sum} PTS`,
+      // the rolls in one line, and where the last one sent you
+      detail: `${rolls.slice(-6).map((r) => r.val).join(" · ")}  →  ${rolls[rolls.length - 1].title.toUpperCase()}`,
     });
     const el = document.createElement("aside");
     el.className = "vt-receipt";

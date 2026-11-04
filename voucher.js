@@ -44,7 +44,7 @@
     return out;
   }
 
-  /* opts: { sub, amount, words, rows: [[label, value]], asset } */
+  /* opts: { sub, amount, words, detail } */
   function make(opts) {
     const now = new Date();
     const validation = `51-${pad(rnd(1e4), 4)}-${pad(rnd(1e4), 4)}-${pad(rnd(1e4), 4)}-${pad(rnd(1e4), 4)}`;
@@ -54,64 +54,56 @@
     return Object.assign({ validation, date, time, number, bars: bars(validation) }, opts);
   }
 
+  // a calm layout: the brand, the title, the table, the barcode, one big amount, one line of facts
   function html(v) {
-    const barsSvg = (() => {
-      let x = 0; const rects = [];
-      v.bars.forEach((b) => { rects.push(`<rect x="${x}" y="0" width="${b.w}" height="40"/>`); x += b.w + b.gap; });
-      return `<svg class="vc-bars" viewBox="0 0 ${x} 40" preserveAspectRatio="none" aria-hidden="true">${rects.join("")}</svg>`;
-    })();
+    let x = 0; const rects = [];
+    v.bars.forEach((b) => { rects.push(`<rect x="${x}" y="0" width="${b.w}" height="40"/>`); x += b.w + b.gap; });
     return `
       <div class="vc">
-        <span class="vc-side vc-left">${T("INTRODUCIR POR ESTE LADO", "INSERT THIS SIDE UP")}<small>WOBLO · DESIGN CONTROLS</small></span>
-        <div class="vc-body">
-          <b class="vc-house">WOBLO.IO</b>
-          <span class="vc-sub">${esc(v.sub || "")}</span>
-          <b class="vc-title">${T("TICKET DE SALIDA", "CASHOUT VOUCHER")}</b>
-          ${barsSvg}
-          <div class="vc-line"><span>${T("VALIDACIÓN", "VALIDATION")}</span><span>${v.validation}</span></div>
-          <div class="vc-line"><span>${v.date}</span><span>${v.time}</span><span>${T("TICKET", "VOUCHER")} # ${v.number}</span></div>
-          ${(v.rows || []).map(([a, b]) => `<div class="vc-line vc-row"><span>${esc(a)}</span><span>${esc(b)}</span></div>`).join("")}
-          <span class="vc-words">${esc(v.words || "")}</span>
-          <b class="vc-amount">${esc(v.amount || "")}</b>
-          <div class="vc-line vc-foot"><span>${T("Caduca a los 180 días", "Void after 180 days")}</span><span>${esc(v.asset || "")}</span></div>
-        </div>
-        <span class="vc-side vc-right">${v.validation}<small>WOBLO.IO</small></span>
+        <span class="vc-house">WOBLO.IO</span>
+        <b class="vc-title">${T("Ticket de salida", "Cashout voucher")}</b>
+        <span class="vc-sub">${esc(v.sub || "")}</span>
+        <svg class="vc-bars" viewBox="0 0 ${x} 40" preserveAspectRatio="none" aria-hidden="true">${rects.join("")}</svg>
+        <span class="vc-code">${v.validation}</span>
+        <b class="vc-amount">${esc(v.amount || "")}</b>
+        <span class="vc-words">${esc(v.words || "")}</span>
+        ${v.detail ? `<span class="vc-detail">${esc(v.detail)}</span>` : ""}
+        <span class="vc-meta"><span>${v.date}</span><span>${v.time.slice(0, 5)}</span><span>Nº ${v.number}</span></span>
       </div>`;
   }
 
-  // the same slip on a canvas, for "Download"
+  // the same slip on a canvas, for "Download": same order, same proportions
   async function canvas(v, scale = 2) {
     try { await document.fonts.load(`700 40px "Barlow Condensed"`); await document.fonts.load(`600 16px "Barlow Condensed"`); } catch (e) { /* fall back */ }
-    const W = 640, rowsH = (v.rows || []).length * 22, H = 360 + rowsH;
+    const W = 520, H = v.detail ? 546 : 518; // ends one margin below the last line
     const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale;
     const x = c.getContext("2d"); x.scale(scale, scale);
-    x.fillStyle = "#f4f3ee"; x.fillRect(0, 0, W, H);
-    // a little grain of thermal paper
-    for (let i = 0; i < 2600; i++) { x.fillStyle = `rgba(0,0,0,${Math.random() * 0.035})`; x.fillRect(Math.random() * W, Math.random() * H, 1, 1); }
-    x.fillStyle = "#0b0b0c"; x.textBaseline = "alphabetic";
-    const text = (t, px, py, size, weight = 600, align = "center", spacing = 1) => {
-      x.font = `${weight} ${size}px ${FONT}`; x.textAlign = align;
+    // paper, with the faint grain of thermal stock, and a perforated top and bottom edge
+    x.fillStyle = "#f6f5f0"; x.fillRect(0, 0, W, H);
+    for (let i = 0; i < 1800; i++) { x.fillStyle = `rgba(0,0,0,${Math.random() * 0.025})`; x.fillRect(Math.random() * W, Math.random() * H, 1, 1); }
+    x.fillStyle = "#0b0b0c";
+    for (let i = 0; i < W; i += 12) { x.beginPath(); x.arc(i + 6, 0, 3, 0, Math.PI); x.fill(); x.beginPath(); x.arc(i + 6, H, 3, Math.PI, 0); x.fill(); }
+    const text = (t, py, size, weight = 600, spacing = 1, color = "#0b0b0c") => {
+      x.fillStyle = color; x.font = `${weight} ${size}px ${FONT}`; x.textAlign = "center";
       if ("letterSpacing" in x) x.letterSpacing = `${spacing}px`;
-      x.fillText(t, px, py);
+      x.fillText(t, W / 2, py);
     };
-    const mid = W / 2;
-    text("WOBLO.IO", mid, 52, 34, 700, "center", 2);
-    text(v.sub || "", mid, 76, 16, 600, "center", 1.5);
-    text(T("TICKET DE SALIDA", "CASHOUT VOUCHER"), mid, 124, 50, 700, "center", 2);
-    // the barcode
-    let total = v.bars.reduce((s, b) => s + b.w + b.gap, 0), bx = mid - 190, k = 380 / total;
-    v.bars.forEach((b) => { x.fillRect(bx, 138, b.w * k, 56); bx += (b.w + b.gap) * k; });
-    let y = 220;
-    text(T("VALIDACIÓN", "VALIDATION"), 150, y, 19, 700, "left", 1.5); text(v.validation, 490, y, 19, 600, "right", 1.5);
-    y += 24;
-    text(v.date, 150, y, 19, 600, "left", 1.5); text(v.time, mid - 22, y, 19, 600, "center", 1.5); text(`${T("TICKET", "VOUCHER")} # ${v.number}`, 490, y, 19, 700, "right", 1.5);
-    (v.rows || []).forEach(([a, b]) => { y += 22; text(a, 150, y, 16, 600, "left", 1.2); text(b, 490, y, 16, 600, "right", 1.2); });
-    y += 26; text(v.words || "", mid, y, 15, 700, "center", 1);
-    y += 46; text(v.amount || "", mid, y, 44, 700, "center", 1);
-    y += 34; text(T("Caduca a los 180 días", "Void after 180 days"), 150, y, 16, 600, "left", 0.6); text(v.asset || "", 490, y, 16, 700, "right", 1);
-    // the vertical lines on both edges
-    x.save(); x.translate(48, H / 2); x.rotate(-Math.PI / 2); text(T("INTRODUCIR POR ESTE LADO", "INSERT THIS SIDE UP"), 0, 0, 20, 600, "center", 1); text("WOBLO · DESIGN CONTROLS", 0, 18, 10, 600, "center", 0.5); x.restore();
-    x.save(); x.translate(W - 44, H / 2); x.rotate(Math.PI / 2); text(v.validation, 0, 0, 17, 700, "center", 1); text("WOBLO.IO", 0, 22, 14, 600, "center", 1); x.restore();
+    const rule = (py) => { x.fillStyle = "rgba(11,11,12,0.18)"; for (let i = 40; i < W - 40; i += 8) x.fillRect(i, py, 4, 1); };
+    let y = 64;
+    text("WOBLO.IO", y, 17, 600, 6, "#55555a");
+    y += 52; text(T("TICKET DE SALIDA", "CASHOUT VOUCHER"), y, 50, 700, 2);
+    y += 32; text(v.sub || "", y, 18, 600, 3, "#55555a");
+    y += 26; rule(y);
+    // the barcode, crisp and centred
+    const total = v.bars.reduce((s, b) => s + b.w + b.gap, 0), bw = 360, k = bw / total;
+    let bx = (W - bw) / 2; y += 24;
+    x.fillStyle = "#0b0b0c"; v.bars.forEach((b) => { x.fillRect(Math.round(bx), y, Math.max(1, Math.round(b.w * k)), 64); bx += (b.w + b.gap) * k; });
+    y += 88; text(v.validation, y, 16, 600, 3, "#55555a");
+    y += 74; text(v.amount || "", y, 64, 700, 1);
+    y += 32; text(v.words || "", y, 16, 600, 1.5, "#55555a");
+    if (v.detail) { y += 28; text(v.detail, y, 16, 600, 1.5); }
+    y += 28; rule(y);
+    y += 36; text(`${v.date}   ·   ${v.time.slice(0, 5)}   ·   Nº ${v.number}`, y, 16, 600, 2, "#55555a");
     return c;
   }
 

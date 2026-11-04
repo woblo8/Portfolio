@@ -160,8 +160,7 @@
       `${V.words(m)} ${m === 1 ? "MINUTE" : "MINUTES"} AND ${V.words(sec)} ${sec === 1 ? "SECOND" : "SECONDS"}`);
     receipt.innerHTML = V.html(V.make({
       sub: `${T("MESA", "TABLE")} ${n} · ${title}`,
-      rows: [[T("VISITA", "VISIT"), detail]],
-      words: spelled, amount: mmss(secs), asset: `${T("CARA", "FACE")} # ${n}`,
+      words: spelled, amount: mmss(secs), detail,
     }));
     receipt.classList.remove("on");
     void receipt.offsetWidth;

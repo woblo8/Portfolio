@@ -203,40 +203,37 @@ html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l
   .index > button .chip-face { font-size: 9px; }
 }
 
-/* ---------- the voucher: a slot machine's cash-out ticket (voucher.js) ---------- */
+/* ---------- the voucher: the cash-out ticket of a slot machine, pared down (voucher.js) ---------- */
 .vc {
-  position: relative; display: grid; grid-template-columns: 26px 1fr 26px; gap: 6px; width: 340px; max-width: calc(100vw - 32px);
-  padding: 14px 6px 12px; color: #0b0b0c; background: #f4f3ee;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px); background-size: 3px 3px;
+  position: relative; display: grid; justify-items: center; text-align: center;
+  width: 280px; max-width: calc(100vw - 32px); padding: 22px 22px 18px; color: #0b0b0c; background: #f6f5f0;
   font-family: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif; font-weight: 600; text-transform: uppercase;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08), 0 24px 60px rgba(0, 0, 0, 0.55);
+  /* perforated top and bottom edges, like paper torn off the roll */
+  -webkit-mask: radial-gradient(circle 3px at 6px 0, transparent 98%, #000) 0 0 / 12px 51% repeat-x,
+                radial-gradient(circle 3px at 6px 100%, transparent 98%, #000) 0 100% / 12px 51% repeat-x;
+          mask: radial-gradient(circle 3px at 6px 0, transparent 98%, #000) 0 0 / 12px 51% repeat-x,
+                radial-gradient(circle 3px at 6px 100%, transparent 98%, #000) 0 100% / 12px 51% repeat-x;
 }
-.vc-body { display: grid; justify-items: center; text-align: center; min-width: 0; }
-.vc-house { font-weight: 700; font-size: 19px; letter-spacing: 0.08em; line-height: 1; }
-.vc-sub { margin-top: 3px; font-size: 10.5px; letter-spacing: 0.08em; }
-.vc-title { margin-top: 6px; font-weight: 700; font-size: 29px; letter-spacing: 0.04em; line-height: 0.95; white-space: nowrap; }
-.vc-bars { width: 82%; height: 34px; margin: 8px 0 6px; fill: #0b0b0c; }
-.vc-line { display: flex; justify-content: space-between; gap: 10px; width: 100%; font-size: 11px; letter-spacing: 0.06em; line-height: 1.35; }
-.vc-line span:first-child { font-weight: 700; }
-.vc-row { font-size: 10.5px; }
-.vc-row span:first-child { font-weight: 600; }
-.vc-words { margin-top: 5px; font-weight: 700; font-size: 10px; letter-spacing: 0.04em; }
-.vc-amount { font-weight: 700; font-size: 28px; letter-spacing: 0.02em; line-height: 1.05; }
-.vc-foot { margin-top: 4px; text-transform: none; font-size: 10.5px; }
-.vc-foot span:last-child { text-transform: uppercase; }
-.vc-side {
-  writing-mode: vertical-rl; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  font-size: 11px; letter-spacing: 0.06em; white-space: nowrap;
+.vc > * { display: block; }
+.vc-house { font-size: 11px; letter-spacing: 0.4em; padding-left: 0.4em; color: #55555a; }
+.vc-title { margin-top: 6px; font-weight: 700; font-size: 31px; letter-spacing: 0.03em; line-height: 0.95; }
+.vc-sub { margin-top: 6px; font-size: 12px; letter-spacing: 0.18em; color: #55555a; }
+.vc-bars { width: 72%; height: 42px; margin: 16px 0 6px; padding-top: 14px; box-sizing: content-box; fill: #0b0b0c; border-top: 1px dashed rgba(11, 11, 12, 0.2); }
+.vc-code { font-size: 10.5px; letter-spacing: 0.16em; color: #55555a; }
+.vc-amount { margin-top: 12px; font-weight: 700; font-size: 44px; letter-spacing: 0.01em; line-height: 1; }
+.vc-words { margin-top: 6px; font-size: 11px; letter-spacing: 0.08em; color: #55555a; }
+.vc-detail { margin-top: 6px; font-size: 12px; letter-spacing: 0.08em; }
+.vc-meta {
+  display: flex !important; justify-content: center; gap: 14px; width: 100%; margin-top: 14px; padding-top: 12px;
+  border-top: 1px dashed rgba(11, 11, 12, 0.2); font-size: 11px; letter-spacing: 0.12em; color: #55555a;
 }
-.vc-side small { font-size: 6.5px; letter-spacing: 0.04em; font-weight: 600; }
-.vc-left { transform: rotate(180deg); }
-.vc-right { font-weight: 700; font-size: 10px; }
 
 /* the slip after a visit: printed out of the bottom-left corner */
 .receipt { padding: 0; min-width: 0; background: none; -webkit-mask: none; mask: none; transform: translateY(40px) rotate(-1.2deg); }
 .receipt.on { transform: rotate(-1.2deg); }
 /* the old slip's styles stop at the voucher's edge */
 .receipt .vc b { padding: 0; border: 0; letter-spacing: inherit; }
-.receipt .vc .vc-house { font-weight: 700; font-size: 19px; letter-spacing: 0.08em; }
-.receipt .vc .vc-title { font-weight: 700; font-size: 29px; letter-spacing: 0.04em; }
-.receipt .vc .vc-amount { font-weight: 700; font-size: 28px; letter-spacing: 0.02em; }
+.receipt .vc .vc-title { font-weight: 700; font-size: 31px; letter-spacing: 0.03em; }
+.receipt .vc .vc-amount { font-weight: 700; font-size: 44px; letter-spacing: 0.01em; }
+/* the shadow lives on the holder: the perforation mask would cut it off the slip itself */
+.receipt, .vt-receipt { filter: drop-shadow(0 26px 40px rgba(0, 0, 0, 0.5)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25)); }
