@@ -387,6 +387,55 @@
   const repaint = () => { materials.forEach(paintFace); for (const k in faceCache) delete faceCache[k]; };
   repaint();
 
+  /* fingerprints: each face has a small clear-coat roughness layer where touch leaves
+     a matte mark; it fades back to polish after a few seconds */
+  const PRINT = 256, PRINT_BASE = 40; // 40/255 ≈ the polished clear-coat roughness
+  materials.forEach((mat) => {
+    const c = mkCanvas(PRINT);
+    const x = c.getContext("2d");
+    x.fillStyle = `rgb(${PRINT_BASE},${PRINT_BASE},${PRINT_BASE})`;
+    x.fillRect(0, 0, PRINT, PRINT);
+    const t = new THREE.CanvasTexture(c);
+    mat.clearcoatRoughnessMap = t;
+    mat.clearcoatRoughness = 1;
+    mat.needsUpdate = true;
+    mat.userData.print = { c, x, t, dirty: 0 };
+  });
+  function pressPrint(fi, uv) {
+    const pr = materials[fi] && materials[fi].userData.print;
+    if (!pr) return;
+    const px = uv.x * PRINT, py = (1 - uv.y) * PRINT;
+    const { x } = pr;
+    x.save();
+    x.translate(px, py);
+    x.rotate(Math.random() * Math.PI);
+    const g = x.createRadialGradient(0, 0, 0, 0, 0, 13);
+    g.addColorStop(0, "rgba(150,150,150,0.55)");
+    g.addColorStop(1, "rgba(150,150,150,0)");
+    x.fillStyle = g;
+    x.beginPath(); x.ellipse(0, 0, 13, 10, 0, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = "rgba(190,190,190,0.35)";
+    x.lineWidth = 0.8;
+    for (let r = 2.5; r < 11; r += 1.6) { x.beginPath(); x.ellipse(0, 0, r * 1.25, r, 0, 0.3, Math.PI * 2 - 0.2); x.stroke(); }
+    x.restore();
+    pr.t.needsUpdate = true;
+    pr.dirty = 4.5; // seconds until it is polished again
+  }
+  function fadePrints(dt) {
+    materials.forEach((mat) => {
+      const pr = mat.userData.print;
+      if (!pr || pr.dirty <= 0) return;
+      pr.dirty -= dt;
+      pr.acc = (pr.acc || 0) + dt;
+      if (pr.acc < 0.08) return;
+      pr.acc = 0;
+      pr.x.fillStyle = `rgba(${PRINT_BASE},${PRINT_BASE},${PRINT_BASE},0.07)`;
+      pr.x.fillRect(0, 0, PRINT, PRINT);
+      if (pr.dirty <= 0) { pr.x.fillStyle = `rgb(${PRINT_BASE},${PRINT_BASE},${PRINT_BASE})`; pr.x.fillRect(0, 0, PRINT, PRINT); }
+      pr.t.needsUpdate = true;
+    });
+  }
+
   let fontsReady = false;
   const fontsLoaded = document.fonts
     ? Promise.all([
@@ -660,7 +709,31 @@
     S.shown = false;
   }
 
+  const ripples = [];
+  const rippleGeo = new THREE.RingGeometry(0.985, 1, 96);
+  function spawnRipple(x, z, v) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+    const ring = new THREE.Mesh(rippleGeo, mat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, FLOOR_Y + 0.006, z);
+    ring.renderOrder = 4;
+    scene.add(ring);
+    ripples.push({ ring, t: 0, v: clamp(v / 6, 0.25, 1) });
+  }
+  function updateRipples(dt) {
+    for (let k = ripples.length - 1; k >= 0; k--) {
+      const r = ripples[k];
+      r.t += dt;
+      const u = r.t / 1.8;
+      r.ring.scale.setScalar(0.9 + u * 3.6);
+      r.ring.material.opacity = 0.1 * r.v * Math.sin(Math.min(1, u) * Math.PI) * (1 - u);
+      if (u >= 1) { scene.remove(r.ring); r.ring.material.dispose(); ripples.splice(k, 1); }
+    }
+  }
+  let lastRipple = 0;
   function impact(v) {
+    const now = performance.now();
+    if (!reduce && now - lastRipple > 140) { lastRipple = now; spawnRipple(B.p.x, B.p.z, v); }
     if (reduce) return;
     // the weight is in the physics; the camera stays still (a shake read as stutter)
   }
@@ -676,7 +749,8 @@
     return best;
   }
 
-  function startLock() {
+  function startLock(settle = 0) {
+    S.settle = settle;
     const fi = nearestFace();
     S.from.copy(S.q);
     S.to.copy(FACES[fi].q);
@@ -991,13 +1065,20 @@
     return ray.intersectObject(die, false).length > 0;
   }
 
+  function printAt(e) {
+    ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObject(die, false)[0];
+    if (hit && hit.uv && hit.face) pressPrint(hit.face.materialIndex, hit.uv);
+  }
   let drag = null;
   canvas.addEventListener("pointerdown", (e) => {
     if (overlay || !introDone || !["idle", "lock", "turn", "ghost"].includes(S.mode)) return;
     if (!hitDie(e)) return;
     if (S.mode === "ghost") { materialize(); S.mode = "idle"; S.y = basePos.y; }
     const now = performance.now();
-    drag = { x: e.clientX, y: e.clientY, t: now, lt: now, vx: 0, vy: 0, moved: 0, hadInfo: hasInfo && S.mode === "idle" };
+    drag = { x: e.clientX, y: e.clientY, t: now, lt: now, vx: 0, vy: 0, moved: 0, hadInfo: hasInfo && S.mode === "idle", lastPrint: 0 };
+    printAt(e);
     S.mode = "drag";
     canvas.setPointerCapture(e.pointerId);
     canvas.style.cursor = "grabbing";
@@ -1023,6 +1104,7 @@
     drag.vx = lerp(drag.vx, (dx / dtm) * 1000, 0.45);
     drag.vy = lerp(drag.vy, (dy / dtm) * 1000, 0.45);
     drag.lt = now;
+    if (now - drag.lastPrint > 45) { drag.lastPrint = now; printAt(e); }
   });
 
   function release() {
@@ -1038,7 +1120,7 @@
     }
     const held = now - d.lt > 90;
     const speed = held ? 0 : Math.hypot(d.vx, d.vy);
-    if (speed < 280) { startLock(); return; }
+    if (speed < 280) { startLock(0.22); return; } // a gentle release: it settles, then floats again
     // throw: the drag direction becomes the throw, the die spins in that direction
     const k = 0.0028;
     const v = new V3(clamp(d.vx * k, -5, 5), clamp(2.5 - d.vy * k, 1.5, 6), rand(-0.6, 0.3));
@@ -1557,6 +1639,71 @@
     }
   }
 
+  /* ---------- the die notices you: a degree or two towards the pointer ---------- */
+  const LOOK = { x: 0, y: 0 };
+  let lookAmp = 0, lookX = 0, lookY = 0;
+  const lookQ = new Q(), lookE = new THREE.Euler();
+  addEventListener("pointermove", (e) => { LOOK.x = (e.clientX / innerWidth) * 2 - 1; LOOK.y = (e.clientY / innerHeight) * 2 - 1; }, { passive: true });
+
+  /* ---------- dust in the light: motes visible only inside the key light's beam ---------- */
+  const DUST = 160;
+  const dustPos = new Float32Array(DUST * 3), dustSeed = new Float32Array(DUST);
+  for (let k = 0; k < DUST; k++) {
+    dustPos[k * 3] = (Math.random() - 0.5) * 9;
+    dustPos[k * 3 + 1] = Math.random() * 5.5 - 1.6;
+    dustPos[k * 3 + 2] = (Math.random() - 0.5) * 5;
+    dustSeed[k] = Math.random() * 100;
+  }
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+  dustGeo.setAttribute("seed", new THREE.BufferAttribute(dustSeed, 1));
+  const dustMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uLight: { value: new V3() }, uDir: { value: new V3() }, uAmt: { value: 0 }, uPR: { value: PR } },
+    vertexShader: `
+      attribute float seed; uniform float uTime; uniform vec3 uLight; uniform vec3 uDir; uniform float uPR;
+      varying float vLit;
+      void main() {
+        vec3 p = position;
+        p.x += sin(uTime * 0.11 + seed) * 0.35;
+        p.y += sin(uTime * 0.07 + seed * 1.7) * 0.25 + mod(uTime * 0.03 + seed, 1.0) * 0.2;
+        p.z += cos(uTime * 0.09 + seed * 0.6) * 0.3;
+        vec3 d = p - uLight;
+        float along = dot(d, uDir);
+        float dist = length(d - uDir * along);       // distance to the beam's axis
+        float radius = 0.35 + along * 0.22;          // the beam widens as it travels
+        vLit = smoothstep(radius, radius * 0.35, dist) * step(0.0, along);
+        vLit *= 0.55 + 0.45 * sin(uTime * 0.8 + seed * 3.0); // they catch the light and lose it
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_PointSize = uPR * (1.6 + fract(seed) * 1.8) * (6.0 / -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform float uAmt; varying float vLit;
+      void main() {
+        float r = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.0, r) * vLit * uAmt;
+        if (a < 0.003) discard;
+        gl_FragColor = vec4(vec3(1.0), a);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const dust = new THREE.Points(dustGeo, dustMat);
+  dust.renderOrder = 6;
+  dust.frustumCulled = false;
+  scene.add(dust);
+
+  /* ---------- real time: the studio light follows the visitor's hour ---------- */
+  (function timeOfDay() {
+    const now = new Date();
+    const h = now.getHours() + now.getMinutes() / 60;
+    // 0 = cool morning light, high; 1 = warm evening light, low
+    const warm = clamp((h - 7) / 15, 0, 1) * (h < 5 ? 0 : 1) + (h < 5 ? 1 : 0);
+    key.color.setRGB(lerp(0.92, 1.06, warm), lerp(0.97, 0.99, warm), lerp(1.07, 0.88, warm));
+    rim.color.setRGB(lerp(0.94, 1.03, warm), 1, lerp(1.06, 0.93, warm));
+    key.position.set(lerp(-2, -4.6, warm), lerp(8, 4.2, warm), lerp(3, 4, warm));
+    renderer.toneMappingExposure = lerp(1.02, 0.95, warm);
+  })();
+
   /* ---------- cursor ---------- */
   const cursorEl = $("#cursor");
   const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -1593,6 +1740,12 @@
 
     updateXray(now);
     updateGhost(now, dt);
+    fadePrints(dt);
+    updateRipples(dt);
+    dustMat.uniforms.uTime.value = time;
+    dustMat.uniforms.uLight.value.copy(key.position);
+    dustMat.uniforms.uDir.value.copy(key.position).negate().normalize();
+    dustMat.uniforms.uAmt.value = damp(dustMat.uniforms.uAmt.value, overlay ? 0 : 0.55 * G.solid, 1.5, dt);
     updateCursor(rawDt > 0 ? Math.min(rawDt, 0.05) : 0.016);
 
     switch (S.mode) {
@@ -1632,7 +1785,9 @@
       case "lock": {
         const e = S.mode === "lock" ? easeOutQuint(t) : easeInOut(t);
         S.q.slerpQuaternions(S.from, S.to, e);
-        S.y = S.mode === "turn" ? Math.sin(Math.PI * e) * 0.3 : lerp(S.y0, 0, e);
+        S.y = S.mode === "turn"
+          ? Math.sin(Math.PI * e) * 0.3
+          : lerp(S.y0, 0, e) - S.settle * Math.sin(Math.min(1, t * 1.7) * Math.PI) * (1 - t); // weight: a small settle
         if (t >= 1) {
           S.q.copy(S.to);
           S.y = 0;
@@ -1686,7 +1841,11 @@
     wobAmp = damp(wobAmp, S.mode === "idle" && !reduce ? 1 : 0, 1.5, dt);
     euler.set(Math.sin(time * 0.55) * 0.03 * wobAmp, Math.sin(time * 0.42) * 0.05 * wobAmp, 0, "XYZ");
     wobQ.setFromEuler(euler);
-    die.quaternion.copy(wobQ).multiply(S.q);
+    lookAmp = damp(lookAmp, S.mode === "idle" && !overlay && !reduce ? 1 : 0, 2, dt);
+    lookX = damp(lookX, -LOOK.y * 0.032 * lookAmp, 3, dt);
+    lookY = damp(lookY, LOOK.x * 0.04 * lookAmp, 3, dt);
+    lookQ.setFromEuler(lookE.set(lookX, lookY, 0));
+    die.quaternion.copy(lookQ).multiply(wobQ).multiply(S.q);
     const bob = Math.sin(time * 0.9) * 0.05 * wobAmp;
     pivot.position.set(basePos.x + dieX, basePos.y + bob + dieY, basePos.z);
 
