@@ -456,3 +456,13 @@ body.xray-on .hint, body.xray-on .index { opacity: 0 !important; transition-dela
 .page.open.scrolled .scroll-cue { opacity: 0; transform: translate(-50%, 12px); transition-delay: 0s; }
 .page.has-layout .scroll-cue { bottom: 96px; }
 @media (prefers-reduced-motion: reduce) { .scroll-cue b, .scroll-cue span { animation: none; } }
+
+/* ---------- apparition: an incomplete line of light ---------- */
+.ghost-line {
+  position: fixed; left: 50%; top: 50%; z-index: 1; pointer-events: none;
+  width: min(72vw, 1100px); height: 1px; transform: translate(-50%, -50%) scaleX(0.2);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15) 22%, #fff 46%, #fff 54%, rgba(255, 255, 255, 0.15) 78%, transparent);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.35);
+  opacity: 0; transition: opacity 1.6s var(--ease), transform 2.6s var(--ease);
+}
+.ghost-line.on { opacity: 0.9; transform: translate(-50%, -50%) scaleX(1); }

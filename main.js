@@ -553,8 +553,8 @@
   const R_IN = SIZE / 2 - RADIUS;
   const CORNERS = [];
   for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) CORNERS.push(new V3(sx * R_IN, sy * R_IN, sz * R_IN));
-  const GRAV = -24;
-  const RESTITUTION = 0.28;
+  const GRAV = -20;
+  const RESTITUTION = 0.22;
   const MU = 0.42;
   const INV_M = 1;
   const INV_I = 1 / ((1 / 6) * SIZE * SIZE); // solid cube, isotropic
@@ -612,10 +612,13 @@
     return grounded;
   }
 
+  // fixed time step: the motion is identical whatever the frame rate, no stutter
+  const PH = 1 / 240;
+  let physAcc = 0;
   function physics(dt, now) {
-    const sub = 10, h = dt / sub;
-    let grounded = false;
-    for (let s = 0; s < sub; s++) grounded = stepBody(h) || grounded;
+    physAcc = Math.min(physAcc + dt, 0.1);
+    let grounded = false, n = 0;
+    while (physAcc >= PH && n < 30) { grounded = stepBody(PH) || grounded; physAcc -= PH; n++; }
     B.t += dt;
     const calm = grounded && B.v.length() < 0.07 && B.w.length() < 0.1;
     B.still = calm ? B.still + dt : 0;
@@ -652,7 +655,7 @@
     S.p0.copy(B.p);
     S.mode = "present";
     S.t0 = performance.now();
-    S.dur = reduce ? 500 : 1500;
+    S.dur = reduce ? 500 : 1800;
     S.y = 0;
     S.shown = false;
   }
@@ -990,8 +993,9 @@
 
   let drag = null;
   canvas.addEventListener("pointerdown", (e) => {
-    if (overlay || !introDone || !["idle", "lock", "turn"].includes(S.mode)) return;
+    if (overlay || !introDone || !["idle", "lock", "turn", "ghost"].includes(S.mode)) return;
     if (!hitDie(e)) return;
+    if (S.mode === "ghost") { materialize(); S.mode = "idle"; S.y = basePos.y; }
     const now = performance.now();
     drag = { x: e.clientX, y: e.clientY, t: now, lt: now, vx: 0, vy: 0, moved: 0, hadInfo: hasInfo && S.mode === "idle" };
     S.mode = "drag";
@@ -1067,7 +1071,7 @@
     }
     if (overlay) return;
     if (e.target.closest && e.target.closest("button, a") && (e.key === "Enter" || e.key === " ")) return;
-    if (e.key === " ") { e.preventDefault(); randomThrow(); }
+    if (e.key === " ") { e.preventDefault(); if (S.mode === "ghost") { materialize(); S.mode = "idle"; } randomThrow(); }
     else if (e.key === "Enter") enterProject();
     else if (e.key === "ArrowRight" || e.key === "ArrowDown") goTo((S.active + 1) % P.length);
     else if (e.key === "ArrowLeft" || e.key === "ArrowUp") goTo((S.active - 1 + P.length) % P.length);
@@ -1423,7 +1427,7 @@
       return;
     }
     try { localStorage.setItem(SEEN_KEY, "1"); } catch (e) { /* private mode: fine */ }
-    startXray();
+    startGhost();
   }
 
   function runLoader(rawDt) {
@@ -1436,6 +1440,120 @@
       introStarted = true;
       loader.classList.add("done");
       setTimeout(introThrow, reduce ? 0 : RETURNING ? 450 : 900);
+    }
+  }
+
+  /* ============================================================
+     APPARITION — the die appears inside the light, in fragments.
+     A broken line of light, a narrow beam that reveals pieces of its
+     faces, edges that are never all visible at once (the back ones
+     seen through it), engraving that arrives a moment later, and one
+     faint echo of where it just was. It floats without support until
+     you take it: then it gathers itself and becomes a physical object.
+     ============================================================ */
+  const G = { active: false, t0: 0, solid: 1, solidTarget: 1, materializing: false };
+  const ghostLine = $("#ghostLine");
+
+  // a narrow beam orbiting the object: only what it touches has volume
+  const beam = new THREE.SpotLight(0xffffff, 0, 14, 0.13, 0.75, 1.1);
+  beam.target = pivot;
+  scene.add(beam);
+
+  // edges that come and go; the back ones show through, much fainter
+  const edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(SIZE * 1.003, SIZE * 1.003, SIZE * 1.003));
+  const edgeMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uOpacity: { value: 0 } },
+    vertexShader: `
+      varying vec3 vLocal; varying float vDepth;
+      void main() {
+        vLocal = position;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vec4 c = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        vDepth = mv.z - c.z; // > 0: in front of the centre, < 0: behind
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform float uTime; uniform float uOpacity;
+      varying vec3 vLocal; varying float vDepth;
+      void main() {
+        float w = 0.5 + 0.5 * sin(dot(vLocal, vec3(1.7, 1.1, 1.4)) * 1.35 + uTime * 0.9)
+                * cos(dot(vLocal, vec3(-0.9, 1.6, 0.7)) * 0.8 - uTime * 0.55);
+        float lit = smoothstep(0.45, 0.85, w);          // never the whole contour at once
+        float front = smoothstep(-0.6, 0.6, vDepth);    // back edges: light passing through
+        float a = lit * mix(0.18, 1.0, front) * uOpacity;
+        gl_FragColor = vec4(vec3(1.0), a);
+      }`,
+    transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+  });
+  const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+  edges.renderOrder = 20;
+  die.add(edges);
+
+  // the late reflection: one faint echo that keeps the previous pose
+  const echoMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, depthTest: false });
+  const echo = new THREE.LineSegments(edgeGeo, echoMat);
+  echo.renderOrder = 19;
+  scene.add(echo);
+  const echoQ = new Q(), echoP = new V3();
+
+  function startGhost() {
+    G.active = true;
+    G.t0 = performance.now();
+    G.solid = 0;
+    G.solidTarget = 0;
+    G.materializing = false;
+    pivot.visible = true;
+    S.q.setFromEuler(new THREE.Euler(-0.5, 0.85, 0.2));
+    S.mode = "ghost";
+    echoQ.copy(S.q);
+    echoP.set(0, 0, 0);
+    introDone = true;
+    body.classList.add("name-landed", "ui-in", "intro-done", "ghosting");
+    ghostLine.classList.add("on");
+  }
+
+  // the key moment: it gathers itself and gains weight under your hand
+  function materialize(then) {
+    if (!G.active || G.materializing) return;
+    G.materializing = true;
+    G.solidTarget = 1;
+    ghostLine.classList.remove("on");
+    body.classList.remove("ghosting");
+    if (then) then();
+  }
+
+  function updateGhost(now, dt) {
+    if (!G.active) return;
+    const t = (now - G.t0) / 1000;
+    if (G.materializing) G.solid = damp(G.solid, 1, 4.5, dt);
+    const ghost = 1 - G.solid;
+
+    // appearance: line first, then the beam finds the object, then the engraving
+    const appear = smooth(0.5, 2.6, t);
+    edgeMat.uniforms.uTime.value = t;
+    edgeMat.uniforms.uOpacity.value = smooth(0.7, 2.2, t) * Math.pow(ghost, 1.5) * (G.materializing ? 1 + 2 * ghost : 1);
+    const a = t * 0.38;
+    beam.position.set(pivot.position.x + Math.cos(a) * 5, pivot.position.y + 1.2 + Math.sin(a * 0.7) * 2.2, pivot.position.z + Math.sin(a) * 5 + 2.5);
+    beam.intensity = 7 * appear * ghost;
+    if (t > 3.2 && !G.materializing) ghostLine.classList.remove("on");
+
+    // the echo lags behind, then rejoins
+    const lag = G.materializing ? 14 : 5;
+    echoQ.slerp(die.quaternion, 1 - Math.exp(-lag * dt));
+    echoP.lerp(pivot.position, 1 - Math.exp(-lag * dt));
+    echo.quaternion.copy(echoQ);
+    echo.position.copy(echoP);
+    const moving = die.quaternion.angleTo(echoQ) * 6 + echoP.distanceTo(pivot.position) * 3;
+    echoMat.opacity = clamp(moving, 0, 1) * 0.12 * appear * ghost;
+
+    // nobody took it: it gathers itself anyway and shows 01
+    if (!G.materializing && t > 9 && S.mode === "ghost") materialize(() => startLock());
+    if (G.materializing && G.solid > 0.995) {
+      G.solid = 1;
+      G.active = false;
+      edgeMat.uniforms.uOpacity.value = 0;
+      echoMat.opacity = 0;
+      beam.intensity = 0;
     }
   }
 
@@ -1474,12 +1592,21 @@
     const t = clamp((now - S.t0) / S.dur, 0, 1);
 
     updateXray(now);
+    updateGhost(now, dt);
     updateCursor(rawDt > 0 ? Math.min(rawDt, 0.05) : 0.016);
 
     switch (S.mode) {
       case "loading":
         runLoader(rawDt);
         break;
+      case "ghost": {
+        // suspended in a space without references: a minimal drift and a slow turn
+        const tt = (now - G.t0) / 1000;
+        tmpQ.setFromAxisAngle(tmpV.set(0.25, 1, 0.15).normalize(), dt * 0.22);
+        S.q.premultiply(tmpQ);
+        basePos.set(Math.sin(tt * 0.31) * 0.14, Math.sin(tt * 0.43) * 0.1 + 0.05, Math.sin(tt * 0.27) * 0.12);
+        break;
+      }
       case "hold":
         break; // the hand carries the die (updateXray)
       case "air":
@@ -1565,7 +1692,7 @@
 
     // reflection
     pivot.updateMatrixWorld(true);
-    mirror.visible = pivot.visible;
+    mirror.visible = pivot.visible && G.solid > 0.6;
     mirror.matrix.multiplyMatrices(reflectM, die.matrixWorld);
     mirror.matrixWorldNeedsUpdate = true;
 
@@ -1574,9 +1701,9 @@
       const u = m.userData;
       u.g = damp(u.g, u.target, 3, dt);
       u.dim = damp(u.dim, u.dimTarget, 2.4, dt);
-      m.emissiveIntensity = u.g;
+      m.emissiveIntensity = G.active ? u.g * G.solid + 0.16 * smooth(2.4, 4.0, (now - G.t0) / 1000) * (1 - G.solid) : u.g;
       m.color.setScalar(u.dim);
-      m.envMapIntensity = 0.25 + 0.75 * u.dim;
+      m.envMapIntensity = (0.25 + 0.75 * u.dim) * (0.015 + 0.985 * G.solid);
       m.clearcoat = 0.55 * u.dim;
     });
     outlinePulse = damp(outlinePulse, 0, 2.2, dt);
@@ -1587,7 +1714,11 @@
     const hgt = Math.max(0, pivot.position.y - REST_Y);
     blob.position.set(pivot.position.x, FLOOR_Y + 0.004, pivot.position.z);
     blob.scale.setScalar(1.05 + hgt * 0.35);
-    blobMat.opacity = pivot.visible ? 0.7 / (1 + hgt * 1.4) : 0;
+    blobMat.opacity = pivot.visible ? (0.7 / (1 + hgt * 1.4)) * G.solid : 0;
+    key.intensity = 1.5 * G.solid;
+    rim.intensity = 2.2 * (0.15 + 0.85 * G.solid);
+    shadowRecvMat.opacity = 0.5 * G.solid;
+    outline.visible = G.solid > 0.5;
 
     // camera
     shake = damp(shake, 0, 8, dt);
