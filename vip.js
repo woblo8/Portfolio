@@ -41,8 +41,8 @@
           <h1>${T("Bienvenidos", "Welcome")}, <em>${esc(name)}.</em></h1>
         </header>
         <div class="vt3-tip" aria-live="polite"></div>
-        <span class="vt3-label" data-label="die">${T("Lánzame", "Roll me")}</span>
-        <span class="vt3-label" data-label="card">${T("Ábrela", "Open me")}</span>
+        <span class="vt3-label" data-label="die"><b>${T("Lánzame", "Roll me")}</b></span>
+        <span class="vt3-label" data-label="card"><b>${T("Ábrela", "Open me")}</b></span>
         <footer class="vt3-foot">
           <span class="vt3-hint">${T("Arrastra para rodear la mesa · Lanza el dado o elige una casilla", "Drag to walk around the table · Roll the die or pick a box")}</span>
           <a class="vt-cta" href="mailto:${esc(site.email)}?subject=${subject}">${T("Hablemos", "Let’s talk")} <span>→</span></a>
@@ -896,7 +896,14 @@
     renderer.localClippingEnabled = true;
     const mouth = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0); // placed every frame at the envelope's top edge
     const clip = { clippingPlanes: [mouth], clipShadows: true }; // its hidden part casts no shadow either
-    const noteFace = new THREE.MeshStandardMaterial({ ...clip, map: canvasTex(noteCardCanvas(2048, 1340, ctx.name, ctx.note)), roughness: 0.78, envMapIntensity: 0.05 }); // satin black: no glare under the lamp
+    const noteTex = canvasTex(noteCardCanvas(2048, 1340, ctx.name, ctx.note));
+    // satin black: no glare under the lamp. While it is read, its own light (below) and a faint
+    // glow in the ink keep it legible however it faces the lamp
+    const noteFace = new THREE.MeshStandardMaterial({ ...clip, map: noteTex, emissiveMap: noteTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.78, envMapIntensity: 0.05 });
+    // a soft key light that comes with the card: from above your left shoulder, like a reading lamp
+    const noteLight = new THREE.SpotLight(0xfff0d8, 0, 4, 0.55, 0.9, 1.2);
+    noteLight.castShadow = false;
+    scene.add(noteLight, noteLight.target);
     const gilt = new THREE.MeshStandardMaterial({ ...clip, color: 0xb08d4e, metalness: 0.9, roughness: 0.35 });
     const lacquer = new THREE.MeshStandardMaterial({ ...clip, color: 0x0a0a0b, roughness: 0.4 });
     const CARD_W = ENV_W - 0.06, CARD_D = ENV_D - 0.06;
@@ -1630,10 +1637,10 @@
       return { box: boxes.findIndex((b) => px > b.x && px < b.x + b.w && py > b.y && py < b.y + b.h) };
     };
     const labels = { die: vt.querySelector("[data-label=die]"), card: vt.querySelector("[data-label=card]") };
-    const lp = new THREE.Vector3();
+    const lp = new THREE.Vector3(), sealAt = new THREE.Vector3();
     let noteSeen = false, rolledOnce = false;
     const placeLabel = (el, obj, lift, show) => {
-      lp.copy(obj.position); lp.y += lift; lp.project(camera);
+      lp.copy(obj.isVector3 ? obj : obj.position); lp.y += lift; lp.project(camera);
       const vis = show && lp.z < 1 && Math.abs(lp.x) < 0.95 && lp.y < 0.85 && lp.y > -0.95;
       el.classList.toggle("on", vis);
       if (!vis) return;
@@ -1826,6 +1833,13 @@
         mouth.setFromNormalAndCoplanarPoint(mouthN, mouthP);
       }
       noteCard.visible = NOTE.slide > 0.001 || NOTE.lift > 0; // nothing to draw inside the closed envelope
+      // light on the card as it comes up: the table lamp only grazes a card held upright
+      const lit = Math.max(NOTE.slide * 0.45, NOTE.lift);
+      noteLight.intensity = 2.0 * lit;
+      noteLight.position.copy(camera.position).add(new THREE.Vector3(-0.35, 0.45, -0.1));
+      noteLight.target.position.copy(noteCard.position);
+      noteLight.target.updateMatrixWorld();
+      noteFace.emissiveIntensity = 0.14 * NOTE.lift;
     }
 
     const R = portrait ? 8.4 : small ? 6.6 : 7.4;
@@ -1860,8 +1874,9 @@
       stepLamp(now / 1000, dt);
       cardHalo.material.opacity = noteSeen ? 0.06 : 0.14 + Math.sin(now / 520) * 0.08;
       // the labels stay until you have done the thing once
-      placeLabel(labels.die, die, DS * 1.6, !roll.on && !rolledOnce);
-      placeLabel(labels.card, card, 0.12, !noteSeen && NOTE.cam === 0);
+      // both labels hang on a thread that ends just above the object it names
+      placeLabel(labels.die, die, DS / 2 + 0.05, !roll.on && !rolledOnce);
+      placeLabel(labels.card, sealBody.getWorldPosition(sealAt), 0.04, !noteSeen && NOTE.cam === 0);
       if (NOTE.cam > 0) labels.die.classList.remove("on");
       stepSmoke(now / 1000, dt);
       smoke.material.uniforms.uScale.value = renderer.getPixelRatio();

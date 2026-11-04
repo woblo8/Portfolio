@@ -101,7 +101,16 @@ html.has-cursor .vt3-gl { cursor: none; }
   font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold-hi);
   text-shadow: 0 0 8px rgba(216, 181, 111, 0.6); opacity: 0; transition: opacity 0.5s var(--ease); will-change: transform;
 }
-.vt3-label::after { content: ""; width: 1px; height: 18px; background: linear-gradient(rgba(216, 181, 111, 0.8), rgba(216, 181, 111, 0)); }
+/* the word sits on a small dark pill, so it reads over anything behind it */
+.vt3-label > span, .vt3-label { --pill: rgba(5, 5, 6, 0.62); }
+/* a thread from the word down to the thing, ending in a small bead of light on it */
+.vt3-label::after {
+  content: ""; width: 7px; height: 42px;
+  background: radial-gradient(circle at 50% calc(100% - 3px), #f1d8a0 0 2.5px, rgba(241, 216, 160, 0) 3.5px),
+              linear-gradient(to right, transparent 3px, rgba(216, 181, 111, 0.85) 3px 4px, transparent 4px) top / 100% calc(100% - 4px) no-repeat;
+  -webkit-mask: linear-gradient(rgba(0, 0, 0, 0.35), #000 40%);
+          mask: linear-gradient(rgba(0, 0, 0, 0.35), #000 40%);
+}
 .vt3-label.on { opacity: 0.9; animation: vtLabel 2.8s ease-in-out infinite; }
 @keyframes vtLabel { 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .vt3-label.on { animation: none; } }
@@ -144,3 +153,8 @@ html.has-cursor .vt3-gl { cursor: none; }
 .vtr-actions button { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold-hi); padding: 6px 2px; }
 .vtr-actions button:hover { text-shadow: 0 0 10px rgba(216, 181, 111, 0.7); }
 @media (max-width: 600px) { .vt-receipt { left: 50%; width: min(300px, calc(100vw - 40px)); margin-left: calc(min(300px, calc(100vw - 40px)) / -2); bottom: 150px; } }
+.vt3-label b {
+  font-weight: 400; padding: 4px 9px 4px 11px; border-radius: 99px;
+  background: rgba(5, 5, 6, 0.62); box-shadow: 0 0 0 1px rgba(216, 181, 111, 0.25);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
