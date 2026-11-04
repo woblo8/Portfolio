@@ -11,7 +11,7 @@
   const $ = (s) => document.querySelector(s);
   const body = document.body;
   const P = D.projects;
-  const WORDS = ["One", "Two", "Three", "Four", "Five", "Six"];
+  const WORDS = T(["Uno", "Dos", "Tres", "Cuatro", "Cinco", "Seis"], ["One", "Two", "Three", "Four", "Five", "Six"]);
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
@@ -76,7 +76,7 @@
   function setSound(on) {
     SND.on = on;
     soundBtn.setAttribute("aria-pressed", String(on));
-    soundBtn.querySelector("b").textContent = on ? "on" : "off";
+    soundBtn.querySelector("b").textContent = on ? T("sí", "on") : T("no", "off");
     store.set("woblo:sound", on ? "1" : "0");
   }
   setSound(SND.on);
@@ -98,7 +98,7 @@
   const streakEl = $("#streak");
   let last = -1, streak = 1, streakTimer = 0;
   function showStreak(n) {
-    streakEl.textContent = `Streak ×${n}`;
+    streakEl.textContent = `${T("Racha", "Streak")} ×${n}`;
     streakEl.classList.remove("on");
     void streakEl.offsetWidth;
     streakEl.classList.add("on");
@@ -110,7 +110,7 @@
 
   /* ---------- double or nothing ---------- */
   $("#againBtn").addEventListener("click", () => {
-    if (D.throwPower(1.55)) say("Double or nothing.", 1800);
+    if (D.throwPower(1.55)) say(T("Doble o nada.", "Double or nothing."), 1800);
   });
 
   /* ---------- the table reacts to the object ---------- */
@@ -119,6 +119,27 @@
     say("Rien ne va plus.", 1700);
   });
   D.on("impact", ({ v }) => thud(Math.min(1, v / 7)));
+  D.on("enter", () => { say("Les jeux sont faits.", 2200); chip(0.7); });
+  D.on("exit", (s) => { if (s) printReceipt(s); });
+
+  /* ---------- the receipt: a tiny slip that sums up the visit ---------- */
+  const receipt = $("#receipt");
+  let receiptTimer = 0;
+  const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  function printReceipt({ index, title, secs, detail }) {
+    const now = new Date();
+    const stamp = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    receipt.innerHTML = `
+      <span class="rc-head">woblo.io · ${T("mesa", "table")} ${String(index + 1).padStart(2, "0")}</span>
+      <b>${title} · ${mmss(secs)} · ${detail}</b>
+      <span class="rc-foot">${stamp} · ${T("gracias por jugar", "thank you for playing")}</span>`;
+    receipt.classList.remove("on");
+    void receipt.offsetWidth;
+    receipt.classList.add("on");
+    clearTimeout(receiptTimer);
+    receiptTimer = setTimeout(() => receipt.classList.remove("on"), 5200);
+    chip(0.4);
+  }
   D.on("land", ({ index }) => {
     say(`${WORDS[index]}. ${P[index].title}.`, 3400);
     body.classList.add("can-again");
@@ -158,12 +179,14 @@
     const fair = 100 / 6;
     el.innerHTML = `
       <div class="odds-head">
-        <span class="odds-k">The odds</span>
-        <h2>Ninguna al azar.<br>O todas.</h2>
-        <p>Cada tirada del dado, contada entre ${scope === "every visitor" ? "todos los visitantes" : "las tiradas de este dispositivo"}. Un dado justo da a cada cara 1/6 = ${fair.toFixed(1)} %.</p>
+        <span class="odds-k">${T("Las probabilidades", "The odds")}</span>
+        <h2>${T("Ninguna al azar.<br>O todas.", "None by chance.<br>Or all of them.")}</h2>
+        <p>${scope === "every visitor"
+          ? T("Cada tirada del dado, contada entre todos los visitantes.", "Every roll of the die, counted across all visitors.")
+          : T("Cada tirada del dado en este dispositivo.", "Every roll of the die on this device.")} ${T("Un dado justo da a cada cara", "A fair die gives each face")} 1/6 = ${fair.toFixed(1)} %.</p>
       </div>
       <div class="odds-table" role="table" aria-label="Rolls per project">
-        <div class="odds-row is-head" role="row"><span>Face</span><span>Project</span><span></span><span>Rolls</span><span>%</span></div>
+        <div class="odds-row is-head" role="row"><span>${T("Cara", "Face")}</span><span>${T("Proyecto", "Project")}</span><span></span><span>${T("Tiradas", "Rolls")}</span><span>%</span></div>
         ${P.map((p, i) => `
         <div class="odds-row" role="row">
           <span>${String(i + 1).padStart(2, "0")}</span>
@@ -177,6 +200,18 @@
     requestAnimationFrame(() => el.classList.add("is-drawn"));
   }
   window.CASINO = { mountOdds };
+
+  /* ---------- private table ---------- */
+  if (window.VIP) {
+    const n = window.VIP.name;
+    setTimeout(() => say(n
+      ? T(`Bienvenidos, ${n}. La mesa es suya.`, `Welcome, ${n}. The table is yours.`)
+      : T("Bienvenido a la mesa privada.", "Welcome to the private table."), 4200), 3200);
+  }
+
+  /* ---------- ES / EN ---------- */
+  const langBtn = $("#langBtn");
+  if (langBtn) langBtn.addEventListener("click", () => window.setLang(window.LANG === "es" ? "en" : "es"));
 
   /* ---------- the cursor roulette: hold outside the die, release, land ---------- */
   const canvas = $("#gl"), cursorEl = $("#cursor");

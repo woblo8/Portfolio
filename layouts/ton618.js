@@ -33,7 +33,7 @@
 
   <section class="tn-power" data-tn="power">
     <div class="tn-sticky">
-      <span class="tn-kicker">Luminosity</span>
+      <span class="tn-kicker">${T("Luminosidad", "Luminosity")}</span>
       <p class="tn-power-lead">${esc(d.power)}</p>
       <div class="tn-number"><span class="tn-digits">${big}</span><b>W</b></div>
       <div class="tn-power-foot">
@@ -49,14 +49,14 @@
 
   <section class="tn-film">
     <figure class="tn-video"><video src="${f(d.video)}" muted loop playsinline autoplay preload="metadata"></video></figure>
-    <p class="tn-caption"><span>Film</span>${esc(p.intro)}</p>
+    <p class="tn-caption"><span>${T("Película", "Film")}</span>${esc(p.intro)}</p>
   </section>
 
   <section class="tn-exploded" data-tn="exploded">
     <div class="tn-sticky">
       <header class="tn-head">
-        <span class="tn-kicker">Exploded view</span>
-        <h2>Tres piezas.<br>Un solo gesto.</h2>
+        <span class="tn-kicker">${T("Vista explosionada", "Exploded view")}</span>
+        <h2>${T("Tres piezas.<br>Un solo gesto.", "Three parts.<br>One gesture.")}</h2>
       </header>
       <div class="tn-ex-stage">
         <figure class="tn-ex-img" data-zoom><img src="${f(d.exploded)}" alt="${cap(3)}" data-cap="${cap(3)}"></figure>
@@ -71,8 +71,8 @@
 
   <section class="tn-detail">
     <header class="tn-head r">
-      <span class="tn-kicker">Light</span>
-      <h2 class="tn-recede" data-recede>La luz escapa<br>por la retícula.</h2>
+      <span class="tn-kicker">${T("Luz", "Light")}</span>
+      <h2 class="tn-recede" data-recede>${T("La luz escapa<br>por la retícula.", "Light escapes<br>through the grid.")}</h2>
     </header>
     <div class="tn-pair">
       ${d.details.map((src, k) => `<div class="tn-par" data-depth="${k ? 0.18 : -0.12}">${zoomImg(src, k + 1)}</div>`).join("")}
@@ -81,13 +81,13 @@
 
   <section class="tn-profile">
     ${zoomImg(d.profile, 4, "is-wide")}
-    <p class="tn-caption"><span>Profile</span>${cap(4)}</p>
+    <p class="tn-caption"><span>${T("Perfil", "Profile")}</span>${cap(4)}</p>
   </section>
 
   <section class="tn-drawings">
     <header class="tn-head r">
-      <span class="tn-kicker">Drawings</span>
-      <h2>Planos.</h2>
+      <span class="tn-kicker">${T("Planos", "Drawings")}</span>
+      <h2>${T("Planos.", "Drawings.")}</h2>
     </header>
     <div class="tn-plot-grid">
       ${d.drawings.map((src, k) => `<div class="tn-plot" data-plot>${zoomImg(src, k + 5)}<i class="tn-pen"></i></div>`).join("")}
@@ -184,7 +184,9 @@
       raf = requestAnimationFrame(frame);
     }
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    const stop = () => cancelAnimationFrame(raf);
+    stop.receipt = () => `Depth ${depthV.textContent}%`;
+    return stop;
   }
 
   window.LAYOUTS.ton618 = { render, init };

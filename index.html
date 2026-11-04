@@ -4,8 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Carlos Infanzón Civantos — Portfolio</title>
-  <meta name="description" content="Product Design / 3D / Visual Systems. Seis caras, seis entradas." />
+  <meta name="description" content="Carlos Infanzón Civantos — Product Design / 3D / Visual Systems. Six faces, six ways in." />
   <meta name="theme-color" content="#050506" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+
+  <!-- how the link looks when it is shared (WhatsApp, LinkedIn, X, Slack…) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.woblo.io/" />
+  <meta property="og:site_name" content="Carlos Infanzón Civantos" />
+  <meta property="og:title" content="Carlos Infanzón Civantos — Portfolio" />
+  <meta property="og:description" content="Product Design / 3D / Visual Systems. A die, six faces, none left to chance." />
+  <meta property="og:image" content="https://www.woblo.io/assets/og.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="An engraved graphite die with the name Carlos Infanzón Civantos" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://www.woblo.io/assets/og.jpg" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Geist Mono = microinformación. Inter Tight = solo fallback mientras no estén los archivos de Neue Haas Grotesk (ver styles.css) -->
@@ -21,28 +36,30 @@
   <div class="loader" id="loader" aria-hidden="true">
     <span class="loader-count" id="loaderCount">000</span>
     <div class="loader-track"><div class="loader-line" id="loaderLine"></div></div>
-    <span class="loader-label">Loading object</span>
+    <span class="loader-label" data-es="Cargando objeto" data-en="Loading object">Loading object</span>
   </div>
 
-  <canvas id="gl" aria-label="Dado interactivo: arrástralo y lánzalo"></canvas>
-  <div class="xray" id="xray" aria-hidden="true"><span class="xray-tag">XR — 001 &nbsp;/&nbsp; MANUS</span></div>
+  <canvas id="gl" aria-label="Interactive die"></canvas>
   <div class="ghost-line" id="ghostLine" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
-  <div class="cursor" id="cursor" aria-hidden="true"><span>Drag</span><i class="cursor-ball"></i></div>
+  <div class="cursor" id="cursor" aria-hidden="true"><span data-es="Arrastra" data-en="Drag">Drag</span><i class="cursor-ball"></i></div>
   <div class="croupier" id="croupier" aria-live="polite"></div>
   <div class="streak" id="streak" aria-hidden="true"></div>
+  <div class="receipt" id="receipt" aria-live="polite"></div>
   <div class="grain" aria-hidden="true"></div>
 
   <header class="top">
     <a class="brand" href="#" id="brand">
       <span class="brand-name" id="brandName"></span>
       <span class="brand-role" id="brandRole"></span>
+      <span class="brand-vip" id="brandVip"></span>
     </a>
     <nav class="menu" id="menu">
-      <button data-open="projects" class="is-active">Projects</button>
-      <button data-open="about">About</button>
-      <button data-open="contact">Contact</button>
-      <button class="sound-toggle" id="soundBtn" aria-pressed="false">Sound <b>off</b></button>
+      <button data-open="projects" class="is-active" data-es="Proyectos" data-en="Projects">Projects</button>
+      <button data-open="about" data-es="Sobre mí" data-en="About">About</button>
+      <button data-open="contact" data-es="Contacto" data-en="Contact">Contact</button>
+      <button class="sound-toggle" id="soundBtn" aria-pressed="false"><span data-es="Sonido" data-en="Sound">Sound</span> <b>off</b></button>
+      <button class="lang-toggle" id="langBtn" aria-label="Idioma / Language"><span data-l="es">ES</span>&thinsp;/&thinsp;<span data-l="en">EN</span></button>
     </nav>
   </header>
 
@@ -52,44 +69,45 @@
     <div class="info-meta" id="iMeta"></div>
     <div class="info-line"></div>
     <p class="info-desc" id="iDesc"></p>
-    <button class="enter" id="enterBtn">Enter project <span>→</span></button>
-    <button class="again" id="againBtn" aria-label="Throw again">Again? <span>↻</span></button>
+    <button class="enter" id="enterBtn"><span data-es="Entrar al proyecto" data-en="Enter project">Enter project</span> <span>→</span></button>
+    <button class="again" id="againBtn"><span data-es="¿Otra?" data-en="Again?">Again?</span> <span>↻</span></button>
   </section>
 
   <div class="hint" id="hint">
-    <div class="hint-row"><span>Drag to rotate</span><i></i><span>Throw</span><i></i><span>Explore</span></div>
+    <div class="hint-row"><span data-es="Arrastra para girar" data-en="Drag to rotate">Drag to rotate</span><i></i><span data-es="Lanza" data-en="Throw">Throw</span><i></i><span data-es="Explora" data-en="Explore">Explore</span></div>
     <em id="tagline"></em>
   </div>
 
-  <nav class="index" id="index" aria-label="Proyectos"></nav>
+  <nav class="index" id="index" aria-label="Projects"></nav>
 
   <div class="flash" id="flash" aria-hidden="true"></div>
 
   <article class="page" id="page" aria-hidden="true">
     <div class="hero-bg" id="heroBg" aria-hidden="true"></div>
     <div class="page-bar">
-      <button class="back" id="backBtn">← Back to object</button>
+      <button class="back" id="backBtn" data-es="← Volver al objeto" data-en="← Back to object">← Back to object</button>
       <span class="page-tag" id="pageTag"></span>
     </div>
     <div class="page-inner" id="pageInner"></div>
     <div class="scroll-cue" id="scrollCue" aria-hidden="true"><span>Scroll</span><i><b></b></i></div>
   </article>
 
-  <div class="lb" id="lb" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Imagen ampliada">
+  <div class="lb" id="lb" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="lb-top">
       <span class="lb-count" id="lbCount">01 / 01</span>
-      <button class="lb-close" id="lbClose">Close ✕</button>
+      <button class="lb-close" id="lbClose" data-es="Cerrar ✕" data-en="Close ✕">Close ✕</button>
     </div>
     <figure class="lb-fig">
       <img id="lbImg" alt="" />
       <figcaption class="lb-cap" id="lbCap"></figcaption>
     </figure>
-    <button class="lb-nav lb-prev" id="lbPrev" aria-label="Anterior">←</button>
-    <button class="lb-nav lb-next" id="lbNext" aria-label="Siguiente">→</button>
+    <button class="lb-nav lb-prev" id="lbPrev" aria-label="←">←</button>
+    <button class="lb-nav lb-next" id="lbNext" aria-label="→">→</button>
   </div>
 
-  <noscript><p class="noscript">Este portfolio necesita JavaScript.</p></noscript>
+  <noscript><p class="noscript">This portfolio needs JavaScript. · Este portfolio necesita JavaScript.</p></noscript>
 
+  <script src="i18n.js"></script>
   <script src="projects.js"></script>
   <script src="layouts/sidea.js"></script>
   <script src="layouts/ton618.js"></script>

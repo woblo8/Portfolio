@@ -2,34 +2,39 @@
    CONTENIDO DEL PORTFOLIO — edita solo este archivo.
    El dado tiene 6 caras = 6 proyectos (orden 01 → 06).
 
-   IMÁGENES Y VÍDEO — automático, no hace falta tocar código:
-   Mete los archivos en la carpeta de cada proyecto (folder):
-     projects/01-safelife/images/01.jpg   → imagen principal
-                                 02.jpg   → par de imágenes (verticales)
-                                 03.jpg
-                                 04.jpg … 12.jpg → galería extra
-     projects/01-safelife/video/video.mp4 → vídeo arriba del todo
+   IDIOMAS: cada texto va en español y en inglés con bi("es", "en").
+   Si un texto es igual en los dos idiomas, escríbelo normal.
+
+   IMÁGENES Y VÍDEO (proyectos sin página propia) — automático:
+     projects/<carpeta>/images/01.jpg   → imagen principal
+                              02.jpg   → par de imágenes (verticales)
+                              03.jpg
+                              04.jpg … 12.jpg → galería extra
+     projects/<carpeta>/video/video.mp4 → vídeo arriba del todo
    Formatos: jpg, jpeg, png, webp, gif. Lo que no exista no se muestra.
-   (images: [...] solo si quieres rutas manuales en vez de 01, 02…)
 
    AMPLIACIÓN: al pulsar una imagen se abre en grande con
-   indicador 01 / 04. Pies de foto opcionales, en el mismo orden:
-     captions: ["Vista frontal, luz apagada.", "Detalle de la retícula.", …]
+   indicador 01 / 04 y pie de foto (captions, en el mismo orden).
    ============================================================ */
 
 window.PORTFOLIO = {
   name: "Carlos Infanzón Civantos",
-  role: "Product Design / 3D / Visual Systems",
-  tagline: "Seis caras. Seis entradas.",
+  role: bi("Diseño de producto / 3D / Sistemas visuales", "Product Design / 3D / Visual Systems"),
+  tagline: bi("Seis caras. Seis entradas.", "Six faces. Six ways in."),
   email: "woblo.original@gmail.com",
   linkedin: "https://www.linkedin.com/in/carlos-infanzon-civantos",
-  contactTitle: "Let’s build something\nworth remembering.",
+  contactTitle: bi("Construyamos algo\nque merezca recordarse.", "Let’s build something\nworth remembering."),
   cv: "assets/cv/Carlos-Infanzon-Civantos-CV.pdf",   // se abre en otra pestaña desde Contact
-  portrait: "assets/about/portrait.jpg",              // retrato de About (grabado en líneas)
-  aboutTitle: "Objects, systems, worlds.",
-  about:
+  portrait: "assets/about/portrait.jpg",              // foto de About
+  aboutTitle: bi("Objetos, sistemas, mundos.", "Objects, systems, worlds."),
+  about: bi(
     "Un dado, seis caras, ninguna al azar.\nLa ambición de abrir nuevas posibilidades. La precisión de darles forma.",
-  disciplines: ["Product Design", "3D & Rendering", "Visual Systems", "Prototyping", "UI / Digital"],
+    "A die, six faces, none left to chance.\nThe ambition to open new possibilities. The precision to give them form."
+  ),
+  disciplines: bi(
+    ["Diseño de producto", "3D y render", "Sistemas visuales", "Prototipado", "UI / Digital"],
+    ["Product Design", "3D & Rendering", "Visual Systems", "Prototyping", "UI / Digital"]
+  ),
   tools: ["Blender", "Figma", "Adobe Suite", "Cinema 4D", "Solidworks", "FL Studio"],
 };
 
@@ -37,26 +42,27 @@ window.PROJECTS = [
   {
     title: "SIDE A",
     folder: "projects/01-side-a",
-    category: "Digital Product",
+    category: bi("Producto digital", "Digital Product"),
     year: "2026",
-    role: "UI / Product thinking",
-    tags: ["UI", "Product thinking", "Figma"],
+    role: bi("UI / Pensamiento de producto", "UI / Product thinking"),
+    tags: bi(["UI", "Pensamiento de producto", "Figma"], ["UI", "Product thinking", "Figma"]),
     motif: "grid",
     short: "Music designed around intention, not endless choice.",
     intro: "Play like you’ve already made it.",
     sections: [],
     images: [],
     // SIDE A tiene su propia página: la lees como si escucharas una sesión.
-    // Archivos en projects/01-side-a/screens y projects/01-side-a/covers
     layout: "sidea",
     sidea: {
       statement: "Music designed around intention, not endless choice.",
-      story:
+      story: bi(
         "SIDE A no es otra app de streaming. Es un ritual: sesiones largas de house, seleccionadas y sin voces, para trabajar como si ya lo hubieras conseguido. Una sola decisión: darle al play.",
+        "SIDE A isn’t another streaming app. It’s a ritual: long, curated house sessions without vocals, for working as if you’d already made it. One decision only: press play."
+      ),
       chapters: [
-        { kicker: "Home", title: "Una decisión por pantalla.", text: "La sesión destacada ocupa el centro. El resto espera debajo, sin competir por tu atención.", screen: "01-desktop-home.jpg", caption: "Home. Una sesión destacada y una fila para lo que venga después." },
-        { kicker: "Session", title: "Sin ruido.", text: "Número, título, artista, duración. La tracklist como una contraportada.", screen: "02-desktop-session.jpg", caption: "Session. Doce pistas, 58:42, y la opción de tocar hasta una hora concreta." },
-        { kicker: "Saved", title: "Tu colección.", text: "Rejilla para mirar. Lista para decidir.", screens: ["03-desktop-saved-grid.jpg", "04-desktop-saved-list.jpg"], caption: "Saved. Rejilla y lista de las sesiones guardadas." },
+        { kicker: "Home", title: bi("Una decisión por pantalla.", "One decision per screen."), text: bi("La sesión destacada ocupa el centro. El resto espera debajo, sin competir por tu atención.", "The featured session takes the centre. Everything else waits below, without competing for your attention."), screen: "01-desktop-home.jpg", caption: bi("Home. Una sesión destacada y una fila para lo que venga después.", "Home. One featured session and a row for whatever comes next.") },
+        { kicker: "Session", title: bi("Sin ruido.", "No noise."), text: bi("Número, título, artista, duración. La tracklist como una contraportada.", "Number, title, artist, length. The tracklist as a back cover."), screen: "02-desktop-session.jpg", caption: bi("Session. Doce pistas, 58:42, y la opción de tocar hasta una hora concreta.", "Session. Twelve tracks, 58:42, and the option to play until a set time.") },
+        { kicker: "Saved", title: bi("Tu colección.", "Your collection."), text: bi("Rejilla para mirar. Lista para decidir.", "A grid to browse. A list to decide."), screens: ["03-desktop-saved-grid.jpg", "04-desktop-saved-list.jpg"], caption: bi("Saved. Rejilla y lista de las sesiones guardadas.", "Saved. Grid and list of saved sessions.") },
       ],
       focus: {
         until: "18:00",
@@ -64,7 +70,7 @@ window.PROJECTS = [
         line: "Empires are built in hours like these.",
         sub: "Same time tomorrow.",
         screens: ["05-desktop-focus.jpg", "06-desktop-built.jpg"],
-        caption: "Focus. Eliges hasta cuándo; SIDE A llena el tiempo y desaparece.",
+        caption: bi("Focus. Eliges hasta cuándo; SIDE A llena el tiempo y desaparece.", "Focus. You choose until when; SIDE A fills the time and disappears."),
       },
       mobile: ["07-mobile-home.jpg", "08-mobile-session.jpg", "09-mobile-saved.jpg"],
       outro: "You have an empire to build.\nLet this play.",
@@ -90,134 +96,137 @@ window.PROJECTS = [
   {
     title: "TON 618",
     folder: "projects/02-ton618",
-    category: "Lighting Product",
+    category: bi("Producto de iluminación", "Lighting Product"),
     year: "2024",
-    role: "Product design · 3D",
-    tags: ["Product", "Lighting", "3D"],
+    role: bi("Diseño de producto · 3D", "Product design · 3D"),
+    tags: bi(["Producto", "Iluminación", "3D"], ["Product", "Lighting", "3D"]),
     motif: "rings",
-    short: "Una lámpara eclipse: la luz rodea la esfera como un horizonte de eventos.",
-    intro: "Un faro del pasado, convertido en objeto.",
+    short: bi("Una lámpara eclipse: la luz rodea la esfera como un horizonte de eventos.", "An eclipse lamp: light circles the sphere like an event horizon."),
+    intro: bi("Un faro del pasado, convertido en objeto.", "A lighthouse from the past, turned into an object."),
     sections: [
-      { heading: "Concept", text: "TON 618 es un quásar a miles de millones de años luz: brilla con una potencia de unos 10⁴⁰ W, cien billones de veces la energía del Sol. La lámpara traduce esa escala imposible a un objeto doméstico." },
-      { heading: "Form", text: "Una esfera negra, un anillo horizontal y una carcasa perforada. Tres piezas, un solo gesto: el eclipse." },
-      { heading: "Light", text: "Al encenderse, la luz envuelve la esfera y escapa por la retícula de perforaciones. Suave y ambiental, crea un efecto óptico que parece desafiar la gravedad." },
-      { heading: "Construction", text: "Dos mitades simétricas que se ensamblan sobre el anillo central. La vista explosionada y las mallas muestran cómo se construye el objeto." },
+      { heading: bi("Concepto", "Concept"), text: bi("TON 618 es un quásar a miles de millones de años luz: brilla con una potencia de unos 10⁴⁰ W, cien billones de veces la energía del Sol. La lámpara traduce esa escala imposible a un objeto doméstico.", "TON 618 is a quasar billions of light-years away: it shines with a power of about 10⁴⁰ W, a hundred trillion times the energy of the Sun. The lamp translates that impossible scale into a domestic object.") },
+      { heading: bi("Forma", "Form"), text: bi("Una esfera negra, un anillo horizontal y una carcasa perforada. Tres piezas, un solo gesto: el eclipse.", "A black sphere, a horizontal ring and a perforated shell. Three parts, one gesture: the eclipse.") },
+      { heading: bi("Luz", "Light"), text: bi("Al encenderse, la luz envuelve la esfera y escapa por la retícula de perforaciones. Suave y ambiental, crea un efecto óptico que parece desafiar la gravedad.", "When switched on, light wraps the sphere and escapes through the perforated grid. Soft and ambient, it creates an optical effect that seems to defy gravity.") },
+      { heading: bi("Construcción", "Construction"), text: bi("Dos mitades simétricas que se ensamblan sobre el anillo central. La vista explosionada y las mallas muestran cómo se construye el objeto.", "Two symmetrical halves assembled on the central ring. The exploded view and meshes show how the object is built.") },
     ],
     captions: [
-      "Encendida. La luz rodea la esfera como un horizonte de eventos.",
-      "Carcasa perforada: la retícula que deja escapar la luz.",
-      "Detalle de las perforaciones.",
-      "Vista explosionada: mitades, anillos y esfera.",
-      "Perfil: la luz corta el objeto en vertical.",
-      "Plano en alzado.",
-      "Malla de las dos mitades de la carcasa.",
+      bi("Encendida. La luz rodea la esfera como un horizonte de eventos.", "Switched on. Light circles the sphere like an event horizon."),
+      bi("Carcasa perforada: la retícula que deja escapar la luz.", "Perforated shell: the grid that lets the light escape."),
+      bi("Detalle de las perforaciones.", "Detail of the perforations."),
+      bi("Vista explosionada: mitades, anillos y esfera.", "Exploded view: halves, rings and sphere."),
+      bi("Perfil: la luz corta el objeto en vertical.", "Profile: light cuts the object vertically."),
+      bi("Plano en alzado.", "Elevation drawing."),
+      bi("Malla de las dos mitades de la carcasa.", "Mesh of the two halves of the shell."),
     ],
     images: [],
     // TON 618 tiene su propia página: escala absurda, zoom hacia el negro.
     layout: "ton618",
     ton: {
       hero: "images/01.jpg",
-      kicker: "Quasar · Lámpara eclipse",
-      fact: "TON 618 es un quásar a miles de millones de años luz. Un faro del pasado.",
-      power: "Brilla con una potencia de unos",
-      powerSun: "Cien billones de veces la energía del Sol.",
-      object: "La lámpara traduce esa escala imposible a un objeto que cabe en una habitación.",
+      kicker: bi("Quásar · Lámpara eclipse", "Quasar · Eclipse lamp"),
+      fact: bi("TON 618 es un quásar a miles de millones de años luz. Un faro del pasado.", "TON 618 is a quasar billions of light-years away. A lighthouse from the past."),
+      power: bi("Brilla con una potencia de unos", "It shines with a power of about"),
+      powerSun: bi("Cien billones de veces la energía del Sol.", "A hundred trillion times the energy of the Sun."),
+      object: bi("La lámpara traduce esa escala imposible a un objeto que cabe en una habitación.", "The lamp translates that impossible scale into an object that fits in a room."),
       parts: [
-        { label: "Carcasa superior", note: "Perforada: la luz escapa por la retícula", y: 18 },
-        { label: "Anillo", note: "El horizonte", y: 31 },
-        { label: "Esfera", note: "El núcleo negro", y: 50 },
-        { label: "Anillo inferior", note: "Cierra el eclipse", y: 67 },
-        { label: "Carcasa inferior", note: "Simétrica a la superior", y: 83 },
+        { label: bi("Carcasa superior", "Upper shell"), note: bi("Perforada: la luz escapa por la retícula", "Perforated: light escapes through the grid"), y: 18 },
+        { label: bi("Anillo", "Ring"), note: bi("El horizonte", "The horizon"), y: 31 },
+        { label: bi("Esfera", "Sphere"), note: bi("El núcleo negro", "The black core"), y: 50 },
+        { label: bi("Anillo inferior", "Lower ring"), note: bi("Cierra el eclipse", "Closes the eclipse"), y: 67 },
+        { label: bi("Carcasa inferior", "Lower shell"), note: bi("Simétrica a la superior", "Mirrors the upper one"), y: 83 },
       ],
       exploded: "images/04.jpg",
       details: ["images/02.jpg", "images/03.jpg"],
       profile: "images/05.jpg",
       drawings: ["images/06.jpg", "images/07.jpg"],
       video: "video/video.mp4",
-      quote: "No es solo una lámpara.\nEs una experiencia.",
+      quote: bi("No es solo una lámpara.\nEs una experiencia.", "It’s not just a lamp.\nIt’s an experience."),
     },
   },
   {
     title: "SAFELIFE",
     folder: "projects/03-safelife",
-    category: "Urban Product",
+    category: bi("Producto urbano", "Urban Product"),
     year: "2022",
-    role: "Product design · 3D · Prototyping",
-    tags: ["Concept", "3D modelling", "Prototyping"],
+    role: bi("Diseño de producto · 3D · Prototipado", "Product design · 3D · Prototyping"),
+    tags: bi(["Concepto", "Modelado 3D", "Prototipado"], ["Concept", "3D modelling", "Prototyping"]),
     motif: "cross",
-    short: "Una farola que gira para llevar la luz donde la ciudad la necesita.",
-    intro: "Light where the city needs it.",
+    short: bi("Una farola que gira para llevar la luz donde la ciudad la necesita.", "A streetlight that turns to bring light where the city needs it."),
+    intro: bi("Luz donde la ciudad la necesita.", "Light where the city needs it."),
     sections: [],
     images: [],
     // SAFELIFE tiene su propia página: técnica, y la luz se dirige con el scroll.
-    // Archivos en projects/03-safelife/{frames,drawings,renders,process}
     layout: "safelife",
     safe: {
-      problem: "La ciudad cambia a lo largo del día; la iluminación urbana se queda fija.",
-      idea: "SAFELIFE explora una estructura de luz capaz de reorientarse cuando cambian los recorridos, la actividad y lo que el espacio necesita.",
+      problem: bi("La ciudad cambia a lo largo del día; la iluminación urbana se queda fija.", "The city changes throughout the day; street lighting stays fixed."),
+      idea: bi("SAFELIFE explora una estructura de luz capaz de reorientarse cuando cambian los recorridos, la actividad y lo que el espacio necesita.", "SAFELIFE explores a lighting structure able to reorient itself as routes, activity and the needs of the space change."),
       verbs: [
-        { w: "Adapt", t: "Una estructura ajustable cambia la dirección de la luz." },
-        { w: "Focus", t: "La luz se dirige al área que necesita atención." },
-        { w: "Integrate", t: "Luz y movimiento se convierten en un único objeto urbano." },
+        { w: bi("Adapta", "Adapt"), t: bi("Una estructura ajustable cambia la dirección de la luz.", "An adjustable structure changes the direction of the light.") },
+        { w: bi("Enfoca", "Focus"), t: bi("La luz se dirige al área que necesita atención.", "Light is directed to the area that needs attention.") },
+        { w: bi("Integra", "Integrate"), t: bi("Luz y movimiento se convierten en un único objeto urbano.", "Light and movement become a single urban object.") },
       ],
       concept: [
-        { img: "process/study-model.jpg", label: "Continuous form", text: "Un solo cuerpo curvo: silueta compacta, pero menos control sobre la dirección de la luz." },
-        { img: "process/sketch-model.jpg", label: "Radial distribution", text: "Varios brazos: más cobertura, pero más componentes y más complejidad visual." },
-        { img: "frames/hero.webp", label: "Selected — Rotating arm", text: "Una estructura horizontal que separa soporte, movimiento y luz, con una silueta clara." },
+        { img: "process/study-model.jpg", label: bi("Forma continua", "Continuous form"), text: bi("Un solo cuerpo curvo: silueta compacta, pero menos control sobre la dirección de la luz.", "A single curved body: a compact silhouette, but less control over the direction of the light.") },
+        { img: "process/sketch-model.jpg", label: bi("Distribución radial", "Radial distribution"), text: bi("Varios brazos: más cobertura, pero más componentes y más complejidad visual.", "Several arms: wider coverage, but more parts and more visual complexity.") },
+        { img: "frames/hero.webp", label: bi("Elegido — Brazo giratorio", "Selected — Rotating arm"), text: bi("Una estructura horizontal que separa soporte, movimiento y luz, con una silueta clara.", "A horizontal structure that separates support, movement and light, with a clear silhouette.") },
       ],
       prototype: [
-        { img: "process/printing.jpg", label: "01 / Manufacturing", text: "Impresión FDM por piezas: la secuencia de montaje queda a la vista." },
-        { img: "process/assembly.jpg", label: "02 / Assembly", text: "El prototipo aclara cómo se unen soporte, brazo y cuerpo de luz." },
-        { img: "process/gear.jpg", label: "03 / Proportion", text: "El modelo físico permite juzgar grosores, equilibrio y jerarquía." },
+        { img: "process/printing.jpg", label: bi("01 / Fabricación", "01 / Manufacturing"), text: bi("Impresión FDM por piezas: la secuencia de montaje queda a la vista.", "FDM printing in separate parts: the assembly sequence stays visible.") },
+        { img: "process/assembly.jpg", label: bi("02 / Montaje", "02 / Assembly"), text: bi("El prototipo aclara cómo se unen soporte, brazo y cuerpo de luz.", "The prototype clarifies how support, arm and light body connect.") },
+        { img: "process/gear.jpg", label: bi("03 / Proporción", "03 / Proportion"), text: bi("El modelo físico permite juzgar grosores, equilibrio y jerarquía.", "The physical model helps judge thickness, balance and hierarchy.") },
       ],
       parts: [
-        { n: "01", label: "Fixed support", text: "Estructura vertical anclada al suelo." },
-        { n: "02", label: "Rotation collar", text: "La unión central que permite cambiar la orientación." },
-        { n: "03", label: "Lighting arm", text: "Elemento horizontal entre el soporte y la luminaria." },
-        { n: "04", label: "LED ring", text: "Fuente de luz circular para una iluminación dirigida." },
+        { n: "01", label: bi("Soporte fijo", "Fixed support"), text: bi("Estructura vertical anclada al suelo.", "Vertical structure anchored to the ground.") },
+        { n: "02", label: bi("Collarín de giro", "Rotation collar"), text: bi("La unión central que permite cambiar la orientación.", "The central joint that lets the orientation change.") },
+        { n: "03", label: bi("Brazo de luz", "Lighting arm"), text: bi("Elemento horizontal entre el soporte y la luminaria.", "Horizontal element between the support and the luminaire.") },
+        { n: "04", label: bi("Anillo LED", "LED ring"), text: bi("Fuente de luz circular para una iluminación dirigida.", "Circular light source for directed illumination.") },
       ],
-      outro: "Lighting and movement\nbecome a single urban object.",
+      outro: bi("Luz y movimiento\nen un único objeto urbano.", "Lighting and movement\nbecome a single urban object."),
     },
   },
   {
     title: "3D VISUALS",
     folder: "projects/04-3d-visuals",
-    category: "Selected Works",
+    category: bi("Selección", "Selected Works"),
     year: "2023—25",
-    role: "3D artist",
+    role: bi("Artista 3D", "3D artist"),
     tags: ["Renders", "Motion", "3D"],
     motif: "cube",
-    short: "Selección de renders y piezas de motion.",
-    intro: "Una selección de imágenes y animaciones: luz, material y composición.",
+    short: bi("Selección de renders y piezas de motion.", "A selection of renders and motion pieces."),
+    intro: bi("Una selección de imágenes y animaciones: luz, material y composición.", "A selection of images and animations: light, material and composition."),
     sections: [
-      { heading: "Selection", text: "Breve nota sobre los criterios de la selección." },
+      { heading: bi("Selección", "Selection"), text: bi("Breve nota sobre los criterios de la selección.", "A short note on how the selection was made.") },
     ],
     images: [],
   },
   {
     title: "PROJECT 05",
     folder: "projects/05-proyecto-05",
-    category: "In progress",
+    category: bi("En curso", "In progress"),
     year: "2026",
     role: "—",
-    tags: ["Coming soon"],
+    tags: bi(["Próximamente"], ["Coming soon"]),
     motif: "dot",
-    short: "Espacio reservado para un nuevo proyecto.",
-    intro: "Sustituye esta cara por tu próximo proyecto.",
-    sections: [{ heading: "Status", text: "En desarrollo." }],
+    short: bi("Espacio reservado para un nuevo proyecto.", "Reserved for a new project."),
+    intro: bi("Próximamente.", "Coming soon."),
+    sections: [{ heading: bi("Estado", "Status"), text: bi("En desarrollo.", "In development.") }],
     images: [],
   },
   {
     title: "PROJECT 06",
     folder: "projects/06-proyecto-06",
-    category: "In progress",
+    category: bi("En curso", "In progress"),
     year: "2026",
     role: "—",
-    tags: ["Coming soon"],
+    tags: bi(["Próximamente"], ["Coming soon"]),
     motif: "square",
-    short: "Espacio reservado para un nuevo proyecto.",
-    intro: "Sustituye esta cara por tu próximo proyecto.",
-    sections: [{ heading: "Status", text: "En desarrollo." }],
+    short: bi("Espacio reservado para un nuevo proyecto.", "Reserved for a new project."),
+    intro: bi("Próximamente.", "Coming soon."),
+    sections: [{ heading: bi("Estado", "Status"), text: bi("En desarrollo.", "In development.") }],
     images: [],
   },
 ];
+
+// pick the visitor's language for everything above
+window.PORTFOLIO = L10N(window.PORTFOLIO);
+window.PROJECTS = L10N(window.PROJECTS);

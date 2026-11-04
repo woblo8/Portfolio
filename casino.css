@@ -119,3 +119,53 @@ body.can-again.has-info .info .again:hover { color: #fff; text-shadow: var(--neo
   .croupier { bottom: 150px; }
   .menu .sound-toggle { display: none; }
 }
+
+/* chip value, shown above the chip on hover */
+.index > button .chip-price {
+  position: absolute; bottom: calc(100% + 14px); right: 50%; transform: translate(50%, 6px); pointer-events: none; white-space: nowrap;
+  padding: 6px 9px; border-radius: 4px; background: rgba(5, 5, 6, 0.9); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: #fff;
+  opacity: 0; transition: opacity 0.3s, transform 0.4s var(--ease);
+}
+.index > button:hover .chip-price { opacity: 1; transform: translate(50%, 0); }
+.index > button:last-child .chip-price { right: 0; transform: translate(0, 6px); }
+.index > button:last-child:hover .chip-price { transform: none; }
+
+/* private table */
+.brand-vip { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #d8b56f; text-shadow: 0 0 10px rgba(216, 181, 111, 0.45); }
+.brand-vip:empty { display: none; }
+body.vip .index > button.is-active { box-shadow: inset 0 0 0 1px #d8b56f, 0 0 14px rgba(216, 181, 111, 0.35), 0 3px 0 #0a0a0b, 0 6px 10px rgba(0, 0, 0, 0.6); }
+
+/* the receipt */
+.receipt {
+  position: fixed; left: var(--gut); bottom: calc(var(--gut) + 8px); z-index: 14; pointer-events: none;
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 18px; min-width: 230px;
+  background: #ecebe7; color: #050506; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 6px repeat-x;
+          mask: linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 6px repeat-x;
+  opacity: 0; transform: translateY(30px); transition: opacity 0.6s var(--ease), transform 0.8s var(--ease);
+}
+.receipt b { font-weight: 500; font-size: 11px; letter-spacing: 0.08em; padding: 6px 0; border-top: 1px dashed rgba(0, 0, 0, 0.3); border-bottom: 1px dashed rgba(0, 0, 0, 0.3); }
+.receipt .rc-head, .receipt .rc-foot { color: #6b6b70; }
+.receipt.on { opacity: 1; transform: none; }
+
+/* language */
+.menu .lang-toggle { color: var(--smoke); }
+.menu .lang-toggle::after { display: none; }
+.menu .lang-toggle span { transition: color 0.3s, text-shadow 0.3s; }
+html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l="en"] { color: #fff; text-shadow: var(--neon-glow); }
+
+/* the small way to paper */
+.print-link {
+  display: inline-flex; gap: 12px; margin-top: 6vh; text-decoration: none;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mist);
+  transition: color 0.4s, text-shadow 0.4s;
+}
+.print-link span { color: var(--smoke); }
+.print-link:hover { color: #fff; text-shadow: var(--neon-glow); }
+
+@media (max-width: 860px) {
+  .menu .lang-toggle { display: inline-block; }
+  .index > button .chip-price { display: none; }
+  .receipt { bottom: 140px; }
+}

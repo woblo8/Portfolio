@@ -48,7 +48,7 @@
 
   <section class="sl-verbs" data-sl="verbs">
     <div class="sl-sticky">
-      <span class="sl-kicker">Concept</span>
+      <span class="sl-kicker">${T("Concepto", "Concept")}</span>
       <p class="sl-idea">${esc(d.idea)}</p>
       <ol class="sl-verb-list">
         ${d.verbs.map((v) => `<li><b>${esc(v.w)}</b><span>${esc(v.t)}</span></li>`).join("")}
@@ -59,8 +59,8 @@
   <section class="sl-compare" data-sl="compare">
     <div class="sl-sticky">
       <header class="sl-head">
-        <span class="sl-kicker">From fixed to responsive</span>
-        <h2>Una dirección fija.<br>O la que haga falta.</h2>
+        <span class="sl-kicker">${T("De fija a adaptable", "From fixed to responsive")}</span>
+        <h2>${T("Una dirección fija.<br>O la que haga falta.", "One fixed direction.<br>Or whichever it takes.")}</h2>
       </header>
       <div class="sl-diagrams">
         <figure class="sl-diagram">
@@ -70,7 +70,7 @@
             <circle class="sl-draw" cx="300" cy="70" r="12"/>
             <path class="sl-ground" d="M40 270 H380"/>
           </svg>
-          <figcaption><span>01</span>Fixed lighting — one permanent direction</figcaption>
+          <figcaption><span>01</span>${T("Luz fija — una dirección permanente", "Fixed lighting — one permanent direction")}</figcaption>
         </figure>
         <figure class="sl-diagram is-adaptive">
           <svg viewBox="0 0 400 300" aria-hidden="true">
@@ -83,7 +83,7 @@
             <circle class="sl-pivot" cx="120" cy="70" r="5"/>
             <path class="sl-ground" d="M40 270 H380"/>
           </svg>
-          <figcaption><span>02</span>Adaptive concept — adjustable orientation</figcaption>
+          <figcaption><span>02</span>${T("Concepto adaptable — orientación ajustable", "Adaptive concept — adjustable orientation")}</figcaption>
         </figure>
       </div>
     </div>
@@ -91,8 +91,8 @@
 
   <section class="sl-block">
     <header class="sl-head r">
-      <span class="sl-kicker">Concept development</span>
-      <h2>Tres caminos.<br>Un brazo que gira.</h2>
+      <span class="sl-kicker">${T("Desarrollo de concepto", "Concept development")}</span>
+      <h2>${T("Tres caminos.<br>Un brazo que gira.", "Three paths.<br>One arm that turns.")}</h2>
     </header>
     <div class="sl-cards">
       ${d.concept.map((c, k) => `
@@ -106,8 +106,8 @@
 
   <section class="sl-block">
     <header class="sl-head r">
-      <span class="sl-kicker">Physical prototyping</span>
-      <h2>Del render<br>a la mano.</h2>
+      <span class="sl-kicker">${T("Prototipado físico", "Physical prototyping")}</span>
+      <h2>${T("Del render<br>a la mano.", "From render<br>to hand.")}</h2>
     </header>
     <div class="sl-proto">
       ${d.prototype.map((c) => `
@@ -123,33 +123,33 @@
     <div class="sl-sticky">
       <div class="sl-axis-grid">
         <div class="sl-axis-text">
-          <span class="sl-kicker">Built around one axis</span>
-          <h2>Cuatro piezas.<br>Un solo giro.</h2>
+          <span class="sl-kicker">${T("Construida sobre un eje", "Built around one axis")}</span>
+          <h2>${T("Cuatro piezas.<br>Un solo giro.", "Four parts.<br>One turn.")}</h2>
           <ol class="sl-parts">
             ${d.parts.map((pt) => `<li><span>${esc(pt.n)}</span><b>${esc(pt.label)}</b><small>${esc(pt.text)}</small></li>`).join("")}
           </ol>
         </div>
-        <figure class="sl-plot" data-zoom><img src="${f("drawings/dimensions.png")}" alt="Dimensioned drawing" data-cap="Alzado acotado: 700 cm de altura, cimentación de 175 cm."><i class="sl-pen"></i></figure>
-        <figure class="sl-plot is-top" data-zoom><img src="${f("drawings/topview.png")}" alt="Top view" data-cap="Vista superior: el brazo de 250 cm gira alrededor del soporte vertical."><i class="sl-pen"></i></figure>
+        <figure class="sl-plot" data-zoom><img src="${f("drawings/dimensions.png")}" alt="Dimensioned drawing" data-cap="${T("Alzado acotado: 700 cm de altura, cimentación de 175 cm.", "Dimensioned elevation: 700 cm high, 175 cm foundation.")}"><i class="sl-pen"></i></figure>
+        <figure class="sl-plot is-top" data-zoom><img src="${f("drawings/topview.png")}" alt="Top view" data-cap="${T("Vista superior: el brazo de 250 cm gira alrededor del soporte vertical.", "Top view: the 250 cm arm turns around the vertical support.")}"><i class="sl-pen"></i></figure>
       </div>
     </div>
   </section>
 
   <section class="sl-block">
     <div class="sl-views">
-      ${fig("renders/above.webp", "Vista superior del brazo y el anillo LED", "is-clear")}
-      ${fig("renders/below.webp", "Vista inferior: el anillo de luz", "is-clear")}
+      ${fig("renders/above.webp", T("Vista superior del brazo y el anillo LED", "Top view of the arm and LED ring"), "is-clear")}
+      ${fig("renders/below.webp", T("Vista inferior: el anillo de luz", "Bottom view: the ring of light"), "is-clear")}
     </div>
   </section>
 
   <section class="sl-wide">
-    ${fig("process/disassembly.jpg", "Despiece: soporte, brazo, anillo y uniones", "is-wide")}
+    ${fig("process/disassembly.jpg", T("Despiece: soporte, brazo, anillo y uniones", "Disassembly: support, arm, ring and joints"), "is-wide")}
   </section>
 
   <section class="sl-urban">
     <figure class="sl-urban-img" data-zoom><img src="${f("process/urban.jpg")}" alt="SAFELIFE in the city" data-cap="Urban application: adaptive lighting in context." loading="lazy"></figure>
     <div class="sl-urban-text">
-      <span class="sl-kicker">Urban application</span>
+      <span class="sl-kicker">${T("Aplicación urbana", "Urban application")}</span>
       <ol>${d.verbs.map((v, k) => `<li class="r"><span>${String(k + 1).padStart(2, "0")}</span>${esc(v.w)}</li>`).join("")}</ol>
     </div>
   </section>
@@ -238,7 +238,9 @@
       raf = requestAnimationFrame(frame);
     }
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    const stop = () => cancelAnimationFrame(raf);
+    stop.receipt = () => `Orientation ${angleEl.textContent}`;
+    return stop;
   }
 
   window.LAYOUTS.safelife = { render, init };

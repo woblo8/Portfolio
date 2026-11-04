@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Carlos Infanzón Civantos — Portfolio (print)</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    @font-face { font-family: "Neue Haas Grotesk"; src: url("fonts/NeueHaasGrotesk-Roman.woff2") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Neue Haas Grotesk"; src: url("fonts/NeueHaasGrotesk-Bold.woff2") format("woff2"); font-weight: 600; }
+    :root { --ink: #0b0b0c; --mute: #6b6b70; --line: #d9d8d3; --paper: #f7f6f2;
+      --sans: "Neue Haas Grotesk", "Inter Tight", "Helvetica Neue", Arial, sans-serif; --mono: "Geist Mono", ui-monospace, monospace; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { background: #e9e8e3; }
+    body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+    .sheet { background: var(--paper); width: min(210mm, 100%); margin: 24px auto; padding: 18mm 16mm; box-shadow: 0 10px 40px rgba(0,0,0,.08); }
+    .mono { font-family: var(--mono); font-size: 9pt; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
+    header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 8mm; border-bottom: 1px solid var(--ink); }
+    header h1 { font-size: 26pt; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+    header .contact { text-align: right; line-height: 1.7; }
+    .about { display: grid; grid-template-columns: 1fr 34mm; gap: 8mm; padding: 8mm 0; border-bottom: 1px solid var(--line); }
+    .about p { font-size: 13pt; line-height: 1.35; letter-spacing: -.01em; }
+    .about img { width: 34mm; height: 42mm; object-fit: cover; filter: grayscale(1); }
+    .about .lists { margin-top: 5mm; display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+    .about .lists p { font-size: 9.5pt; line-height: 1.5; color: #333; }
+    .project { padding: 9mm 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
+    .project-head { display: grid; grid-template-columns: 14mm 1fr; gap: 4mm; align-items: baseline; }
+    .project h2 { font-size: 22pt; font-weight: 600; letter-spacing: -.035em; line-height: 1; }
+    .project .meta { margin-top: 2mm; }
+    .project .body { margin: 5mm 0 0 18mm; display: grid; grid-template-columns: 1fr 62mm; gap: 7mm; align-items: start; }
+    .project .lead { font-size: 12pt; line-height: 1.35; font-weight: 500; letter-spacing: -.01em; margin-bottom: 3mm; }
+    .project .text p { font-size: 9.5pt; line-height: 1.55; color: #333; margin-top: 2mm; }
+    .project .text b { font-weight: 600; color: var(--ink); }
+    .project img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #111; filter: grayscale(1); }
+    footer { padding-top: 6mm; display: flex; justify-content: space-between; }
+    .bar { position: sticky; top: 0; z-index: 2; display: flex; justify-content: center; gap: 18px; padding: 12px; background: rgba(233,232,227,.92); backdrop-filter: blur(8px); }
+    .bar button, .bar a { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); background: none; border: 1px solid var(--ink); border-radius: 99px; padding: 9px 16px; cursor: pointer; text-decoration: none; }
+    .bar button { background: var(--ink); color: #fff; }
+    @page { size: A4; margin: 0; }
+    @media print {
+      html { background: #fff; }
+      .bar { display: none; }
+      .sheet { margin: 0; width: auto; box-shadow: none; background: #fff; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <button id="printBtn"></button>
+    <a href="./" id="backLink"></a>
+  </div>
+  <main class="sheet" id="sheet"></main>
+
+  <script src="i18n.js"></script>
+  <script src="projects.js"></script>
+  <script>
+    (() => {
+      const S = window.PORTFOLIO, P = window.PROJECTS;
+      const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      const br = (s) => esc(s).replace(/\n/g, "<br>");
+      const pad = (n) => String(n + 1).padStart(2, "0");
+      document.getElementById("printBtn").textContent = T("Imprimir / Guardar PDF", "Print / Save as PDF");
+      document.getElementById("backLink").textContent = T("← Volver a la web", "← Back to the site");
+      document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+      // the main image and the written content of each project, whatever its layout
+      const image = (p) => {
+        if (p.layout === "sidea") return `${p.folder}/screens/${p.sidea.chapters[0].screen}`;
+        if (p.layout === "ton618") return `${p.folder}/${p.ton.hero}`;
+        if (p.layout === "safelife") return `${p.folder}/process/urban.jpg`;
+        return "";
+      };
+      const text = (p) => {
+        if (p.layout === "sidea") {
+          const d = p.sidea;
+          return `<p>${esc(d.story)}</p>` + d.chapters.map((c) => `<p><b>${esc(c.title)}</b> ${esc(c.text)}</p>`).join("");
+        }
+        if (p.layout === "safelife") {
+          const d = p.safe;
+          return `<p>${esc(d.problem)} ${esc(d.idea)}</p>` +
+            `<p>${d.verbs.map((v) => `<b>${esc(v.w)}.</b> ${esc(v.t)}`).join(" ")}</p>` +
+            `<p>${d.parts.map((x) => `<b>${esc(x.label)}</b> — ${esc(x.text)}`).join("<br>")}</p>`;
+        }
+        return (p.sections || []).map((s) => `<p><b>${esc(s.heading)}.</b> ${esc(s.text)}</p>`).join("");
+      };
+
+      document.getElementById("sheet").innerHTML = `
+        <header>
+          <div>
+            <div class="mono">woblo.io · Portfolio</div>
+            <h1>${esc(S.name)}</h1>
+            <div class="mono" style="margin-top:3mm">${esc(S.role)}</div>
+          </div>
+          <div class="contact mono">${esc(S.email)}<br>${esc(S.linkedin.replace(/^https?:\/\/(www\.)?/, ""))}<br>woblo.io</div>
+        </header>
+        <section class="about">
+          <div>
+            <p>${br(S.about)}</p>
+            <div class="lists">
+              <div><div class="mono">${T("Disciplinas", "Disciplines")}</div><p>${S.disciplines.map(esc).join(" · ")}</p></div>
+              <div><div class="mono">${T("Herramientas", "Tools")}</div><p>${S.tools.map(esc).join(" · ")}</p></div>
+            </div>
+          </div>
+          ${S.portrait ? `<img src="${esc(S.portrait)}" alt="">` : ""}
+        </section>
+        ${P.filter((p) => !/^PROJECT 0/.test(p.title)).map((p, i) => `
+        <article class="project">
+          <div class="project-head">
+            <span class="mono">${pad(P.indexOf(p))}</span>
+            <div>
+              <h2>${esc(p.title)}</h2>
+              <div class="meta mono">${esc(p.category)} · ${esc(p.year)} · ${esc(p.role)}</div>
+            </div>
+          </div>
+          <div class="body">
+            <div class="text">
+              <p class="lead">${esc(p.short)}</p>
+              ${text(p)}
+            </div>
+            ${image(p) ? `<img src="${esc(image(p))}" alt="${esc(p.title)}">` : "<div></div>"}
+          </div>
+        </article>`).join("")}
+        <footer class="mono"><span>${esc(S.name)} · ${new Date().getFullYear()}</span><span>woblo.io</span></footer>`;
+    })();
+  </script>
+</body>
+</html>

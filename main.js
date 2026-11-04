@@ -30,6 +30,19 @@
   $("#brandName").textContent = SITE.name;
   $("#brandRole").textContent = SITE.role;
   $("#tagline").textContent = SITE.tagline;
+
+  // private table: a link like woblo.io/?vip=Acme greets that company by name
+  const VIP = (() => {
+    const q = new URLSearchParams(location.search);
+    if (!q.has("vip")) return null;
+    const name = (q.get("vip") || "").replace(/[^\p{L}\p{N} .&'’-]/gu, "").trim().slice(0, 40);
+    return { name };
+  })();
+  window.VIP = VIP;
+  if (VIP) {
+    body.classList.add("vip");
+    $("#brandVip").textContent = T("Mesa privada", "Private table") + (VIP.name ? ` · ${VIP.name}` : "");
+  }
   document.title = `${SITE.name} — Portfolio`;
 
   /* ---------- renderer / scene ---------- */
@@ -567,7 +580,7 @@
 
   P.forEach((p, i) => {
     const b = document.createElement("button");
-    b.innerHTML = `<span class="chip-face">${pad(i)}</span>`;
+    b.innerHTML = `<span class="chip-face">${pad(i)}</span><span class="chip-price">${pad(i)} · ${esc(p.year)} · ${esc(p.category).toUpperCase()}</span>`;
     b.setAttribute("aria-label", `${pad(i)} — ${p.title}`);
     b.title = p.title;
     b.addEventListener("click", () => goTo(i));
@@ -803,9 +816,11 @@
     pageOpened = false;
     overlay = "project";
     materials.forEach((m) => (m.userData.target = m.userData.i === S.active ? 1.1 : 0));
+    emit("enter", { index: S.active });
   }
 
   function exitProject() {
+    emit("exit", visitSummary());
     closePage();
     S.mode = "exit";
     S.t0 = performance.now();
@@ -829,7 +844,18 @@
     return (faceCache[i] = c.toDataURL("image/jpeg", 0.88));
   }
 
-  let io, settleTimer, layoutCleanup = null;
+  let io, settleTimer, layoutCleanup = null, visit = null;
+  // what the receipt prints: project, time spent, and how far you got
+  function visitSummary() {
+    if (!visit) return null;
+    const secs = Math.round((performance.now() - visit.t0) / 1000);
+    let detail = layoutCleanup && layoutCleanup.receipt ? layoutCleanup.receipt() : "";
+    if (!detail) {
+      const pct = Math.round(100 * page.scrollTop / Math.max(1, page.scrollHeight - page.clientHeight));
+      detail = T(`${pct}% leído`, `${pct}% read`);
+    }
+    return { index: visit.index, title: P[visit.index].title, secs, detail };
+  }
   const scrollCueLabel = $("#scrollCue span");
   page.addEventListener("scroll", () => page.classList.toggle("scrolled", page.scrollTop > 60), { passive: true });
   function stopLayout() { if (layoutCleanup) { layoutCleanup(); layoutCleanup = null; } }
@@ -846,8 +872,9 @@
     [...page.classList].filter((c) => c.startsWith("has-layout-")).forEach((c) => page.classList.remove(c));
     if (L) page.classList.add("has-layout-" + (lp.layout === "ton618" ? "tn" : lp.layout));
     page.classList.remove("scrolled");
-    scrollCueLabel.textContent = L ? "Scroll to play" : "Scroll";
+    scrollCueLabel.textContent = L && lp.layout === "sidea" ? T("Desliza para escuchar", "Scroll to play") : T("Desliza", "Scroll");
     if (L) layoutCleanup = L.init(page, pageInner, { project: lp });
+    visit = kind === "project" ? { index: S.active, t0: performance.now() } : null;
     if (kind === "about" && window.initPortrait) layoutCleanup = window.initPortrait(pageInner.querySelector(".about-portrait"));
     if (kind === "about" && window.CASINO) window.CASINO.mountOdds(pageInner.querySelector("#odds"));
     pageTag.textContent = tag || "";
@@ -979,7 +1006,7 @@
     const L = p.layout && window.LAYOUTS && window.LAYOUTS[p.layout];
     if (L) {
       return L.render(p, i, { esc, pad }) +
-        `<button class="next r" data-next="${ni}"><span>Next — ${pad(ni)}</span><strong>${esc(P[ni].title)}</strong></button>`;
+        `<button class="next r" data-next="${ni}"><span>${T("Siguiente", "Next")} — ${pad(ni)}</span><strong>${esc(P[ni].title)}</strong></button>`;
     }
     return `
       <header class="ph">
@@ -987,9 +1014,9 @@
         <h1 class="ph-title r">${esc(p.title)}</h1>
         <div class="neon-line r"></div>
         <dl class="ph-meta r">
-          <div><dt>Year</dt><dd>${esc(p.year)}</dd></div>
-          <div><dt>Role</dt><dd>${esc(p.role)}</dd></div>
-          <div><dt>Discipline</dt><dd>${p.tags.map(esc).join(" / ")}</dd></div>
+          <div><dt>${T("Año", "Year")}</dt><dd>${esc(p.year)}</dd></div>
+          <div><dt>${T("Rol", "Role")}</dt><dd>${esc(p.role)}</dd></div>
+          <div><dt>${T("Disciplina", "Discipline")}</dt><dd>${p.tags.map(esc).join(" / ")}</dd></div>
         </dl>
       </header>
       <p class="lead r">${esc(p.intro)}</p>
@@ -998,28 +1025,28 @@
       ${p.sections.map((s) => `<section class="block r"><h2>${esc(s.heading)}</h2><p>${esc(s.text)}</p></section>`).join("")}
       <div class="shots-2 r">${shots(p, 1, 2)}</div>
       <div class="gallery">${shots(p, 3, 9, true)}</div>
-      <button class="next r" data-next="${ni}"><span>Next — ${pad(ni)}</span><strong>${esc(P[ni].title)}</strong></button>`;
+      <button class="next r" data-next="${ni}"><span>${T("Siguiente", "Next")} — ${pad(ni)}</span><strong>${esc(P[ni].title)}</strong></button>`;
   }
 
   function aboutHTML() {
     const portrait = SITE.portrait
       ? `<figure class="about-portrait r" data-src="${esc(SITE.portrait)}" aria-label="${esc(SITE.name)}">
           <div class="about-photo"><img src="${esc(SITE.portrait)}" alt="${esc(SITE.name)}"><i class="about-scan"></i></div>
-          <figcaption><span>${esc(SITE.name)}</span><span>Product Designer</span></figcaption>
+          <figcaption><span>${esc(SITE.name)}</span><span>${T("Diseñador de producto", "Product Designer")}</span></figcaption>
         </figure>`
       : "";
     return `
       <section class="about">
         <div class="about-text">
-          <div class="ph-code r"><b>About</b><span>/</span><span>${esc(SITE.name)}</span></div>
+          <div class="ph-code r"><b>${T("Sobre mí", "About")}</b><span>/</span><span>${esc(SITE.name)}</span></div>
           <h1 class="about-title r">${esc(SITE.aboutTitle)}</h1>
           <div class="neon-line r"></div>
           <p class="about-lead r">${esc(SITE.about).replace(/\n/g, "<br>")}</p>
         </div>
         ${portrait}
       </section>
-      <section class="block r"><h2>Disciplines</h2><p>${SITE.disciplines.map(esc).join("<br>")}</p></section>
-      <section class="block r"><h2>Tools</h2><p>${SITE.tools.map(esc).join(" · ")}</p></section>
+      <section class="block r"><h2>${T("Disciplinas", "Disciplines")}</h2><p>${SITE.disciplines.map(esc).join("<br>")}</p></section>
+      <section class="block r"><h2>${T("Herramientas", "Tools")}</h2><p>${SITE.tools.map(esc).join(" · ")}</p></section>
       <section class="odds r" id="odds"></section>`;
   }
 
@@ -1037,9 +1064,9 @@
         </span>
       </a>`;
     const rows = `<div class="cards">${[
-      SITE.email && card(`mailto:${SITE.email}`, "@", "Email", esc(SITE.email), false),
-      SITE.linkedin && card(SITE.linkedin, "in", "LinkedIn", "Profile ↗", true),
-      SITE.cv && card(SITE.cv, "CV", "Curriculum", "Open PDF ↗", true),
+      SITE.email && card(`mailto:${SITE.email}`, "@", T("Correo", "Email"), esc(SITE.email), false),
+      SITE.linkedin && card(SITE.linkedin, "in", "LinkedIn", T("Perfil ↗", "Profile ↗"), true),
+      SITE.cv && card(SITE.cv, "CV", T("Currículum", "Curriculum"), T("Abrir PDF ↗", "Open PDF ↗"), true),
     ].filter(Boolean).join("")}</div>`;
     const title = esc(SITE.contactTitle || "Let’s talk.").replace(/\n/g, "<br>");
     return `
@@ -1047,6 +1074,7 @@
         <h1 class="contact-title r">${title}</h1>
         <div class="neon-line r"></div>
         ${rows}
+        <a class="print-link r" href="print.html" target="_blank" rel="noopener"><span>${T("¿Prefieres papel?", "Prefer paper?")}</span>${T("Versión imprimible", "Printable version")} ↗</a>
       </section>`;
   }
 
@@ -1368,7 +1396,6 @@
     });
   }
 
-  const xrayLight = $("#xray");
   const X = { t0: 0, released: false, active: false };
   // debug: index.html?xray=0.4 freezes the radiograph at that second
   const XR_PARAM = new URLSearchParams(location.search).get("xray");
@@ -1746,6 +1773,10 @@
     rim.color.setRGB(lerp(0.94, 1.03, warm), 1, lerp(1.06, 0.93, warm));
     key.position.set(lerp(-2, -4.6, warm), lerp(8, 4.2, warm), lerp(3, 4, warm));
     renderer.toneMappingExposure = lerp(1.02, 0.95, warm);
+    if (VIP) {
+      outlineMat.color.setRGB(0.86, 0.7, 0.42);
+      rim.color.setRGB(1.0, 0.95, 0.84); // only a hint of gold in the edge light
+    }
   })();
 
   /* ---------- cursor ---------- */
@@ -1910,7 +1941,7 @@
       m.clearcoat = 0.55 * u.dim;
     });
     outlinePulse = damp(outlinePulse, 0, 2.2, dt);
-    const hoverRim = hovering && (S.mode === "idle" || S.mode === "drag") ? 0.1 : 0;
+    const hoverRim = Math.max(VIP && G.solid > 0.9 ? 0.07 : 0, hovering && (S.mode === "idle" || S.mode === "drag") ? 0.1 : 0);
     outlineMat.opacity = damp(outlineMat.opacity, Math.max(hoverRim, outlinePulse), 6, dt);
 
     // contact shadow follows the body and softens with height

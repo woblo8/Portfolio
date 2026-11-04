@@ -37,15 +37,15 @@
       <div class="sa-sleeve"><img src="${cov(d.covers[0].file)}" alt=""><span>QUIET AMBITION · VOL. 01</span></div>
     </div>
     <dl class="sa-facts">
-      <div><dt>Role</dt><dd>${esc(p.role)}</dd></div>
-      <div><dt>Discipline</dt><dd>${p.tags.map(esc).join(" / ")}</dd></div>
-      <div><dt>Year</dt><dd>${esc(p.year)}</dd></div>
+      <div><dt>${T("Rol", "Role")}</dt><dd>${esc(p.role)}</dd></div>
+      <div><dt>${T("Disciplina", "Discipline")}</dt><dd>${p.tags.map(esc).join(" / ")}</dd></div>
+      <div><dt>${T("Año", "Year")}</dt><dd>${esc(p.year)}</dd></div>
     </dl>
   </section>
 
   <section class="sa-lyrics" data-sa="lyrics" ${T()}>
     <div class="sa-sticky">
-      <span class="sa-kicker">Track 01 — Intention</span>
+      <span class="sa-kicker">${T("Pista", "Track")} 01 — ${T("Intención", "Intention")}</span>
       <p class="sa-lyric">${words(d.statement)}</p>
       <p class="sa-story">${esc(d.story)}</p>
     </div>
@@ -54,7 +54,7 @@
   ${d.chapters.map((c, k) => `
   <section class="sa-chapter ${c.screens ? "is-pair" : ""}" ${T()}>
     <header class="sa-chapter-head r">
-      <span class="sa-kicker">Track ${String(k + 2).padStart(2, "0")} — ${esc(c.kicker)}</span>
+      <span class="sa-kicker">${T("Pista", "Track")} ${String(k + 2).padStart(2, "0")} — ${esc(c.kicker)}</span>
       <h2>${esc(c.title)}</h2>
       <p>${esc(c.text)}</p>
     </header>
@@ -66,9 +66,9 @@
   <section class="sa-covers" data-sa="covers" ${T()}>
     <div class="sa-sticky">
       <header class="sa-covers-head">
-        <span class="sa-kicker">Interlude — Sessions</span>
-        <h2>Diez sesiones.<br>Diez bodegones.</h2>
-        <p>Cada portada es un retrato de quien escucha: el coche, el reloj, el café. Blanco, negro y nada más.</p>
+        <span class="sa-kicker">${T("Interludio — Sesiones", "Interlude — Sessions")}</span>
+        <h2>${T("Diez sesiones.<br>Diez bodegones.", "Ten sessions.<br>Ten still lifes.")}</h2>
+        <p>${T("Cada portada es un retrato de quien escucha: el coche, el reloj, el café. Blanco, negro y nada más.", "Every cover is a portrait of the listener: the car, the watch, the coffee. Black, white and nothing else.")}</p>
       </header>
       <div class="sa-track">
         ${d.covers.map((c, n) => `
@@ -86,7 +86,7 @@
 
   <section class="sa-focus" data-sa="focus" ${T()}>
     <div class="sa-sticky">
-      <span class="sa-kicker">Track ${String(d.chapters.length + 2).padStart(2, "0")} — Focus</span>
+      <span class="sa-kicker">${T("Pista", "Track")} ${String(d.chapters.length + 2).padStart(2, "0")} — Focus</span>
       <div class="sa-dial">
         <div class="sa-orbit o1"></div><div class="sa-orbit o2"></div><div class="sa-orbit o3"></div>
         <svg class="sa-ring" viewBox="0 0 200 200" aria-hidden="true">
@@ -112,8 +112,8 @@
 
   <section class="sa-mobile" ${T()}>
     <header class="sa-chapter-head r">
-      <span class="sa-kicker">Track ${String(d.chapters.length + 3).padStart(2, "0")} — Mobile</span>
-      <h2>La misma calma, en el bolsillo.</h2>
+      <span class="sa-kicker">${T("Pista", "Track")} ${String(d.chapters.length + 3).padStart(2, "0")} — ${T("Móvil", "Mobile")}</span>
+      <h2>${T("La misma calma, en el bolsillo.", "The same calm, in your pocket.")}</h2>
     </header>
     <div class="sa-phones">
       ${d.mobile.map((f, k) => `<figure class="sa-phone r" data-zoom style="--k:${k}"><img src="${scr(f)}" alt="SIDE A mobile ${k + 1}" data-cap="SIDE A — móvil" loading="lazy"></figure>`).join("")}
@@ -149,7 +149,7 @@
     const RING = 2 * Math.PI * 96;
     ringFg.style.strokeDasharray = `${RING}`;
 
-    let playing = true, angle = 0, last = performance.now(), raf = 0, current = -1;
+    let playing = true, angle = 0, last = performance.now(), raf = 0, current = -1, played = 0;
     playBtn.addEventListener("click", () => {
       playing = !playing;
       root.classList.toggle("is-paused", !playing);
@@ -210,8 +210,10 @@
 
       // the player: the page is the session
       const sp = clamp(scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight), 0, 1);
-      t0.textContent = mmss(sp * 3522);
-      bar.style.transform = `scaleX(${sp.toFixed(4)})`;
+      if (playing) played += dt; // it plays: real time, from the moment you enter
+      const pos = played % 3522;
+      t0.textContent = mmss(pos);
+      bar.style.transform = `scaleX(${(pos / 3522).toFixed(4)})`;
       let idx = 0;
       sections.forEach((s, k) => { if (s.getBoundingClientRect().top < vh * 0.55) idx = k; });
       if (idx !== current) {
@@ -228,7 +230,9 @@
       raf = requestAnimationFrame(frame);
     }
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    const stop = () => cancelAnimationFrame(raf);
+    stop.receipt = () => `Track ${String(Math.max(0, current) + 1).padStart(2, "0")}`;
+    return stop;
   }
 
   window.LAYOUTS.sidea = { render, init };
