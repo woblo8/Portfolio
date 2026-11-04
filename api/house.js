@@ -35,7 +35,7 @@ function weekKey(d = new Date()) {
 }
 const roll = () => crypto.randomInt(1, 7);
 const pub = (s) => ({ chips: s.chips, best: s.best, hand: s.hand, phase: s.phase, bet: s.bet, you: s.you, house: s.house, submitted: !!s.submitted });
-const board = (flat) => { const out = []; for (let i = 0; i < (flat || []).length; i += 2) out.push({ name: String(flat[i]).split("·")[0], score: Number(flat[i + 1]) }); return out; };
+const board = (flat) => { const out = []; for (let i = 0; i < (flat || []).length; i += 2) { const [name, , p] = String(flat[i]).split("·"); out.push({ name, score: Number(flat[i + 1]), p: p || "" }); } return out; };
 
 // ---------- without Redis: Vercel Blob, and a game that travels signed ----------
 // The state goes to the browser sealed with an HMAC (the key never leaves the server),
@@ -65,6 +65,13 @@ function dice(s, a) {
     return 1 + (h.readUInt32BE(0) % 6);
   };
 }
+// the player's id never leaves as such: rows only say whether they are yours
+function player(req) {
+  const q = String((req.query && req.query.p) || new URL(req.url || "/", "http://x").searchParams.get("p") || "");
+  return /^[a-f0-9]{12}$/.test(q) ? q : "";
+}
+const strip = (l, p) => l.slice(0, 10).map((r) => (p && r.p === p ? { name: r.name, score: r.score, me: true } : { name: r.name, score: r.score }));
+function mine(l, p) { const i = l.findIndex((r) => r.p === p); return i < 0 ? null : { name: l[i].name, score: l[i].score, rank: i + 1 }; }
 let boardCache = { at: 0, data: null };
 async function blobBoard(force) {
   if (!force && boardCache.data && Date.now() - boardCache.at < 20000) return boardCache.data;
@@ -74,8 +81,8 @@ async function blobBoard(force) {
     do {
       const page = await list({ prefix, cursor, limit: 1000 });
       for (const b of page.blobs) {
-        const m = b.pathname.slice(prefix.length).match(/^(\d{7})-([A-Z]{3})-([a-f0-9]{8})/);
-        if (m) out.push({ name: m[2], score: Number(m[1]), g: m[3] });
+        const m = b.pathname.slice(prefix.length).match(/^(\d{7})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
+        if (m) out.push({ name: m[2], score: Number(m[1]), g: m[3], p: m[4] || "" });
       }
       cursor = page.hasMore ? page.cursor : undefined;
     } while (cursor);
@@ -87,9 +94,9 @@ async function blobBoard(force) {
 }
 async function blobHandler(req, res, body) {
   if (req.method === "GET") {
-    const { week, all } = await blobBoard();
-    const strip = (l) => l.slice(0, 10).map(({ name, score }) => ({ name, score }));
-    res.status(200).json({ week: strip(week), all: strip(all), weekKey: weekKey() });
+    const { week, all } = await blobBoard(/[?&]fresh=1/.test(req.url || ""));
+    const p = player(req);
+    res.status(200).json({ week: strip(week, p), all: strip(all, p), me: p ? { week: mine(week, p), all: mine(all, p) } : null, weekKey: weekKey() });
     return;
   }
   if (body.op === "start") {
@@ -117,7 +124,8 @@ async function blobHandler(req, res, body) {
     const { put, list } = await import("@vercel/blob");
     const seen = await list({ prefix: `house/g/${s.g}`, limit: 1 });
     if (seen.blobs.length) { res.status(409).json({ error: "already" }); return; }
-    const file = `${String(Math.min(9999999, s.best)).padStart(7, "0")}-${name}-${s.g}.txt`;
+    const p = /^[a-f0-9]{12}$/.test(String(body.p || "")) ? body.p : "";
+    const file = `${String(Math.min(9999999, s.best)).padStart(7, "0")}-${name}-${s.g}${p ? "-" + p : ""}.txt`;
     const opts = { access: "public", addRandomSuffix: false, contentType: "text/plain" };
     await Promise.all([
       put(`house/g/${s.g}.txt`, "1", opts),
@@ -145,11 +153,12 @@ module.exports = async (req, res) => {
   }
   try {
     if (req.method === "GET") {
-      const [week, all] = await Promise.all([
-        R("ZREVRANGE", `house:week:${weekKey()}`, 0, 9, "WITHSCORES"),
-        R("ZREVRANGE", "house:all", 0, 9, "WITHSCORES"),
-      ]);
-      res.status(200).json({ week: board(week), all: board(all), weekKey: weekKey() });
+      const [week, all] = (await Promise.all([
+        R("ZREVRANGE", `house:week:${weekKey()}`, 0, 999, "WITHSCORES"),
+        R("ZREVRANGE", "house:all", 0, 999, "WITHSCORES"),
+      ])).map(board);
+      const p = player(req);
+      res.status(200).json({ week: strip(week, p), all: strip(all, p), me: p ? { week: mine(week, p), all: mine(all, p) } : null, weekKey: weekKey() });
       return;
     }
     if (req.method !== "POST") { res.setHeader("Allow", "GET, POST"); res.status(405).json({ error: "method not allowed" }); return; }
@@ -198,7 +207,8 @@ module.exports = async (req, res) => {
         if (s.acts < 3) { res.status(400).json({ error: "too-short" }); return; }
         // submitting ends the game: the score is the most chips held
         s.submitted = true; s.phase = "over";
-        const member = `${name}·${id.slice(0, 8)}`, wk = `house:week:${weekKey()}`;
+        const p = /^[a-f0-9]{12}$/.test(String(body.p || "")) ? body.p : "";
+        const member = `${name}·${id.slice(0, 8)}${p ? "·" + p : ""}`, wk = `house:week:${weekKey()}`;
         await Promise.all([
           R("SET", `house:g:${id}`, JSON.stringify(s), "EX", GAME_TTL),
           R("ZADD", wk, s.best, member),

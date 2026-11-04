@@ -15,7 +15,13 @@
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
   };
-  const BEST_KEY = "woblo:house-best", NAME_KEY = "woblo:house-name";
+  const BEST_KEY = "woblo:house-best", NAME_KEY = "woblo:house-name", PLAYER_KEY = "woblo:house-player";
+  // who you are, without an account: a random id kept by this browser
+  const PLAYER = (() => {
+    let p = store.get(PLAYER_KEY);
+    if (!/^[a-f0-9]{12}$/.test(p || "")) { const a = new Uint8Array(6); crypto.getRandomValues(a); p = [...a].map((x) => x.toString(16).padStart(2, "0")).join(""); store.set(PLAYER_KEY, p); }
+    return p;
+  })();
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const snd = () => { const s = window.CASINO && window.CASINO.sound; return s && s.on ? s : null; };
   const wait = (ms) => new Promise((r) => setTimeout(r, reduce ? ms * 0.35 : ms));
@@ -114,6 +120,7 @@
         </details>
       </section>
       <section class="house-board" hidden>
+        <div class="house-me" data-k="me" hidden></div>
         <div class="house-board-head">
           <span class="house-k">${T("Esta semana", "This week")}</span>
           <span class="house-k" data-k="allBest"></span>
@@ -203,6 +210,7 @@
     try {
       const j = await post({ op: "start" });
       G.mode = "remote"; G.id = j.id; G.s = j.s;
+      fetchBoard().then((b) => paintMe(b.me)).catch(() => {});
     } catch (e) {
       G.mode = "local"; G.id = null; G.s = E.newGame();
       if (e.status !== 503) speak(LINES.offline());
@@ -300,7 +308,7 @@
     if (!/^[A-Z]{3}$/.test(name)) { signNote.textContent = T("Tres letras, como en las recreativas.", "Three letters, arcade style."); return; }
     signNote.textContent = "…";
     try {
-      const j = await post({ op: "submit", id: G.id, name });
+      const j = await post({ op: "submit", id: G.id, name, p: PLAYER });
       G.signed = true; G.myRank = j.rank; G.s = j.s; store.set(NAME_KEY, name);
       signNote.textContent = "";
       speak(j.rank ? T(`${name}: ${j.score} fichas. Puesto ${j.rank} de la semana.`, `${name}: ${j.score} chips. Number ${j.rank} this week.`) : T("Apuntado.", "Signed."));
@@ -317,12 +325,14 @@
     const list = k("week");
     list.innerHTML = `<li class="is-empty">…</li>`;
     try {
-      const r = await fetch(API, { cache: "no-store" });
-      const j = await r.json();
-      const rows = j.week || [];
-      list.innerHTML = rows.length
-        ? rows.map((x, i) => `<li class="${mine && x.name === mine && i + 1 === G.myRank ? "is-me" : ""}"><span>${String(i + 1).padStart(2, "0")}</span><b>${x.name}</b><em>${x.score}</em></li>`).join("")
-        : `<li class="is-empty">${T("Nadie todavía. La mesa es tuya.", "Nobody yet. The table is yours.")}</li>`;
+      const j = await fetchBoard(!!mine);
+      const rows = j.week || [], me = (j.me && j.me.week) || null;
+      const row = (x, rank, cls) => `<li class="${cls}"><span>${String(rank).padStart(2, "0")}</span><b>${x.name}</b>${cls.includes("is-me") ? `<i>${T("tú", "you")}</i>` : ""}<em>${x.score}</em></li>`;
+      let html = rows.map((x, i) => row(x, i + 1, x.me && me && i + 1 === me.rank ? "is-me" : x.me ? "is-mine" : "")).join("");
+      // outside the top ten, your row still shows, under a gap
+      if (me && me.rank > rows.length) html += `<li class="is-gap" aria-hidden="true">· · ·</li>` + row(me, me.rank, "is-me");
+      list.innerHTML = html || `<li class="is-empty">${T("Nadie todavía. La mesa es tuya.", "Nobody yet. The table is yours.")}</li>`;
+      paintMe(j.me);
       const top = (j.all || [])[0];
       k("allBest").textContent = top ? T(`Récord absoluto: ${top.name} · ${top.score}`, `All-time: ${top.name} · ${top.score}`) : "";
       k("boardNote").textContent = T("Se reinicia cada lunes. Las tiradas se hacen en el servidor: aquí no se hace trampa.", "Resets every Monday. Rolls are made on the server: no cheating here.");
@@ -330,9 +340,31 @@
       list.innerHTML = `<li class="is-empty">${T("El ranking no responde ahora mismo.", "The ranking isn't answering right now.")}</li>`;
     }
   }
+  async function fetchBoard(fresh) {
+    const r = await fetch(`${API}?p=${PLAYER}${fresh ? "&fresh=1" : ""}`, { cache: "no-store" });
+    return r.json();
+  }
+  // your initials, your best and your place: on the board, and on the tab that opens it
+  function paintMe(me) {
+    const el = k("me"), w = me && me.week, a = me && me.all, name = (w || a || {}).name || store.get(NAME_KEY);
+    if (!w && !a) {
+      el.hidden = false;
+      el.innerHTML = `<span class="house-k">${T("Tú", "You")}</span><b>${name || "———"}</b><small>${T("Aún sin marca. Juega una mano y apúntate.", "No score yet. Play a hand and sign.")}</small>`;
+      G.meTab = ""; return closeTabLabel();
+    }
+    el.hidden = false;
+    el.innerHTML = `<span class="house-k">${T("Tú", "You")}</span><b>${name}</b>
+      <div><small>${T("Esta semana", "This week")}</small><em>${w ? `#${w.rank} · ${w.score}` : "—"}</em></div>
+      <div><small>${T("Histórico", "All time")}</small><em>${a ? `#${a.rank} · ${a.score}` : "—"}</em></div>`;
+    G.meTab = w ? `${name} #${w.rank}` : name;
+    closeTabLabel();
+  }
+  function closeTabLabel() {
+    if ($(".house-board").hidden) $(".house-tab").innerHTML = G.meTab ? `${T("Ranking", "Ranking")} <b>${G.meTab}</b>` : T("Ranking", "Ranking");
+  }
   function closeBoard() {
     $(".house-play").hidden = false; $(".house-board").hidden = true;
-    $(".house-tab").textContent = T("Ranking", "Ranking");
+    closeTabLabel();
   }
 
   /* ---------- open and close: the cabinet unfolds ---------- */

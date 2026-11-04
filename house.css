@@ -242,4 +242,20 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house-board li.is-me { box-shadow: inset 0 0 0 1.5px #fff, 0 0 18px rgba(255, 255, 255, 0.2); }
 .house-board li.is-empty { display: block; text-align: center; color: var(--smoke); background: none; }
 .house-board-note { margin-top: 12px; font-size: 12.5px; line-height: 1.5; color: var(--smoke); text-align: center; }
+/* you, always: a card above the board, a pinned row, your place on the tab */
+.house-tab b { font-weight: 400; color: #fff; margin-left: 6px; letter-spacing: 0.14em; text-shadow: var(--neon-glow); }
+.house-me {
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 6px 18px; margin-bottom: 16px; padding: 14px 16px;
+  border-radius: 12px; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 0 22px rgba(255, 255, 255, 0.12);
+}
+.house-me > b { font-family: var(--mono); font-weight: 500; font-size: 22px; letter-spacing: 0.32em; color: #fff; text-shadow: var(--neon-glow); }
+.house-me > small { grid-column: 3 / -1; font-size: 12.5px; color: var(--mist); text-align: right; }
+.house-me small { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke); }
+.house-me em { display: block; margin-top: 3px; font-style: normal; font-family: var(--mono); font-size: 14px; color: #fff; font-variant-numeric: tabular-nums; }
+.house-board li > i { font-style: normal; font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: #050506; background: #fff; padding: 2px 6px; border-radius: 99px; justify-self: start; }
+.house-board li { grid-template-columns: 36px auto 1fr auto; }
+.house-board li > em { grid-column: 4; }
+.house-board li.is-mine b { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255, 255, 255, 0.4); }
+.house-board li.is-gap { display: block; text-align: center; padding: 4px; background: none; color: var(--smoke); letter-spacing: 0.4em; }
+@media (max-width: 480px) { .house-me { grid-template-columns: auto 1fr; } .house-me > small { grid-column: 1 / -1; text-align: left; } }
 [hidden] { display: none !important; }
