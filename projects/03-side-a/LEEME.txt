@@ -1,0 +1,19 @@
+PROYECTO: 03-side-a
+===============================
+
+images/   Imágenes del proyecto. Nómbralas con número:
+          01.jpg  -> imagen principal (horizontal, 16:9 recomendado)
+          02.jpg  -> imagen vertical izquierda (4:5)
+          03.jpg  -> imagen vertical derecha (4:5)
+          04.jpg ... 12.jpg -> galería extra (opcional)
+          Vale jpg, jpeg, png, webp o gif.
+          Consejo: 2400 px de ancho como máximo y menos de 1 MB cada una.
+
+video/    Opcional. Si metes un archivo llamado video.mp4,
+          sale arriba del todo en la página del proyecto
+          (en bucle y sin sonido).
+
+docs/     Para ti: textos, bocetos, PDFs, fuentes de trabajo...
+          La web NO usa esta carpeta.
+
+Los textos (título, año, descripción...) se cambian en projects.js

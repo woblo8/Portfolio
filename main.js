@@ -1,6 +1,8 @@
 /* ============================================================
    THE OBJECT — dado escultórico interactivo
-   Física de lanzamiento + lock-in coreografiado + transiciones.
+   Render PBR + reflejo + sombras · física de cuerpo rígido real.
+   El dado cae, rueda y se para solo; la cara de arriba es el
+   resultado y el objeto se eleva para presentarla.
    ============================================================ */
 (() => {
   "use strict";
@@ -12,29 +14,36 @@
   const V3 = THREE.Vector3, Q = THREE.Quaternion;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * t;
+  const rand = (a, b) => a + Math.random() * (b - a);
   const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
   const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  const easeInOutSine = (t) => -(Math.cos(Math.PI * t) - 1) / 2;
   const easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
   const smooth = (a, b, t) => { const x = clamp((t - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
   const pad = (n) => String(n + 1).padStart(2, "0");
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const body = document.body;
 
   /* ---------- static text ---------- */
   $("#brandName").textContent = SITE.name;
   $("#brandRole").textContent = SITE.role;
   $("#tagline").textContent = SITE.tagline;
+  document.title = `${SITE.name} — Portfolio`;
 
   /* ---------- renderer / scene ---------- */
   const canvas = $("#gl");
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const PR = Math.min(window.devicePixelRatio, 2);
+  renderer.setPixelRatio(PR);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.VSMShadowMap;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x050506);
+  scene.background = new THREE.Color(0x050506); // written straight to screen
+  const BG_LIN = new THREE.Color(0x050506).convertSRGBToLinear(); // for materials (encoded on output)
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
   const CAM_Y = 0.55;
   let baseZ = 9;
@@ -44,7 +53,7 @@
     const env = new THREE.Scene();
     env.add(new THREE.Mesh(
       new THREE.BoxGeometry(30, 30, 30),
-      new THREE.MeshBasicMaterial({ color: 0x030303, side: THREE.BackSide })
+      new THREE.MeshBasicMaterial({ color: 0x020202, side: THREE.BackSide })
     ));
     const panel = (w, h, x, y, z, i) => {
       const m = new THREE.Mesh(
@@ -55,21 +64,30 @@
       m.lookAt(0, 0, 0);
       env.add(m);
     };
-    panel(12, 1.4, 0, 10, 1, 5);       // overhead strip — the raking white light
-    panel(1.6, 10, -11, 1.5, 4, 2.2);  // left softbox
-    panel(0.5, 8, 11, 0.5, -3, 3.4);   // right rim strip
-    panel(14, 0.6, 0, -4, 10, 0.6);    // faint front fill
+    panel(12, 1.4, 0, 10, 1, 6);       // overhead strip
+    panel(1.6, 10, -11, 1.5, 4, 2.4);  // left softbox
+    panel(0.5, 8, 11, 0.5, -3, 4);     // right rim strip
+    panel(0.25, 8, 9, 2, 6, 2.2);      // thin front-right kicker (edge highlight)
+    panel(14, 0.6, 0, -4, 10, 0.5);    // faint front fill
     const pm = new THREE.PMREMGenerator(renderer);
-    scene.environment = pm.fromScene(env, 0.03).texture;
+    scene.environment = pm.fromScene(env, 0.025).texture;
     pm.dispose();
   })();
 
-  const key = new THREE.DirectionalLight(0xffffff, 0);
-  key.position.set(-3, 6, 4);
-  const rim = new THREE.DirectionalLight(0xffffff, 0);
+  const key = new THREE.DirectionalLight(0xffffff, 1.5);
+  key.position.set(-2.5, 7, 3.5);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.left = key.shadow.camera.bottom = -5;
+  key.shadow.camera.right = key.shadow.camera.top = 5;
+  key.shadow.camera.near = 1;
+  key.shadow.camera.far = 20;
+  key.shadow.radius = 14;
+  key.shadow.blurSamples = 16;
+  key.shadow.bias = -0.0005;
+  const rim = new THREE.DirectionalLight(0xffffff, 2.2);
   rim.position.set(5, 1, -6);
   scene.add(key, rim);
-  const LIGHT = { key: 1.6, rim: 2.2 };
 
   /* ---------- geometry: precise rounded cube ---------- */
   const SIZE = 2, RADIUS = 0.15;
@@ -79,7 +97,6 @@
     const g = new THREE.BoxGeometry(size, size, size, N, N, N);
     const pos = g.attributes.position, nor = g.attributes.normal, uv = g.attributes.uv;
     const s2 = size / 2, h = s2 - r, step = size / N;
-    // concentrate vertices in the bevel band
     const remap = (a) => {
       const i = Math.round((a + s2) / step);
       if (i <= k) return -s2 + (i / k) * r;
@@ -117,21 +134,20 @@
     { n: new V3(0, 0, 1), up: new V3(0, 1, 0) },
     { n: new V3(0, 0, -1), up: new V3(0, 1, 0) },
   ];
-  // orientation that brings a face to the camera, upright
   FACES.forEach((f) => {
     const r = new V3().crossVectors(f.up, f.n);
     const m = new THREE.Matrix4().makeBasis(r, f.up, f.n).transpose();
     f.q = new Q().setFromRotationMatrix(m);
   });
-  const PROJECT_FACE = [4, 0, 2, 3, 1, 5]; // project index -> face index (01 front, 06 back)
+  const PROJECT_FACE = [4, 0, 2, 3, 1, 5]; // project index -> face index
   const FACE_PROJECT = [];
   PROJECT_FACE.forEach((f, p) => (FACE_PROJECT[f] = p));
 
-  /* ---------- face textures (drawn, engraved, glowing) ---------- */
+  /* ---------- face textures: albedo, glow, engraving normals, roughness ---------- */
   const TEX = 1024;
+  const mkCanvas = (s = TEX) => { const c = document.createElement("canvas"); c.width = c.height = s; return c; };
   const noise = (() => {
-    const c = document.createElement("canvas");
-    c.width = c.height = 256;
+    const c = mkCanvas(256);
     const x = c.getContext("2d");
     const d = x.createImageData(256, 256);
     for (let i = 0; i < d.data.length; i += 4) {
@@ -155,7 +171,7 @@
 
   function motif(ctx, kind, cx, cy, s) {
     ctx.save();
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = "#fff";
     ctx.fillStyle = "#fff";
     if (kind === "cross") {
@@ -176,7 +192,7 @@
       const n = 5, g = (s * 1.6) / (n - 1);
       for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
         ctx.globalAlpha = 0.65;
-        ctx.beginPath(); ctx.arc(cx - s * 0.8 + i * g, cy - s * 0.8 + j * g, 3.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx - s * 0.8 + i * g, cy - s * 0.8 + j * g, 3.4, 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalAlpha = 1;
       ctx.strokeRect(cx - s * 0.8 + g - 16, cy - s * 0.8 + g - 16, g * 2 + 32, g + 32);
@@ -201,22 +217,25 @@
       for (let i = 0; i < 3; i++) {
         ctx.globalAlpha = 0.9 - i * 0.28;
         const a = s * (0.75 - i * 0.22);
-        ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.PI / 4 * (i % 2)); ctx.strokeRect(-a, -a, a * 2, a * 2); ctx.restore();
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate((Math.PI / 4) * (i % 2)); ctx.strokeRect(-a, -a, a * 2, a * 2); ctx.restore();
       }
     }
     ctx.restore();
   }
 
-  function drawDesign(ctx, p, i) {
+  const FALLBACK_FONT = `"Inter Tight", "Helvetica Neue", Arial, sans-serif`;
+  let displayFont = FALLBACK_FONT;
+
+  function drawDesign(ctx, p, i, frame = true) {
     const W = TEX, m = W * 0.135;
     ctx.clearRect(0, 0, W, W);
     ctx.fillStyle = ctx.strokeStyle = "#fff";
-    // hairline frame
-    ctx.globalAlpha = 0.28;
-    ctx.lineWidth = 2;
-    rr(ctx, m * 0.62, m * 0.62, W - m * 1.24, W - m * 1.24, 30);
-    ctx.stroke();
-    // code + category
+    if (frame) {
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = 2;
+      rr(ctx, m * 0.62, m * 0.62, W - m * 1.24, W - m * 1.24, 30);
+      ctx.stroke();
+    }
     ctx.globalAlpha = 0.95;
     ctx.textBaseline = "top";
     ctx.font = `500 30px "Geist Mono", monospace`;
@@ -226,97 +245,167 @@
     ctx.globalAlpha = 0.6;
     ctx.fillText(p.category.toUpperCase(), W - m, m);
     ctx.textAlign = "left";
-    // geometry
     motif(ctx, p.motif, W / 2, W * 0.4, W * 0.17);
-    // title
     ctx.globalAlpha = 1;
     ctx.textBaseline = "alphabetic";
     if ("letterSpacing" in ctx) ctx.letterSpacing = "-3px";
     let fs = 150;
     do {
-      ctx.font = `600 ${fs}px "Neue Haas Grotesk", "Inter Tight", "Helvetica Neue", Arial, sans-serif`;
+      ctx.font = `600 ${fs}px ${displayFont}`;
       fs -= 4;
     } while (ctx.measureText(p.title).width > W - m * 2 && fs > 40);
     ctx.fillText(p.title, m - 4, W * 0.735);
-    // neon line
     ctx.fillRect(m, W * 0.735 + 34, W * 0.24, 3);
-    // tags
     ctx.globalAlpha = 0.7;
     ctx.textBaseline = "top";
     ctx.font = `400 26px "Geist Mono", monospace`;
     if ("letterSpacing" in ctx) ctx.letterSpacing = "4px";
     ctx.fillText(p.tags.join(" / ").toUpperCase(), m, W * 0.735 + 66);
     ctx.globalAlpha = 1;
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
   }
 
-  const design = document.createElement("canvas");
-  design.width = design.height = TEX;
+  const design = mkCanvas();
+  const heightC = mkCanvas();
+
+  // Engraving: height = -design → tangent-space normal map
+  function engraveNormals(out) {
+    const W = TEX;
+    const hx = heightC.getContext("2d", { willReadFrequently: true });
+    hx.filter = "none";
+    hx.fillStyle = "#000";
+    hx.fillRect(0, 0, W, W);
+    hx.filter = "blur(1.2px)";
+    hx.drawImage(design, 0, 0);
+    hx.filter = "none";
+    const src = hx.getImageData(0, 0, W, W).data;
+    const ox = out.getContext("2d");
+    const img = ox.createImageData(W, W);
+    const d = img.data;
+    const S = 2.4;
+    for (let y = 0; y < W; y++) {
+      const y0 = (y > 0 ? y - 1 : y) * W, y1 = (y < W - 1 ? y + 1 : y) * W, yr = y * W;
+      for (let x = 0; x < W; x++) {
+        const l = src[(yr + (x > 0 ? x - 1 : x)) * 4];
+        const r = src[(yr + (x < W - 1 ? x + 1 : x)) * 4];
+        const u = src[(y0 + x) * 4];
+        const b = src[(y1 + x) * 4];
+        const nx = ((r - l) / 255) * S;
+        const ny = (-(b - u) / 255) * S;
+        const inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
+        const k = (yr + x) * 4;
+        d[k] = (nx * inv * 0.5 + 0.5) * 255;
+        d[k + 1] = (ny * inv * 0.5 + 0.5) * 255;
+        d[k + 2] = (inv * 0.5 + 0.5) * 255;
+        d[k + 3] = 255;
+      }
+    }
+    ox.putImageData(img, 0, 0);
+  }
+
+  // smudges & satin etching → roughness variation
+  const smudges = (() => {
+    const c = mkCanvas(512);
+    const x = c.getContext("2d");
+    for (let i = 0; i < 60; i++) {
+      const px = Math.random() * 512, py = Math.random() * 512, r = 20 + Math.random() * 120;
+      const g = x.createRadialGradient(px, py, 0, px, py, r);
+      const v = Math.random() < 0.5 ? 255 : 0;
+      g.addColorStop(0, `rgba(${v},${v},${v},0.06)`);
+      g.addColorStop(1, `rgba(${v},${v},${v},0)`);
+      x.fillStyle = g;
+      x.fillRect(px - r, py - r, r * 2, r * 2);
+    }
+    return c;
+  })();
 
   function paintFace(mat) {
-    const { p, i, alb, glow } = mat.userData;
+    const { p, i, alb, glow, nrm, rgh } = mat.userData;
     drawDesign(design.getContext("2d"), p, i);
-    // albedo: polished graphite with faint engraving
     const a = alb.getContext("2d");
     const g = a.createLinearGradient(0, 0, TEX, TEX);
-    g.addColorStop(0, "#202023");
+    g.addColorStop(0, "#1f1f22");
     g.addColorStop(1, "#141416");
     a.globalAlpha = 1;
     a.fillStyle = g;
     a.fillRect(0, 0, TEX, TEX);
-    a.globalAlpha = 0.045;
+    a.globalAlpha = 0.04;
     a.fillStyle = a.createPattern(noise, "repeat");
     a.fillRect(0, 0, TEX, TEX);
-    a.globalAlpha = 0.2;
+    a.globalAlpha = 0.16;
     a.drawImage(design, 0, 0);
-    // emissive: pure white line-work on black
+    a.globalAlpha = 1;
+    // glow layer: only the engraving lights up, never the frame of the face
     const e = glow.getContext("2d");
-    e.globalAlpha = 1;
     e.fillStyle = "#000";
     e.fillRect(0, 0, TEX, TEX);
+    drawDesign(design.getContext("2d"), p, i, false);
     e.drawImage(design, 0, 0);
-    mat.map.needsUpdate = true;
-    mat.emissiveMap.needsUpdate = true;
+    drawDesign(design.getContext("2d"), p, i, true);
+    const r = rgh.getContext("2d");
+    r.globalAlpha = 1;
+    r.fillStyle = "rgb(70,70,70)";
+    r.fillRect(0, 0, TEX, TEX);
+    r.drawImage(smudges, 0, 0, TEX, TEX);
+    r.globalAlpha = 0.03;
+    r.fillStyle = r.createPattern(noise, "repeat");
+    r.fillRect(0, 0, TEX, TEX);
+    r.globalAlpha = 0.55;
+    r.drawImage(design, 0, 0);
+    r.globalAlpha = 1;
+    engraveNormals(nrm);
+    [mat.map, mat.emissiveMap, mat.normalMap, mat.roughnessMap].forEach((t) => (t.needsUpdate = true));
   }
 
-  const aniso = renderer.capabilities.getMaxAnisotropy();
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const materials = FACES.map((f, fi) => {
     const pi = FACE_PROJECT[fi];
-    const alb = document.createElement("canvas");
-    const glow = document.createElement("canvas");
-    alb.width = alb.height = glow.width = glow.height = TEX;
-    const map = new THREE.CanvasTexture(alb);
-    const emap = new THREE.CanvasTexture(glow);
-    [map, emap].forEach((t) => { t.encoding = THREE.sRGBEncoding; t.anisotropy = aniso; });
+    const alb = mkCanvas(), glow = mkCanvas(), nrm = mkCanvas(), rgh = mkCanvas();
+    const tex = (c, srgb) => {
+      const t = new THREE.CanvasTexture(c);
+      if (srgb) t.encoding = THREE.sRGBEncoding;
+      t.anisotropy = aniso;
+      return t;
+    };
     const mat = new THREE.MeshPhysicalMaterial({
-      map,
-      emissiveMap: emap,
+      map: tex(alb, true),
+      emissiveMap: tex(glow, true),
       emissive: 0xffffff,
       emissiveIntensity: 0,
-      bumpMap: emap,
-      bumpScale: -0.06,
-      roughness: 0.36,
-      metalness: 0.1,
-      clearcoat: 0.75,
-      clearcoatRoughness: 0.22,
-      envMapIntensity: 0,
+      normalMap: tex(nrm, false),
+      normalScale: new THREE.Vector2(0.9, 0.9),
+      roughnessMap: tex(rgh, false),
+      roughness: 1,
+      metalness: 0.12,
+      clearcoat: 0.55,
+      clearcoatRoughness: 0.16,
     });
-    mat.userData = { p: P[pi], i: pi, alb, glow, g: 0, target: 0.05 };
-    paintFace(mat);
+    mat.userData = { p: P[pi], i: pi, alb, glow, nrm, rgh, g: 0, target: 0.03, dim: 1, dimTarget: 1 };
     return mat;
   });
-  const repaint = () => materials.forEach(paintFace);
-  if (document.fonts) {
-    Promise.all([
-      document.fonts.load('600 100px "Neue Haas Grotesk"'),
-      document.fonts.load('500 30px "Geist Mono"'),
-      document.fonts.load('600 100px "Inter Tight"'),
-    ]).then(repaint, () => {});
-    document.fonts.ready.then(repaint);
-  }
+  const faceCache = {};
+  const repaint = () => { materials.forEach(paintFace); for (const k in faceCache) delete faceCache[k]; };
+  repaint();
+
+  let fontsReady = false;
+  const fontsLoaded = document.fonts
+    ? Promise.all([
+        document.fonts.load('600 100px "Neue Haas Grotesk"')
+          .then((list) => {
+            if (list.length && list.every((f) => f.status === "loaded")) displayFont = `"Neue Haas Grotesk", ${FALLBACK_FONT}`;
+          })
+          .catch(() => {}),
+        document.fonts.load('600 100px "Inter Tight"').catch(() => {}),
+        document.fonts.load('500 30px "Geist Mono"').catch(() => {}),
+      ]).then(() => document.fonts.ready)
+    : Promise.resolve();
+  fontsLoaded.then(() => { repaint(); fontsReady = true; });
+  setTimeout(() => (fontsReady = true), 4500);
 
   const geo = roundedBox(SIZE, RADIUS);
   const pivot = new THREE.Group();
   const die = new THREE.Mesh(geo, materials);
+  die.castShadow = true;
   const outlineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide, transparent: true, opacity: 0, depthWrite: false });
   const outline = new THREE.Mesh(geo, outlineMat);
   outline.scale.setScalar(1.016);
@@ -324,46 +413,68 @@
   pivot.add(die);
   scene.add(pivot);
 
-  // soft contact shadow
-  const shadowTex = (() => {
-    const c = document.createElement("canvas");
-    c.width = c.height = 256;
+  /* ---------- floor: glossy black with reflection, shadows ---------- */
+  const FLOOR_Y = -1.75;
+  const REST_Y = FLOOR_Y + SIZE / 2;
+  const mirror = new THREE.Mesh(geo, materials);
+  mirror.matrixAutoUpdate = false;
+  scene.add(mirror);
+  const reflectM = new THREE.Matrix4().makeScale(1, -1, 1).premultiply(new THREE.Matrix4().makeTranslation(0, 2 * FLOOR_Y, 0));
+
+  const radial = (stops) => {
+    const c = mkCanvas(256);
     const x = c.getContext("2d");
     const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
-    g.addColorStop(0, "rgba(0,0,0,0.85)");
-    g.addColorStop(0.45, "rgba(0,0,0,0.35)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
+    stops.forEach(([o, col]) => g.addColorStop(o, col));
     x.fillStyle = g;
     x.fillRect(0, 0, 256, 256);
     return new THREE.CanvasTexture(c);
-  })();
-  const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, opacity: 0 });
-  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), shadowMat);
-  shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = -1.7;
-  scene.add(shadow);
+  };
+  const floorMat = new THREE.MeshBasicMaterial({
+    color: BG_LIN,
+    transparent: true,
+    alphaMap: radial([[0, "rgb(214,214,214)"], [0.35, "rgb(232,232,232)"], [1, "rgb(255,255,255)"]]),
+    depthWrite: true, // the backdrop never shows below the floor line
+    toneMapped: false,
+  });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = FLOOR_Y;
+  floor.renderOrder = 1;
+  scene.add(floor);
 
-  // faint horizon line of light on the floor
-  const floorLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
-  const floorLine = new THREE.Mesh(new THREE.PlaneGeometry(9, 0.004), floorLineMat);
-  floorLine.position.set(0, -1.72, -1.6);
-  scene.add(floorLine);
+  const shadowRecvMat = new THREE.ShadowMaterial({ opacity: 0.5, depthWrite: false });
+  const shadowRecv = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), shadowRecvMat);
+  shadowRecv.rotation.x = -Math.PI / 2;
+  shadowRecv.position.y = FLOOR_Y + 0.002;
+  shadowRecv.receiveShadow = true;
+  shadowRecv.renderOrder = 2;
+  scene.add(shadowRecv);
+
+  const blobMat = new THREE.MeshBasicMaterial({
+    map: radial([[0, "rgba(0,0,0,0.9)"], [0.45, "rgba(0,0,0,0.35)"], [1, "rgba(0,0,0,0)"]]),
+    transparent: true, depthWrite: false, opacity: 0,
+  });
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), blobMat);
+  blob.rotation.x = -Math.PI / 2;
+  blob.position.y = FLOOR_Y + 0.004;
+  blob.renderOrder = 3;
+  scene.add(blob);
 
   /* ---------- state ---------- */
   const S = {
-    mode: "intro",
-    q: new Q(),
-    from: new Q(),
-    to: new Q(),
-    w: new V3(),
-    y: 0, vy: 0, y0: 0,
-    t0: 0, dur: 1,
+    mode: "loading",
+    q: new Q(), from: new Q(), to: new Q(),
+    y: 0, y0: 0, t0: 0, dur: 1,
     active: 0, target: 0,
-    light: 0,
     camZ: 9, camFrom: 9, camTo: 9,
     flash: 0,
+    p0: new V3(),
   };
-  let overlay = null;      // null | "project" | "about" | "contact"
+  // rigid body (world space)
+  const B = { p: new V3(), v: new V3(), w: new V3(), still: 0, t: 0 };
+  const basePos = new V3();
+  let overlay = null;
   let hasInfo = false;
   let hovering = false;
   let outlinePulse = 0;
@@ -372,25 +483,30 @@
   let dieX = 0, dieY = 0;
   let time = 0, last = performance.now();
   let pageOpened = false;
+  let introDone = false;
+  let wallX = 3.2;
+  const WALL_Z = 2.2;
 
   const tmpQ = new Q(), tmpV = new V3(), wobQ = new Q(), euler = new THREE.Euler();
 
   /* ---------- layout ---------- */
   const isWide = () => innerWidth > 860;
+  let halfW = 4;
   function layout() {
     const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     baseZ = w / h < 1 ? Math.max(9, 6.6 / (w / h)) : 9;
-    if (S.mode !== "enter" && S.mode !== "project" && S.mode !== "exit") S.camZ = baseZ;
+    if (!["enter", "project", "exit"].includes(S.mode)) S.camZ = baseZ;
     camera.updateProjectionMatrix();
+    halfW = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * baseZ * camera.aspect;
+    wallX = clamp(halfW - 1.3, 0.6, 3.4);
   }
   addEventListener("resize", layout);
   layout();
 
   /* ---------- DOM refs ---------- */
-  const body = document.body;
-  const info = { code: $("#iCode"), cat: $("#iCat"), title: $("#iTitle"), desc: $("#iDesc") };
+  const info = { code: $("#iCode"), title: $("#iTitle"), meta: $("#iMeta"), desc: $("#iDesc") };
   const indexNav = $("#index");
   const page = $("#page"), pageInner = $("#pageInner"), pageTag = $("#pageTag");
   const flash = $("#flash");
@@ -403,32 +519,149 @@
     b.addEventListener("click", () => goTo(i));
     indexNav.appendChild(b);
   });
-
-  function setIndex(i) {
-    [...indexNav.children].forEach((b, j) => b.classList.toggle("is-active", j === i));
-  }
+  const setIndex = (i) => [...indexNav.children].forEach((b, j) => b.classList.toggle("is-active", j === i));
 
   function showInfo(i) {
     const p = P[i];
     S.active = i;
-    info.code.textContent = `PROJECT ${pad(i)}`;
-    $("#iFace").textContent = `FACE ${pad(i)} / ${String(P.length).padStart(2, "0")}`;
-    info.cat.textContent = p.category;
+    info.code.textContent = pad(i);
     info.title.textContent = p.title;
+    info.meta.textContent = `${p.category} / ${p.year}`;
     info.desc.textContent = p.short;
     hasInfo = true;
     body.classList.add("has-info");
-    materials.forEach((m) => (m.userData.target = m.userData.i === i ? 0.85 : 0.04));
+    // the chosen face lights its neon edge; the rest of the object falls to deep grey
+    materials.forEach((m) => {
+      const on = m.userData.i === i;
+      m.userData.target = on ? 0.8 : 0.0;
+      m.userData.dimTarget = on ? 1 : 0.22;
+    });
     setIndex(i);
   }
   function hideInfo() {
     hasInfo = false;
     body.classList.remove("has-info");
-    materials.forEach((m) => (m.userData.target = 0.04));
+    materials.forEach((m) => { m.userData.target = 0.03; m.userData.dimTarget = 1; });
   }
   const played = () => body.classList.add("played");
 
-  /* ---------- motions ---------- */
+  /* ============================================================
+     RIGID BODY — a real die: gravity, corner contacts with the
+     rounded edges, restitution, Coulomb friction, rest detection.
+     ============================================================ */
+  const R_IN = SIZE / 2 - RADIUS;
+  const CORNERS = [];
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) CORNERS.push(new V3(sx * R_IN, sy * R_IN, sz * R_IN));
+  const GRAV = -24;
+  const RESTITUTION = 0.28;
+  const MU = 0.42;
+  const INV_M = 1;
+  const INV_I = 1 / ((1 / 6) * SIZE * SIZE); // solid cube, isotropic
+  const UP = new V3(0, 1, 0);
+  const ra = new V3(), vc = new V3(), rn = new V3(), vt = new V3(), rt = new V3();
+
+  function stepBody(h) {
+    B.v.y += GRAV * h;
+    B.p.addScaledVector(B.v, h);
+    const ang = B.w.length() * h;
+    if (ang > 1e-8) {
+      tmpQ.setFromAxisAngle(tmpV.copy(B.w).normalize(), ang);
+      S.q.premultiply(tmpQ).normalize();
+    }
+
+    let grounded = false, maxPen = 0;
+    for (const c of CORNERS) {
+      ra.copy(c).applyQuaternion(S.q);
+      ra.y -= RADIUS; // lowest point of the rounded corner
+      const pen = FLOOR_Y - (B.p.y + ra.y);
+      if (pen <= 0) continue;
+      grounded = true;
+      if (pen > maxPen) maxPen = pen;
+      vc.crossVectors(B.w, ra).add(B.v);
+      const vn = vc.y;
+      if (vn >= 0) continue;
+      rn.crossVectors(ra, UP);
+      const jn = (-(1 + (vn < -1.4 ? RESTITUTION : 0)) * vn) / (INV_M + INV_I * rn.lengthSq());
+      B.v.y += jn * INV_M;
+      B.w.addScaledVector(rn, INV_I * jn);
+      if (-vn > 2.2) impact(-vn);
+      // friction
+      vc.crossVectors(B.w, ra).add(B.v);
+      vt.set(vc.x, 0, vc.z);
+      const vtl = vt.length();
+      if (vtl > 1e-6) {
+        vt.divideScalar(vtl);
+        rt.crossVectors(ra, vt);
+        const jt = Math.min(vtl / (INV_M + INV_I * rt.lengthSq()), MU * jn);
+        B.v.addScaledVector(vt, -jt * INV_M);
+        B.w.addScaledVector(rt, -INV_I * jt);
+      }
+    }
+    if (maxPen > 0) B.p.y += maxPen;
+
+    // invisible walls keep the throw inside the frame
+    if (B.p.x > wallX && B.v.x > 0) { B.v.x *= -0.35; B.w.multiplyScalar(0.7); }
+    if (B.p.x < -wallX && B.v.x < 0) { B.v.x *= -0.35; B.w.multiplyScalar(0.7); }
+    if (B.p.z > WALL_Z && B.v.z > 0) B.v.z *= -0.35;
+    if (B.p.z < -WALL_Z && B.v.z < 0) B.v.z *= -0.35;
+
+    // air drag + rolling resistance
+    B.w.multiplyScalar(Math.exp(-(grounded ? 0.9 : 0.12) * h));
+    if (grounded) { B.v.x *= Math.exp(-0.6 * h); B.v.z *= Math.exp(-0.6 * h); }
+    return grounded;
+  }
+
+  function physics(dt, now) {
+    const sub = 10, h = dt / sub;
+    let grounded = false;
+    for (let s = 0; s < sub; s++) grounded = stepBody(h) || grounded;
+    B.t += dt;
+    const calm = grounded && B.v.length() < 0.07 && B.w.length() < 0.1;
+    B.still = calm ? B.still + dt : 0;
+    if (B.still > 0.22 || B.t > 7) startPresent();
+  }
+
+  function launch(p, v, w) {
+    hideInfo();
+    B.p.copy(p);
+    B.v.copy(v);
+    B.w.copy(w);
+    B.still = 0;
+    B.t = 0;
+    S.mode = "air";
+  }
+
+  // from the floating pose: bake the current visual position into the body
+  function launchFromHere(v, w) {
+    launch(pivot.position.clone(), v, w);
+    dieX = 0;
+    dieY = 0;
+  }
+
+  // the die has stopped: the face looking up is the result → it rises and presents it
+  function startPresent() {
+    let top = 0, best = -2;
+    FACES.forEach((f, fi) => {
+      const d = f.n.clone().applyQuaternion(S.q).y;
+      if (d > best) { best = d; top = fi; }
+    });
+    S.from.copy(S.q);
+    S.to.copy(FACES[top].q);
+    S.target = FACE_PROJECT[top];
+    S.p0.copy(B.p);
+    S.mode = "present";
+    S.t0 = performance.now();
+    S.dur = reduce ? 500 : 1500;
+    S.y = 0;
+    S.shown = false;
+  }
+
+  function impact(v) {
+    if (reduce) return;
+    shake = Math.max(shake, clamp(v * 0.0035, 0, 0.03));
+  }
+
+  /* ---------- floating motions ---------- */
   function nearestFace() {
     tmpV.copy(camera.position).sub(pivot.position).normalize();
     let best = 0, bestDot = -2;
@@ -445,16 +678,13 @@
     S.to.copy(FACES[fi].q);
     S.target = FACE_PROJECT[fi];
     S.y0 = S.y;
-    S.vy = 0;
-    S.w.set(0, 0, 0);
     S.mode = "lock";
     S.t0 = performance.now();
-    S.dur = reduce ? 300 : 950;
+    S.dur = reduce ? 300 : 1000;
   }
 
   function goTo(i) {
-    if (overlay) return;
-    if (!["idle", "lock", "turn"].includes(S.mode)) return;
+    if (overlay || !["idle", "lock", "turn"].includes(S.mode)) return;
     played();
     if (i === S.active && S.mode === "idle") { if (!hasInfo) showInfo(i); return; }
     hideInfo();
@@ -467,52 +697,14 @@
     setIndex(i);
   }
 
-  function throwDie(w, vy) {
-    hideInfo();
-    played();
-    S.w.copy(w);
-    S.vy = vy;
-    S.mode = "air";
-    S.t0 = performance.now();
-  }
-
   function randomThrow() {
     if (overlay || !["idle", "lock", "turn"].includes(S.mode)) return;
-    const a = Math.random() * Math.PI * 2;
-    throwDie(new V3(Math.cos(a), Math.sin(a), (Math.random() - 0.5) * 0.5).normalize().multiplyScalar(15), 6.2);
-  }
-
-  function impact(v) {
-    if (reduce) return;
-    shake = Math.max(shake, clamp(v * 0.006, 0, 0.045));
-    outlinePulse = Math.max(outlinePulse, clamp(v * 0.035, 0, 0.28));
-  }
-
-  const G = 17;
-  function physics(dt, now) {
-    const sub = 4, h = dt / sub;
-    for (let s = 0; s < sub; s++) {
-      S.vy -= G * h;
-      S.y += S.vy * h;
-      if (S.y < 0) {
-        S.y = 0;
-        if (S.vy < -1.5) {
-          impact(-S.vy);
-          S.vy = -S.vy * 0.33;
-          S.w.multiplyScalar(0.6);
-          S.w.z *= 0.5;
-        } else S.vy = 0;
-      }
-      const grounded = S.y === 0 && S.vy === 0;
-      S.w.multiplyScalar(Math.exp(-(grounded ? 3.4 : 0.3) * h));
-      const ang = S.w.length() * h;
-      if (ang > 1e-6) {
-        tmpQ.setFromAxisAngle(tmpV.copy(S.w).normalize(), ang);
-        S.q.premultiply(tmpQ);
-      }
-    }
-    S.q.normalize();
-    if ((S.y === 0 && S.vy === 0 && S.w.length() < 3.4) || now - S.t0 > 3400) startLock();
+    played();
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    launchFromHere(
+      new V3(rand(1.2, 2.6) * dir, rand(3.5, 4.5), rand(-0.8, 0.4)),
+      new V3(rand(-6, 6), rand(-4, 4), -dir * rand(7, 11))
+    );
   }
 
   /* ---------- enter / exit project ---------- */
@@ -526,8 +718,7 @@
     S.camTo = 3.3;
     pageOpened = false;
     overlay = "project";
-    // fully light the face we're travelling into
-    materials.forEach((m) => (m.userData.target = m.userData.i === S.active ? 1.6 : 0));
+    materials.forEach((m) => (m.userData.target = m.userData.i === S.active ? 1.1 : 0));
   }
 
   function exitProject() {
@@ -540,9 +731,25 @@
   }
 
   /* ---------- pages ---------- */
-  let io;
+  // the chosen face, flattened: becomes the background of the project hero
+  const heroBg = $("#heroBg");
+  function faceImage(i) {
+    if (faceCache[i]) return faceCache[i];
+    const m = materials.find((x) => x.userData.i === i);
+    const c = mkCanvas();
+    const x = c.getContext("2d");
+    x.drawImage(m.userData.alb, 0, 0);
+    x.globalCompositeOperation = "lighter";
+    x.globalAlpha = 0.9;
+    x.drawImage(m.userData.glow, 0, 0);
+    return (faceCache[i] = c.toDataURL("image/jpeg", 0.88));
+  }
+
+  let io, settleTimer;
   function openPage(html, kind, tag) {
     overlay = kind;
+    clearTimeout(settleTimer);
+    heroBg.classList.remove("on", "settle"); // the project opens on clean black
     pageInner.innerHTML = html;
     hydrateMedia(pageInner);
     pageTag.textContent = tag || "";
@@ -580,9 +787,10 @@
     const base = !manual && p.folder ? `${p.folder}/images/${nn}` : "";
     if (optional && !manual && !base) return "";
     const alt = `${esc(p.title)} — ${nn}`;
+    const cap = esc((p.captions && p.captions[k]) || "");
     const img = manual
-      ? `<img src="${esc(manual)}" alt="${alt}" loading="lazy">`
-      : base ? `<img data-base="${esc(base)}" alt="${alt}">` : "";
+      ? `<img src="${esc(manual)}" alt="${cap || alt}" data-cap="${cap}" loading="lazy">`
+      : base ? `<img data-base="${esc(base)}" alt="${cap || alt}" data-cap="${cap}">` : "";
     return `<figure class="shot"${optional ? " data-optional" : ""}>${img}<span>${alt}</span></figure>`;
   }
   function shots(p, from, count, optional) {
@@ -618,6 +826,53 @@
       v.src = v.dataset.src;
     });
   }
+
+  /* ---------- lightbox: examine a detail (01 / 04 + caption) ---------- */
+  const lb = $("#lb"), lbImg = $("#lbImg"), lbCap = $("#lbCap"), lbCount = $("#lbCount");
+  let lbList = [], lbIndex = 0;
+  const lbIsOpen = () => lb.classList.contains("open");
+  function lbShow(i) {
+    lbIndex = (i + lbList.length) % lbList.length;
+    const src = lbList[lbIndex];
+    lbImg.classList.remove("ready");
+    lbImg.onload = () => lbImg.classList.add("ready");
+    lbImg.src = src.currentSrc || src.src;
+    lbImg.alt = src.alt;
+    lbCap.textContent = src.dataset.cap || "";
+    lbCount.textContent = `${String(lbIndex + 1).padStart(2, "0")} / ${String(lbList.length).padStart(2, "0")}`;
+    const many = lbList.length > 1 ? "visible" : "hidden";
+    $("#lbPrev").style.visibility = many;
+    $("#lbNext").style.visibility = many;
+  }
+  function lbOpenAt(img) {
+    lbList = [...pageInner.querySelectorAll(".shot.has-media img")];
+    if (!lbList.length) return;
+    lb.classList.add("open");
+    lb.setAttribute("aria-hidden", "false");
+    lbShow(Math.max(0, lbList.indexOf(img)));
+    $("#lbClose").focus({ preventScroll: true });
+  }
+  function lbClose() {
+    lb.classList.remove("open");
+    lb.setAttribute("aria-hidden", "true");
+  }
+  pageInner.addEventListener("click", (e) => {
+    const fig = e.target.closest(".shot.has-media");
+    if (fig && fig.querySelector("img")) lbOpenAt(fig.querySelector("img"));
+  });
+  $("#lbClose").addEventListener("click", lbClose);
+  $("#lbPrev").addEventListener("click", () => lbShow(lbIndex - 1));
+  $("#lbNext").addEventListener("click", () => lbShow(lbIndex + 1));
+  lb.addEventListener("click", (e) => { if (e.target === lb) lbClose(); });
+  addEventListener("keydown", (e) => {
+    if (!lbIsOpen()) return;
+    if (e.key === "Escape") lbClose();
+    else if (e.key === "ArrowRight") lbShow(lbIndex + 1);
+    else if (e.key === "ArrowLeft") lbShow(lbIndex - 1);
+    else return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
 
   function projectHTML(i) {
     const p = P[i];
@@ -660,13 +915,13 @@
       SITE.linkedin && `<a class="row r" href="${esc(SITE.linkedin)}" target="_blank" rel="noopener"><span>LinkedIn</span><strong>Profile ↗</strong></a>`,
       SITE.cv && `<a class="row r" href="${esc(SITE.cv)}" download><span>CV</span><strong>Download ↓</strong></a>`,
     ].filter(Boolean).join("");
+    const title = esc(SITE.contactTitle || "Let’s talk.").replace(/\n/g, "<br>");
     return `
-      <header class="ph">
-        <div class="ph-code r"><b>Contact</b></div>
-        <h1 class="ph-title r"><a href="mailto:${esc(SITE.email)}">Let’s talk.</a></h1>
+      <section class="contact">
+        <h1 class="contact-title r">${title}</h1>
         <div class="neon-line r"></div>
-      </header>
-      <div class="rows">${rows}</div>`;
+        <div class="rows">${rows}</div>
+      </section>`;
   }
 
   pageInner.addEventListener("click", (e) => {
@@ -686,7 +941,7 @@
 
   menu.addEventListener("click", (e) => {
     const b = e.target.closest("button");
-    if (!b) return;
+    if (!b || !introDone) return;
     const kind = b.dataset.open;
     if (kind === "projects") { if (overlay === "project") exitProject(); else if (overlay) closePage(); return; }
     if (S.mode === "enter" || S.mode === "exit") return;
@@ -706,20 +961,18 @@
 
   let drag = null;
   canvas.addEventListener("pointerdown", (e) => {
-    if (overlay || !["idle", "lock", "turn", "air"].includes(S.mode)) return;
+    if (overlay || !introDone || !["idle", "lock", "turn"].includes(S.mode)) return;
     if (!hitDie(e)) return;
     const now = performance.now();
     drag = { x: e.clientX, y: e.clientY, t: now, lt: now, vx: 0, vy: 0, moved: 0, hadInfo: hasInfo && S.mode === "idle" };
     S.mode = "drag";
-    S.w.set(0, 0, 0);
-    S.vy = 0;
     canvas.setPointerCapture(e.pointerId);
     canvas.style.cursor = "grabbing";
   });
 
   canvas.addEventListener("pointermove", (e) => {
     if (!drag) {
-      hovering = !overlay && hitDie(e);
+      hovering = !overlay && introDone && hitDie(e);
       canvas.style.cursor = hovering ? (hasInfo ? "pointer" : "grab") : "default";
       return;
     }
@@ -727,7 +980,7 @@
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.x = e.clientX; drag.y = e.clientY;
     drag.moved += Math.abs(dx) + Math.abs(dy);
-    if (drag.moved > 6 && hasInfo) hideInfo();
+    if (drag.moved > 6 && hasInfo) { hideInfo(); played(); }
     const len = Math.hypot(dx, dy);
     if (len > 0) {
       tmpQ.setFromAxisAngle(tmpV.set(dy, dx, 0).normalize(), len * 0.0085);
@@ -739,7 +992,7 @@
     drag.lt = now;
   });
 
-  function release(e) {
+  function release() {
     if (!drag) return;
     const now = performance.now();
     const d = drag;
@@ -753,19 +1006,20 @@
     const held = now - d.lt > 90;
     const speed = held ? 0 : Math.hypot(d.vx, d.vy);
     if (speed < 280) { startLock(); return; }
-    const k = 0.011;
-    const w = new V3(d.vy * k, d.vx * k, (Math.random() - 0.5) * 4);
-    w.multiplyScalar(clamp(w.length(), 8, 22) / w.length());
-    throwDie(w, clamp(3.4 + speed / 700, 4, 7.5));
+    // throw: the drag direction becomes the throw, the die spins in that direction
+    const k = 0.0028;
+    const v = new V3(clamp(d.vx * k, -5, 5), clamp(2.5 - d.vy * k, 1.5, 6), rand(-0.6, 0.3));
+    const w = new V3(d.vy * 0.006, d.vx * 0.004, -d.vx * 0.006 + rand(-1, 1));
+    w.multiplyScalar(clamp(w.length(), 5, 16) / Math.max(w.length(), 1e-3));
+    launchFromHere(v, w);
   }
   canvas.addEventListener("pointerup", release);
   canvas.addEventListener("pointercancel", release);
   canvas.addEventListener("pointerleave", () => { if (!drag) hovering = false; });
 
-  // controlled rotation with the wheel
   let wheelAcc = 0, lastWheel = 0;
   addEventListener("wheel", (e) => {
-    if (overlay || S.mode !== "idle") return;
+    if (overlay || S.mode !== "idle" || !introDone) return;
     const now = performance.now();
     wheelAcc += e.deltaY;
     if (Math.abs(wheelAcc) > 60 && now - lastWheel > 900) {
@@ -776,6 +1030,7 @@
   }, { passive: true });
 
   addEventListener("keydown", (e) => {
+    if (!introDone) return;
     if (e.key === "Escape") {
       if (overlay === "project") exitProject();
       else if (overlay) closePage();
@@ -790,20 +1045,424 @@
     else if (/^[1-6]$/.test(e.key)) goTo(+e.key - 1);
   });
 
+  /* ---------- intro: 000 → 100, then the first throw ---------- */
+  const loader = $("#loader"), loaderCount = $("#loaderCount"), loaderLine = $("#loaderLine");
+  let loadStart = performance.now(), loadShown = 0;
+  pivot.visible = false;
+
+  /* ============================================================
+     RADIOGRAPH — a giant skeletal hand, seen as an X-ray for an
+     instant: it lowers into frame holding the die, opens its
+     fingers, releases it, and the lightbox goes dark.
+     Built procedurally (anatomical proportions, in cm).
+     ============================================================ */
+  const CM = 0.45; // hand units: centimetres → world (a giant hand)
+  const xrayUniforms = { uOpacity: { value: 0 } };
+  const xrayMat = (core, edge) => new THREE.ShaderMaterial({
+    uniforms: { uOpacity: xrayUniforms.uOpacity, uCore: { value: core }, uEdge: { value: edge } },
+    vertexShader: `
+      varying vec3 vN; varying vec3 vV;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal);
+        vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform float uOpacity; uniform float uCore; uniform float uEdge;
+      varying vec3 vN; varying vec3 vV;
+      void main() {
+        float f = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+        float i = (uCore + uEdge * pow(f, 2.2)) * uOpacity;
+        gl_FragColor = vec4(vec3(i * 0.96, i * 0.98, i), 1.0);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+  });
+  const BONE = xrayMat(0.06, 0.95);   // cortical bone: bright rims, soft core
+  const FLESH = xrayMat(0.012, 0.16); // soft tissue: a faint halo around the bones
+
+  // a long bone: narrow shaft, bulbous ends, rounded caps — along -y from the joint
+  const boneGeoCache = {};
+  function boneGeo(L, r) {
+    const key = `${L.toFixed(2)}_${r.toFixed(2)}`;
+    if (boneGeoCache[key]) return boneGeoCache[key];
+    const pts = [new THREE.Vector2(0, r * 0.55), new THREE.Vector2(r * 0.75, r * 0.32)];
+    const N = 16;
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1), k = Math.abs(2 * t - 1);
+      pts.push(new THREE.Vector2(r * (0.56 + 0.44 * Math.pow(k, 3)), -t * L));
+    }
+    pts.push(new THREE.Vector2(r * 0.75, -L - r * 0.32), new THREE.Vector2(0, -L - r * 0.55));
+    return (boneGeoCache[key] = new THREE.LatheGeometry(pts, 14));
+  }
+  function addBone(parent, L, r) {
+    const b = new THREE.Mesh(boneGeo(L * CM, r * CM), BONE);
+    const f = new THREE.Mesh(boneGeo(L * CM * 1.02, r * CM * 2.4), FLESH);
+    parent.add(b, f);
+  }
+
+  const hand = new THREE.Group();
+  hand.visible = false;
+  scene.add(hand);
+  const palm = new THREE.Group(); // wrist origin; fingers point down (-y), palm faces the camera (+z)
+  hand.add(palm);
+
+  // forearm: radius & ulna, running up out of frame
+  [[-1.0, 1.05], [1.25, 0.8]].forEach(([x, r]) => {
+    const g = new THREE.Group();
+    g.position.set(x * CM, 13 * CM, 0);
+    palm.add(g);
+    addBone(g, 13, r);
+  });
+  // carpals: a cluster of eight small bones
+  [[-1.5, -0.6], [-0.4, -0.5], [0.7, -0.5], [1.6, -0.7], [-1.7, -2.0], [-0.6, -2.1], [0.5, -2.1], [1.6, -2.0]].forEach(([x, y]) => {
+    const c = new THREE.Mesh(new THREE.SphereGeometry(0.62 * CM, 16, 12), BONE);
+    c.position.set(x * CM, y * CM, 0);
+    c.scale.set(1, 0.85, 0.8);
+    const fl = new THREE.Mesh(new THREE.SphereGeometry(1.4 * CM, 12, 10), FLESH);
+    fl.position.copy(c.position);
+    palm.add(c, fl);
+  });
+
+  // digits: [base x, base y, splay (rad), lengths (meta, prox, mid, dist), radii]
+  const DIGITS = [
+    { name: "thumb", base: [-1.9, -2.4], splay: 0.62, L: [4.6, 3.2, 2.4], R: [0.48, 0.42, 0.34] },
+    { name: "index", base: [-1.2, -3.0], splay: 0.1, L: [6.8, 4.0, 2.3, 1.8], R: [0.42, 0.38, 0.32, 0.28] },
+    { name: "middle", base: [0.0, -3.1], splay: 0.0, L: [6.4, 4.5, 2.8, 1.9], R: [0.44, 0.4, 0.34, 0.29] },
+    { name: "ring", base: [1.1, -3.0], splay: -0.1, L: [5.8, 4.2, 2.6, 1.9], R: [0.4, 0.37, 0.31, 0.27] },
+    { name: "little", base: [2.1, -2.8], splay: -0.22, L: [5.3, 3.3, 1.8, 1.7], R: [0.36, 0.32, 0.27, 0.24] },
+  ];
+  const GAP = 0.3;
+  DIGITS.forEach((d) => {
+    const root = new THREE.Group();
+    root.position.set(d.base[0] * CM, d.base[1] * CM, 0);
+    root.rotation.z = d.splay;
+    if (d.name === "thumb") root.rotation.y = -0.75; // opposed, comes forward
+    palm.add(root);
+    d.root = root;
+    d.joints = [];
+    let parent = root;
+    d.L.forEach((L, k) => {
+      const j = new THREE.Group();
+      if (k > 0) j.position.y = -(d.L[k - 1] + GAP) * CM;
+      parent.add(j);
+      addBone(j, L, d.R[k]);
+      d.joints.push(j);
+      parent = j;
+    });
+  });
+
+  // the x-ray draws after the floor and its veil, so nothing cuts through the bones
+  hand.traverse((o) => (o.renderOrder = 10));
+
+  // The hand itself is never seen: only its giant, soft shadow crosses the floor.
+  // Palm volume so the silhouette reads as flesh, not a skeleton.
+  const palmFlesh = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), FLESH);
+  palmFlesh.position.set(0.3 * CM, -6.4 * CM, 0);
+  palmFlesh.scale.set(4.4 * CM, 6.2 * CM, 1.5 * CM);
+  palm.add(palmFlesh);
+  const HAND_SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+  hand.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = HAND_SHADOW_ONLY;
+    o.castShadow = true;
+  });
+  // a pool of light on the floor, like a studio spot: the hand's shadow crosses it
+  const poolMat = new THREE.MeshBasicMaterial({
+    map: radial([[0, "rgba(255,255,255,1)"], [0.4, "rgba(255,255,255,0.55)"], [1, "rgba(255,255,255,0)"]]),
+    color: new THREE.Color(0.24, 0.24, 0.25),
+    transparent: true, depthWrite: false, toneMapped: false, opacity: 0,
+  });
+  // shadow theatre: during the intro a backdrop is lit behind the object
+  const BACKDROP_Z = -5;
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(17, 11), poolMat);
+  pool.position.set(0.6, 1.0, BACKDROP_Z);
+  pool.renderOrder = 1.5;
+  scene.add(pool);
+  const wallShadowMat = new THREE.ShadowMaterial({ opacity: 0, depthWrite: false });
+  const wallShadow = new THREE.Mesh(new THREE.PlaneGeometry(40, 22), wallShadowMat);
+  wallShadow.position.set(0, 1, BACKDROP_Z + 0.002);
+  wallShadow.receiveShadow = true;
+  wallShadow.renderOrder = 2;
+  scene.add(wallShadow);
+  let poolTarget = 0;
+
+  // a light straight above, used only during the intro to cast the hand's shadow
+  const handLight = new THREE.DirectionalLight(0xffffff, 0);
+  handLight.position.set(1.4, 3.2, 14); // from the front: the shadow falls on the backdrop
+  handLight.castShadow = false;
+  handLight.shadow.mapSize.set(2048, 2048);
+  handLight.shadow.camera.left = handLight.shadow.camera.bottom = -11;
+  handLight.shadow.camera.right = handLight.shadow.camera.top = 11;
+  handLight.shadow.camera.near = 2;
+  handLight.shadow.camera.far = 30;
+  handLight.shadow.radius = 9;
+  handLight.shadow.blurSamples = 16;
+  handLight.shadow.bias = -0.0005;
+  scene.add(handLight);
+
+  // curl: 0 = open hand, 1 = gripping the die (per joint angles, in radians).
+  // GRIP is solved at start (solveGrip): each joint curls until the finger touches the die.
+  const GRIP = {
+    thumb: [0.25, 0.55, 0.6],
+    index: [0.05, 0.95, 1.15, 0.6],
+    middle: [0.05, 1.0, 1.2, 0.65],
+    ring: [0.05, 1.05, 1.2, 0.6],
+    little: [0.05, 1.1, 1.15, 0.55],
+  };
+  const MAX_CURL = {
+    thumb: [0.5, 1.2, 1.1],
+    index: [0.1, 1.5, 1.7, 1.2],
+    middle: [0.1, 1.5, 1.7, 1.2],
+    ring: [0.1, 1.5, 1.7, 1.2],
+    little: [0.1, 1.5, 1.7, 1.2],
+  };
+  const OPEN = {
+    thumb: [0.05, 0.1, 0.05],
+    index: [0, 0.12, 0.08, 0.04],
+    middle: [0, 0.1, 0.08, 0.04],
+    ring: [0, 0.12, 0.1, 0.05],
+    little: [0, 0.16, 0.12, 0.06],
+  };
+  // gripOf(digitIndex) → 0 open … 1 gripping; fingers can open one after another
+  function poseHand(gripOf, spread) {
+    DIGITS.forEach((d, di) => {
+      const g = gripOf(di);
+      d.root.rotation.z = d.splay * (1 + spread * 0.7);
+      d.joints.forEach((j, k) => {
+        j.rotation.x = -lerp(OPEN[d.name][k], GRIP[d.name][k], g); // curl towards the camera
+      });
+    });
+  }
+
+  // where the die sits in the grip (hand-local cm): cradled in the curl of the fingers,
+  // its back face resting along the proximal phalanges
+  const DIE_HALF_CM = SIZE / 2 / CM;
+  const dieAnchor = new THREE.Object3D();
+  dieAnchor.position.set(0.3 * CM, (-9.6 - DIE_HALF_CM - 0.1) * CM, (DIE_HALF_CM + 0.55) * CM);
+  palm.add(dieAnchor);
+  const HOLD_LOCAL = new Q().setFromEuler(new THREE.Euler(0, 0, 0.08));
+
+  // curl every joint, from the knuckle out, until the finger meets the die — never through it
+  function solveGrip() {
+    const p = new V3(), inv = HOLD_LOCAL.clone().invert();
+    hand.position.set(0, 0, 0);
+    hand.quaternion.identity();
+    const c = dieAnchor.position; // palm == hand space while the hand is at identity
+    const touches = (d, from) => {
+      hand.updateMatrixWorld(true);
+      for (let k = from; k < d.joints.length; k++) {
+        const L = d.L[k] * CM, r = d.R[k] * CM * 1.05, lim = SIZE / 2 + r;
+        for (let s = 0; s <= 10; s++) {
+          p.set(0, -L * (s / 10) - (s === 10 ? r * 0.5 : 0), 0);
+          d.joints[k].localToWorld(p);
+          p.sub(c).applyQuaternion(inv);
+          if (Math.abs(p.x) < lim && Math.abs(p.y) < lim && Math.abs(p.z) < lim) return true;
+        }
+      }
+      return false;
+    };
+    DIGITS.forEach((d) => {
+      d.root.rotation.z = d.splay;
+      const open = OPEN[d.name], max = MAX_CURL[d.name];
+      d.joints.forEach((j, k) => (j.rotation.x = -open[k]));
+      const sol = open.slice();
+      for (let k = 0; k < d.joints.length; k++) {
+        let a = open[k];
+        while (a + 0.02 <= max[k]) {
+          d.joints[k].rotation.x = -(a + 0.02);
+          if (touches(d, k)) break;
+          a += 0.02;
+        }
+        d.joints[k].rotation.x = -a;
+        sol[k] = a;
+      }
+      GRIP[d.name] = sol;
+    });
+  }
+
+  const xrayLight = $("#xray");
+  const X = { t0: 0, released: false, active: false };
+  // debug: index.html?xray=0.4 freezes the radiograph at that second
+  const XR_PARAM = new URLSearchParams(location.search).get("xray");
+  const XR_FREEZE = XR_PARAM != null ? parseFloat(XR_PARAM) : null;
+  if (XR_PARAM != null) window.__xr = { hand, pivot, camera, THREE };
+  const HAND_REST = new V3();
+  const HOLD_AT = new V3(0.9, 0.85, -0.6);           // held in the air, in front of the backdrop
+  const HAND_BASE = new THREE.Euler(Math.PI / 2 - 0.08, 0, -Math.PI / 2); // fingers point left, palm faces the floor
+  const qBase = new Q(), qMove = new Q(), Z_AXIS = new V3(0, 0, 1);
+
+  // Choreography (seconds). Offsets are world units from the resting hold pose.
+  // A smooth Hermite spline runs through the keys, so the motion never stops dead.
+  const KEYS = [
+    { t: 0.0, v: [7.0, 0.7, -0.3, 0.16] },   // off-frame right
+    { t: 1.2, v: [0.2, 0.06, 0.0, 0.025] },  // glides in, slowing down
+    { t: 1.6, v: [0, 0, 0, 0] },             // settles: a moment to look
+    { t: 1.85, v: [0.45, 0.18, -0.1, 0.06] }, // small backswing, wrist cocks
+    { t: 2.15, v: [-1.15, -0.16, 0.22, -0.12] }, // the toss
+    { t: 2.45, v: [-0.8, 0.05, 0.1, -0.06] }, // follow-through
+    { t: 3.45, v: [8.0, 0.8, -0.3, 0.14] },  // withdraws to the right
+  ];
+  const XR_END = 3.6;
+  const RELEASE_AT = 2.07;
+  const OPEN_AT = 1.98;
+
+  function sampleKeys(t, out) {
+    const n = KEYS.length;
+    if (t <= KEYS[0].t) { for (let c = 0; c < 4; c++) out[c] = KEYS[0].v[c]; return out; }
+    if (t >= KEYS[n - 1].t) { for (let c = 0; c < 4; c++) out[c] = KEYS[n - 1].v[c]; return out; }
+    let i = 0;
+    while (t > KEYS[i + 1].t) i++;
+    const k0 = KEYS[i], k1 = KEYS[i + 1], h = k1.t - k0.t, u = (t - k0.t) / h;
+    const h00 = 2 * u ** 3 - 3 * u ** 2 + 1, h10 = u ** 3 - 2 * u ** 2 + u, h01 = -2 * u ** 3 + 3 * u ** 2, h11 = u ** 3 - u ** 2;
+    const tan = (j, c) => (j <= 0 || j >= n - 1 ? 0 : (KEYS[j + 1].v[c] - KEYS[j - 1].v[c]) / (KEYS[j + 1].t - KEYS[j - 1].t));
+    for (let c = 0; c < 4; c++) {
+      out[c] = h00 * k0.v[c] + h10 * h * tan(i, c) + h01 * k1.v[c] + h11 * h * tan(i + 1, c);
+    }
+    return out;
+  }
+
+  const kv = [0, 0, 0, 0];
+  function placeHand(t) {
+    sampleKeys(t, kv);
+    const sway = 1 - smooth(OPEN_AT, OPEN_AT + 0.5, t);
+    hand.position.set(
+      HAND_REST.x + kv[0],
+      HAND_REST.y + kv[1] + Math.sin(t * 1.35) * 0.035 * sway,
+      HAND_REST.z + kv[2]
+    );
+    qBase.setFromEuler(HAND_BASE);
+    qMove.setFromAxisAngle(Z_AXIS, kv[3] + Math.sin(t * 0.9) * 0.012 * sway);
+    hand.quaternion.copy(qMove).multiply(qBase);
+    // fingers open one after another, then relax
+    poseHand((di) => {
+      const o = smooth(OPEN_AT + di * 0.025, OPEN_AT + 0.26 + di * 0.025, t);
+      return lerp(1, 0.15, o) * (1 - smooth(2.5, 3.1, t) * 0.4);
+    }, smooth(OPEN_AT, OPEN_AT + 0.4, t));
+    hand.updateMatrixWorld(true);
+  }
+
+  function startXray() {
+    // rest pose: solve where the hand must be so the die sits at HOLD_AT
+    solveGrip();
+    HAND_REST.set(0, 0, 0);
+    hand.position.set(0, 0, 0);
+    qBase.setFromEuler(HAND_BASE);
+    hand.quaternion.copy(qBase);
+    poseHand(() => 1, 0);
+    hand.updateMatrixWorld(true);
+    HAND_REST.copy(HOLD_AT).sub(dieAnchor.getWorldPosition(new V3()));
+    hand.visible = true;
+    pivot.visible = true;
+    key.castShadow = false;      // one clean shadow: the hand's, from straight above
+    handLight.castShadow = true;
+    shadowRecvMat.opacity = 0.6;
+    wallShadowMat.opacity = 0.92;
+    poolTarget = 1;
+    S.mode = "hold";
+    X.t0 = performance.now();
+    X.released = false;
+    X.active = true;
+    introDone = true;
+    body.classList.add("name-landed", "ui-in", "intro-done", "xray-on");
+  }
+
+  function releaseDie(t) {
+    X.released = true;
+    // the die leaves with the hand's own velocity, plus the roll of the fingers
+    placeHand(t - 0.03);
+    const a = dieAnchor.getWorldPosition(new V3());
+    placeHand(t);
+    const b = dieAnchor.getWorldPosition(new V3());
+    const v = b.clone().sub(a).divideScalar(0.03).multiplyScalar(0.6);
+    v.y = Math.min(v.y, 0) + 0.6;
+    v.z = clamp(v.z, -0.5, 0.5);
+    launch(b, v, new V3(rand(-1.5, 1.5), rand(-1.5, 1.5), rand(4, 6)));
+  }
+
+  function updateXray(now) {
+    if (!X.active) return;
+    const t = XR_FREEZE != null ? XR_FREEZE : (now - X.t0) / 1000;
+    placeHand(t);
+
+    if (S.mode === "hold") {
+      dieAnchor.getWorldPosition(basePos);
+      S.q.copy(hand.quaternion).multiply(HOLD_LOCAL);
+      if (t >= RELEASE_AT && !X.released) releaseDie(t);
+    }
+    if (t > XR_END && XR_FREEZE == null) {
+      X.active = false;
+      hand.visible = false;
+      handLight.castShadow = false;
+      key.castShadow = true;
+      shadowRecvMat.opacity = 0.5;
+      wallShadowMat.opacity = 0;
+      poolTarget = 0;
+      body.classList.remove("xray-on");
+    }
+  }
+
+  function introThrow() {
+    if (reduce) {
+      // no theatre: the die simply drops in
+      pivot.visible = true;
+      S.q.setFromEuler(new THREE.Euler(0.4, 0.6, 0.2));
+      launch(new V3(0, 1.5, 0.4), new V3(0.6, 0, 0.3), new V3(-2, 1, -3));
+      introDone = true;
+      body.classList.add("name-landed", "ui-in", "intro-done");
+      return;
+    }
+    startXray();
+  }
+
+  function runLoader(rawDt) {
+    const target = clamp((performance.now() - loadStart) / 1500, 0, fontsReady ? 1 : 0.92);
+    loadShown = Math.min(target, loadShown + rawDt * 1.6);
+    loaderCount.textContent = String(Math.round(loadShown * 100)).padStart(3, "0");
+    loaderLine.style.transform = `scaleX(${loadShown})`;
+    if (loadShown >= 1) {
+      S.mode = "waiting";
+      loader.classList.add("done");
+      setTimeout(introThrow, reduce ? 0 : 900);
+    }
+  }
+
   /* ---------- loop ---------- */
   function tick(now) {
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const rawDt = Math.max(0, (now - last) / 1000);
+    const dt = Math.min(0.033, rawDt);
     last = now;
     time += dt;
     const t = clamp((now - S.t0) / S.dur, 0, 1);
 
+    updateXray(now);
+
     switch (S.mode) {
-      case "intro": {
-        const e = easeInOut(t);
-        S.q.slerpQuaternions(S.from, S.to, e);
-        S.y = lerp(-0.5, 0, easeOut(t));
-        S.light = easeInOut(clamp(t * 1.2, 0, 1));
-        if (t >= 1) { S.mode = "idle"; S.q.copy(S.to); showInfo(0); }
+      case "loading":
+        runLoader(rawDt);
+        break;
+      case "hold":
+        break; // the hand carries the die (updateXray)
+      case "air":
+        physics(dt, now);
+        basePos.copy(B.p);
+        break;
+      case "present": {
+        // rises from the floor, turns its result towards you, settles into the float
+        const lift = easeInOutSine(clamp(t / 0.85, 0, 1));
+        const turn = easeInOut(clamp((t - 0.12) / 0.88, 0, 1));
+        S.q.slerpQuaternions(S.from, S.to, turn);
+        basePos.set(lerp(S.p0.x, 0, lift), lerp(S.p0.y, 0, lift), lerp(S.p0.z, 0, lift));
+        // the text comes back while the object is still rising
+        if (t >= 0.45 && !S.shown) { S.shown = true; showInfo(S.target); }
+        if (t >= 1) {
+          S.q.copy(S.to);
+          S.mode = "idle";
+          S.y = 0;
+        }
         break;
       }
       case "turn":
@@ -815,26 +1474,26 @@
           S.q.copy(S.to);
           S.y = 0;
           S.mode = "idle";
-          outlinePulse = 0.3;
+          outlinePulse = 0.25;
           showInfo(S.target);
         }
+        basePos.set(0, S.y, 0);
         break;
       }
-      case "air":
-        physics(dt, now);
-        break;
       case "drag":
         S.y = damp(S.y, 0.2, 8, dt);
+        basePos.set(0, S.y, 0);
         break;
       case "enter": {
         const e = easeInOut(t);
         S.camZ = lerp(S.camFrom, S.camTo, e);
-        S.flash = smooth(0.55, 0.92, t) * 0.55;
+        S.flash = 0;
         if (t > 0.78 && !pageOpened) {
           pageOpened = true;
           openPage(projectHTML(S.active), "project", `FACE ${pad(S.active)} / 06`);
         }
         if (t >= 1) S.mode = "project";
+        basePos.set(0, 0, 0);
         break;
       }
       case "project":
@@ -845,48 +1504,59 @@
         S.camZ = lerp(S.camFrom, S.camTo, e);
         S.flash = 0;
         if (t >= 1) { S.mode = "idle"; S.camZ = baseZ; showInfo(S.active); }
+        basePos.set(0, 0, 0);
         break;
       }
+      case "idle":
+        basePos.set(0, S.y, 0);
+        break;
     }
 
-    // composition: die slides aside to make room for the reveal
-    const showing = hasInfo && S.mode === "idle";
-    const tx = S.mode === "enter" || S.mode === "project" ? 0 : showing && isWide() ? 1.45 : 0;
-    const ty = showing && !isWide() ? 0.75 : 0;
-    dieX = damp(dieX, tx, 3.2, dt);
-    dieY = damp(dieY, ty, 3.2, dt);
+    // composition: the object slides aside to make room for the reveal
+    const showing = hasInfo && (S.mode === "idle" || S.mode === "present");
+    const tx = ["enter", "project"].includes(S.mode) ? 0 : showing && isWide() ? 1.45 : 0;
+    const ty = showing && !isWide() ? (camera.aspect < 0.8 ? 0.95 : 0.5) : 0;
+    dieX = damp(dieX, tx, 3.6, dt);
+    dieY = damp(dieY, ty, 3.6, dt);
 
     // idle: weightless float, barely breathing
-    wobAmp = damp(wobAmp, S.mode === "idle" && !reduce ? 1 : 0, 2, dt);
-    euler.set(Math.sin(time * 0.55) * 0.03 * wobAmp, Math.sin(time * 0.42) * 0.05 * wobAmp, 0);
+    wobAmp = damp(wobAmp, S.mode === "idle" && !reduce ? 1 : 0, 1.5, dt);
+    euler.set(Math.sin(time * 0.55) * 0.03 * wobAmp, Math.sin(time * 0.42) * 0.05 * wobAmp, 0, "XYZ");
     wobQ.setFromEuler(euler);
     die.quaternion.copy(wobQ).multiply(S.q);
     const bob = Math.sin(time * 0.9) * 0.05 * wobAmp;
-    pivot.position.set(dieX, S.y + bob + dieY, 0);
+    pivot.position.set(basePos.x + dieX, basePos.y + bob + dieY, basePos.z);
 
-    // light & materials
-    key.intensity = LIGHT.key * S.light;
-    rim.intensity = LIGHT.rim * S.light;
+    // reflection
+    pivot.updateMatrixWorld(true);
+    mirror.visible = pivot.visible;
+    mirror.matrix.multiplyMatrices(reflectM, die.matrixWorld);
+    mirror.matrixWorldNeedsUpdate = true;
+
+    // materials
     materials.forEach((m) => {
-      m.userData.g = damp(m.userData.g, m.userData.target, 3, dt);
-      m.emissiveIntensity = m.userData.g * S.light;
-      m.envMapIntensity = S.light;
+      const u = m.userData;
+      u.g = damp(u.g, u.target, 3, dt);
+      u.dim = damp(u.dim, u.dimTarget, 2.4, dt);
+      m.emissiveIntensity = u.g;
+      m.color.setScalar(u.dim);
+      m.envMapIntensity = 0.25 + 0.75 * u.dim;
+      m.clearcoat = 0.55 * u.dim;
     });
     outlinePulse = damp(outlinePulse, 0, 2.2, dt);
-    const hoverRim = hovering && (S.mode === "idle" || S.mode === "drag") ? 0.12 : 0;
-    outlineMat.opacity = damp(outlineMat.opacity, Math.max(hoverRim, outlinePulse) * S.light, 6, dt);
+    const hoverRim = hovering && (S.mode === "idle" || S.mode === "drag") ? 0.1 : 0;
+    outlineMat.opacity = damp(outlineMat.opacity, Math.max(hoverRim, outlinePulse), 6, dt);
 
-    // shadow reacts to height
-    const hgt = Math.max(0, S.y);
-    shadow.position.x = dieX;
-    shadow.position.y = -1.7 + dieY;
-    shadow.scale.setScalar(1 + hgt * 0.35);
-    shadowMat.opacity = 0.75 * S.light / (1 + hgt * 1.3);
-    floorLine.position.y = -1.72 + dieY;
-    floorLineMat.opacity = 0.07 * S.light;
+    poolMat.opacity = damp(poolMat.opacity, poolTarget, 1.6, dt);
+
+    // contact shadow follows the body and softens with height
+    const hgt = Math.max(0, pivot.position.y - REST_Y);
+    blob.position.set(pivot.position.x, FLOOR_Y + 0.004, pivot.position.z);
+    blob.scale.setScalar(1.05 + hgt * 0.35);
+    blobMat.opacity = pivot.visible ? 0.7 / (1 + hgt * 1.4) : 0;
 
     // camera
-    shake = damp(shake, 0, 7, dt);
+    shake = damp(shake, 0, 8, dt);
     camera.position.set(
       (Math.random() - 0.5) * shake,
       lerp(CAM_Y, 0, clamp((baseZ - S.camZ) / (baseZ - 3.3), 0, 1)) + (Math.random() - 0.5) * shake,
@@ -900,12 +1570,5 @@
     requestAnimationFrame(tick);
   }
 
-  /* ---------- intro ---------- */
-  S.from.setFromEuler(new THREE.Euler(-0.9, 2.4, 0.5));
-  S.to.copy(FACES[PROJECT_FACE[0]].q);
-  S.q.copy(S.from);
-  S.t0 = performance.now() + 250;
-  S.dur = reduce ? 600 : 3600;
-  requestAnimationFrame(() => body.classList.add("ready"));
   requestAnimationFrame(tick);
 })();

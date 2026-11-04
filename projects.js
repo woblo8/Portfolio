@@ -11,14 +11,19 @@
      projects/01-safelife/video/video.mp4 → vídeo arriba del todo
    Formatos: jpg, jpeg, png, webp, gif. Lo que no exista no se muestra.
    (images: [...] solo si quieres rutas manuales en vez de 01, 02…)
+
+   AMPLIACIÓN: al pulsar una imagen se abre en grande con
+   indicador 01 / 04. Pies de foto opcionales, en el mismo orden:
+     captions: ["Vista frontal, luz apagada.", "Detalle de la retícula.", …]
    ============================================================ */
 
 window.PORTFOLIO = {
-  name: "Carlos Infanzón",
+  name: "Carlos Infanzón Civantos",
   role: "Product Design / 3D / Visual Systems",
   tagline: "Seis caras. Seis entradas.",
   email: "woblo.original@gmail.com",
-  linkedin: "https://www.linkedin.com/",
+  linkedin: "https://www.linkedin.com/in/carlos-infanzon-civantos",
+  contactTitle: "Let’s build something\nworth remembering.",
   cv: "",   // ← mete tu CV en assets/ y pon aquí "assets/cv.pdf"
   aboutTitle: "Objects, systems, worlds.",
   about:
@@ -46,31 +51,42 @@ window.PROJECTS = [
     images: [],
   },
   {
-    title: "TON618",
+    title: "TON 618",
     folder: "projects/02-ton618",
-    category: "Experimental",
-    year: "2025",
-    role: "Concept & visuals",
-    tags: ["Concept", "Visual", "Experimental"],
+    category: "Lighting Product",
+    year: "2024",
+    role: "Product design · 3D",
+    tags: ["Product", "Lighting", "3D"],
     motif: "rings",
-    short: "Exploración visual sobre la escala, la masa y el vacío.",
-    intro: "Una pieza conceptual que convierte una idea imposible de abarcar en un lenguaje visual.",
+    short: "Una lámpara eclipse: la luz rodea la esfera como un horizonte de eventos.",
+    intro: "Un faro del pasado, convertido en objeto.",
     sections: [
-      { heading: "Concept", text: "La idea central del proyecto y por qué importa." },
-      { heading: "Execution", text: "Técnicas, herramientas y decisiones visuales." },
+      { heading: "Concept", text: "TON 618 es un quásar a miles de millones de años luz: brilla con una potencia de unos 10⁴⁰ W, cien billones de veces la energía del Sol. La lámpara traduce esa escala imposible a un objeto doméstico." },
+      { heading: "Form", text: "Una esfera negra, un anillo horizontal y una carcasa perforada. Tres piezas, un solo gesto: el eclipse." },
+      { heading: "Light", text: "Al encenderse, la luz envuelve la esfera y escapa por la retícula de perforaciones. Suave y ambiental, crea un efecto óptico que parece desafiar la gravedad." },
+      { heading: "Construction", text: "Dos mitades simétricas que se ensamblan sobre el anillo central. La vista explosionada y las mallas muestran cómo se construye el objeto." },
+    ],
+    captions: [
+      "Encendida. La luz rodea la esfera como un horizonte de eventos.",
+      "Carcasa perforada: la retícula que deja escapar la luz.",
+      "Detalle de las perforaciones.",
+      "Vista explosionada: mitades, anillos y esfera.",
+      "Perfil: la luz corta el objeto en vertical.",
+      "Plano en alzado.",
+      "Malla de las dos mitades de la carcasa.",
     ],
     images: [],
   },
   {
     title: "SIDE A",
     folder: "projects/03-side-a",
-    category: "Digital",
-    year: "2024",
+    category: "Digital Product",
+    year: "2026",
     role: "UI / Product thinking",
     tags: ["UI", "Product thinking", "Figma"],
     motif: "grid",
-    short: "Producto digital: arquitectura, interfaz y sistema de diseño.",
-    intro: "Del flujo de usuario al sistema de componentes, con foco en claridad y ritmo.",
+    short: "Music designed around intention, not endless choice.",
+    intro: "Play like you’ve already made it.",
     sections: [
       { heading: "Challenge", text: "Qué había que resolver y para quién." },
       { heading: "System", text: "Arquitectura de información, componentes y tokens." },

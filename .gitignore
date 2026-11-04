@@ -1,0 +1,10 @@
+# herramientas locales
+.claude/
+node_modules/
+.vercel/
+
+# sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+*.log
