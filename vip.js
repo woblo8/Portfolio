@@ -41,7 +41,7 @@
         </header>
         <div class="vt3-tip" aria-live="polite"></div>
         <footer class="vt3-foot">
-          <span class="vt3-hint">${T("Arrastra para rodear la mesa · Elige una casilla", "Drag to walk around the table · Pick a box")}</span>
+          <span class="vt3-hint">${T("Arrastra para rodear la mesa · Lanza el dado o elige una casilla", "Drag to walk around the table · Roll the die or pick a box")}</span>
           <a class="vt-cta" href="mailto:${esc(site.email)}?subject=${subject}">${T("Hablemos", "Let’s talk")} <span>→</span></a>
         </footer>
         <div class="vt3-note" role="dialog" aria-hidden="true">
@@ -384,6 +384,87 @@
       scene.add(m);
     });
 
+    /* ---------- the die: black lacquer, gold pips sunk into each face ---------- */
+    const DS = 0.3; // edge length
+    const dieGeo = (() => {
+      const g = new THREE.BoxGeometry(1, 1, 1, 10, 10, 10), p = g.attributes.position;
+      const r = 0.14, inner = 0.5 - r, v = new THREE.Vector3(), c = new THREE.Vector3();
+      for (let i = 0; i < p.count; i++) {
+        v.fromBufferAttribute(p, i);
+        c.set(Math.max(-inner, Math.min(inner, v.x)), Math.max(-inner, Math.min(inner, v.y)), Math.max(-inner, Math.min(inner, v.z)));
+        v.sub(c).normalize().multiplyScalar(r).add(c);
+        p.setXYZ(i, v.x * DS, v.y * DS, v.z * DS);
+      }
+      g.computeVertexNormals();
+      return g;
+    })();
+    const PIPS = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]],
+      5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
+    const face = (n) => {
+      const S = 512, c = mk(S, S), x = c.getContext("2d");
+      x.fillStyle = "#0a0a0b"; x.fillRect(0, 0, S, S);
+      PIPS[n].forEach(([u, w]) => {
+        const cx = S / 2 + u * 128, cy = S / 2 + w * 128, rr = n === 1 ? 62 : 44;
+        // a sunken cup: dark rim, gold floor, a lip of light on the lower edge
+        const g = x.createRadialGradient(cx - rr * 0.25, cy - rr * 0.3, rr * 0.1, cx, cy, rr);
+        g.addColorStop(0, "#f3d79a"); g.addColorStop(0.7, "#b8913f"); g.addColorStop(1, "#3b2a10");
+        x.fillStyle = g;
+        x.beginPath(); x.arc(cx, cy, rr, 0, Math.PI * 2); x.fill();
+      });
+      return canvasTex(c);
+    };
+    // BoxGeometry faces: +x, −x, +y, −y, +z, −z — opposite faces add up to seven
+    const FACE_VAL = [3, 4, 1, 6, 2, 5];
+    const FACE_N = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].map((a) => new THREE.Vector3(...a));
+    const die = new THREE.Mesh(dieGeo, FACE_VAL.map((n) => new THREE.MeshPhysicalMaterial({
+      map: face(n), roughness: 0.22, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 0.6,
+    })));
+    die.castShadow = true;
+    const UP = new THREE.Vector3(0, 1, 0);
+    const restQ = (val, yaw) => {
+      const q = new THREE.Quaternion().setFromUnitVectors(FACE_N[FACE_VAL.indexOf(val)], UP);
+      return new THREE.Quaternion().setFromAxisAngle(UP, yaw).multiply(q);
+    };
+    die.position.set(0.95, DS / 2, -0.32);
+    die.quaternion.copy(restQ(5, 0.5));
+    scene.add(die);
+    const roll = { on: false, t: 0, dur: 1.7, p0: new THREE.Vector3(), p1: new THREE.Vector3(), q1: new THREE.Quaternion(), axis: new THREE.Vector3(), spins: 0, val: 0 };
+    let chosen = -1;
+    const WORDS = T(["Uno", "Dos", "Tres", "Cuatro", "Cinco", "Seis"], ["One", "Two", "Three", "Four", "Five", "Six"]);
+    function throwDie() {
+      if (roll.on) return;
+      chosen = -1;
+      roll.on = true; roll.t = 0;
+      roll.p0.copy(die.position);
+      // land somewhere free: between the monogram and the bets
+      let x, z;
+      do { x = (Math.random() * 2 - 1) * 1.5; z = -0.55 + Math.random() * 0.45; } while (Math.abs(x - die.position.x) < 0.6);
+      roll.p1.set(x, DS / 2, z);
+      roll.val = 1 + Math.floor(Math.random() * 6);
+      roll.q1.copy(restQ(roll.val, Math.random() * Math.PI * 2));
+      roll.axis.set(z - roll.p0.z, 0, -(x - roll.p0.x)).normalize(); // it tumbles in the direction it travels
+      if (roll.axis.lengthSq() < 0.01) roll.axis.set(1, 0, 0);
+      roll.spins = 2 + Math.floor(Math.random() * 2);
+      setTip("Rien ne va plus.");
+    }
+    const tmpQ = new THREE.Quaternion();
+    function stepDie(dt) {
+      if (!roll.on) return;
+      roll.t = Math.min(1, roll.t + dt / roll.dur);
+      const t = roll.t, e = 1 - Math.pow(1 - t, 3);
+      die.position.lerpVectors(roll.p0, roll.p1, e);
+      // three bounces, each lower than the last
+      die.position.y = DS / 2 + Math.abs(Math.sin(t * Math.PI * 3.5)) * 0.55 * Math.pow(1 - t, 2.2);
+      tmpQ.setFromAxisAngle(roll.axis, (1 - e) * roll.spins * Math.PI * 2);
+      die.quaternion.copy(tmpQ).multiply(roll.q1);
+      if (t >= 1) {
+        roll.on = false;
+        chosen = (roll.val - 1) % boxes.length;
+        const b = boxes[chosen];
+        setTip(`${WORDS[roll.val - 1]}. ${b.title} — ${T("apostar", "place your bet")} →`);
+      }
+    }
+
     /* ---------- camera: the height of a die, walking around ---------- */
     const view = { th: Math.PI * 0.5, vth: 0, h: 1.25, x0: 0, y0: 0, drag: false, moved: 0 };
     let rx = 0, ry = 0, raf = 0, hoverBox = -1;
@@ -401,6 +482,7 @@
       const r = canvas.getBoundingClientRect();
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
+      if (ray.intersectObject(die, false).length) return { die: true };
       if (ray.intersectObject(card, false).length) return { card: true };
       const hit = ray.intersectObject(felt, false)[0];
       if (!hit) return {};
@@ -425,12 +507,16 @@
         view.x0 = e.clientX; view.y0 = e.clientY;
         return;
       }
-      if (e.target !== canvas) { hoverBox = -1; setTip(""); return; }
+      if (roll.on) return;
+      if (e.target !== canvas) { hoverBox = -1; if (chosen < 0) setTip(""); return; }
       const p = pick(e);
       hoverBox = p.box != null ? p.box : -1;
-      canvas.classList.toggle("is-link", hoverBox >= 0 || !!p.card);
+      canvas.classList.toggle("is-link", hoverBox >= 0 || !!p.card || !!p.die);
       if (hoverBox >= 0) { const b = boxes[hoverBox]; setTip(`${b.n} · ${b.title} — ${T("apostar", "place your bet")} →`); }
-      else setTip(p.card ? T("Una nota para usted", "A note for you") : "");
+      else if (p.die) setTip(T("Lance el dado", "Roll the die"));
+      else if (p.card) setTip(T("Una nota para usted", "A note for you"));
+      else if (chosen >= 0) setTip(`${boxes[chosen].title} — ${T("apostar", "place your bet")} →`);
+      else setTip("");
     };
     const up = (e) => {
       if (!view.drag) return;
@@ -438,6 +524,7 @@
       canvas.classList.remove("is-drag");
       if (view.moved > 6) return;
       const p = pick(e);
+      if (p.die) { throwDie(); return; }
       if (p.card) { noteEl.classList.add("on"); noteEl.setAttribute("aria-hidden", "false"); return; }
       if (p.box != null && p.box >= 0) {
         const btn = vt.querySelector(`[data-next="${boxes[p.box].i}"]`);
@@ -461,12 +548,16 @@
       const h = view.h - ry * 0.12;
       camera.position.set(Math.cos(th) * R, h, Math.sin(th) * R * 0.86);
       camera.lookAt(target);
-      glows.forEach((g, k) => { g.material.opacity += ((k === hoverBox ? 0.16 : 0) - g.material.opacity) * Math.min(1, dt * 8); });
+      stepDie(dt);
+      glows.forEach((g, k) => {
+        const want = k === hoverBox ? 0.16 : k === chosen ? 0.1 + Math.sin(now / 260) * 0.04 : 0;
+        g.material.opacity += (want - g.material.opacity) * Math.min(1, dt * 8);
+      });
       renderer.render(scene, camera);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    window.__vt = { scene, camera, view, renderer };
+    window.__vt = { scene, camera, view, renderer, throwDie, roll };
 
     return () => {
       disposed = true;
