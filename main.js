@@ -57,6 +57,30 @@
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.VSMShadowMap;
 
+  /* ---------- lite mode: a slow device gets a lighter picture, never a slow one ----------
+     Starts lite on obviously small hardware; otherwise watches the frame time and steps
+     down once if it stays slow. The private table reads the same flag. */
+  const PERF = window.PERF = (() => {
+    const cores = navigator.hardwareConcurrency || 8, mem = navigator.deviceMemory || 8;
+    const forced = /[?&]lite(=|&|$)/.test(location.search); // ?lite forces it, for testing
+    const p = { lite: forced || cores <= 4 || mem <= 3, subs: [], samples: [], since: 0 };
+    p.on = (fn) => { p.subs.push(fn); if (p.lite) fn(); };
+    p.goLite = () => { if (p.lite) return; p.lite = true; document.documentElement.classList.add("lite"); p.subs.forEach((fn) => fn()); };
+    // feed with raw frame times; ignores the first seconds and hidden tabs
+    p.sample = (ms, now) => {
+      if (p.lite || document.hidden) return;
+      if (!p.since) p.since = now + 2500;
+      if (now < p.since) return;
+      p.samples.push(ms);
+      if (p.samples.length < 90) return;
+      const sorted = p.samples.slice().sort((a, b) => a - b), median = sorted[45];
+      p.samples.length = 0;
+      if (median > 30) p.goLite(); // under ~33 fps for a sustained stretch
+    };
+    if (p.lite) document.documentElement.classList.add("lite");
+    return p;
+  })();
+
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x050506); // written straight to screen
   const BG_LIN = new THREE.Color(0x050506).convertSRGBToLinear(); // for materials (encoded on output)
@@ -282,23 +306,26 @@
   }
 
   const design = mkCanvas();
-  const heightC = mkCanvas();
+  // the engraving relief is computed at half size: four times less work, and a
+  // soft normal map is all an engraving needs
+  const NTEX = TEX / 2;
+  const heightC = mkCanvas(NTEX);
 
   // Engraving: height = -design → tangent-space normal map
   function engraveNormals(out) {
-    const W = TEX;
+    const W = NTEX;
     const hx = heightC.getContext("2d", { willReadFrequently: true });
     hx.filter = "none";
     hx.fillStyle = "#000";
     hx.fillRect(0, 0, W, W);
-    hx.filter = "blur(1.2px)";
-    hx.drawImage(design, 0, 0);
+    hx.filter = "blur(0.6px)";
+    hx.drawImage(design, 0, 0, W, W);
     hx.filter = "none";
     const src = hx.getImageData(0, 0, W, W).data;
     const ox = out.getContext("2d");
     const img = ox.createImageData(W, W);
     const d = img.data;
-    const S = 2.4;
+    const S = 1.5;
     for (let y = 0; y < W; y++) {
       const y0 = (y > 0 ? y - 1 : y) * W, y1 = (y < W - 1 ? y + 1 : y) * W, yr = y * W;
       for (let x = 0; x < W; x++) {
@@ -376,7 +403,7 @@
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const materials = FACES.map((f, fi) => {
     const pi = FACE_PROJECT[fi];
-    const alb = mkCanvas(), glow = mkCanvas(), nrm = mkCanvas(), rgh = mkCanvas();
+    const alb = mkCanvas(), glow = mkCanvas(), nrm = mkCanvas(NTEX), rgh = mkCanvas();
     const tex = (c, srgb) => {
       const t = new THREE.CanvasTexture(c);
       if (srgb) t.encoding = THREE.sRGBEncoding;
@@ -570,6 +597,14 @@
     wallX = clamp(halfW - 1.3, 0.6, 3.4);
   }
   addEventListener("resize", layout);
+  PERF.on(() => {
+    renderer.setPixelRatio(Math.min(PR, 1.25));
+    renderer.shadowMap.type = THREE.PCFShadowMap; // VSM blurs every frame; PCF is cheaper
+    scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => (m.needsUpdate = true)); });
+    if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; }
+    key.shadow.mapSize.set(512, 512);
+    layout();
+  });
   layout();
 
   /* ---------- DOM refs ---------- */
@@ -1919,6 +1954,7 @@
   /* ---------- loop ---------- */
   function tick(now) {
     const rawDt = Math.max(0, (now - last) / 1000);
+    PERF.sample(rawDt * 1000, now);
     const dt = Math.min(0.033, rawDt);
     last = now;
     time += dt;

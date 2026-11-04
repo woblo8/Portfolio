@@ -343,9 +343,10 @@
     const tip = vt.querySelector(".vt3-tip");
     const noteEl = vt.querySelector(".vt3-note");
     const small = innerWidth < 860;
+    const lite = !!(window.PERF && window.PERF.lite); // slow device: no lens effects, fewer particles
     let disposed = false;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, small ? 1.6 : 2));
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, lite ? 1.25 : small ? 1.6 : 2));
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
@@ -385,7 +386,7 @@
     lamp.position.set(0, LAMP_Y - 0.2, 0);
     lamp.target.position.set(0, 0, 0);
     lamp.castShadow = true;
-    lamp.shadow.mapSize.set(small ? 1024 : 2048, small ? 1024 : 2048);
+    lamp.shadow.mapSize.set(lite ? 512 : small ? 1024 : 2048, lite ? 512 : small ? 1024 : 2048);
     lamp.shadow.bias = -0.0004;
     lamp.shadow.camera.near = 0.5;
     lamp.shadow.camera.far = 8;
@@ -442,7 +443,7 @@
     // Rendered in half float so the highlights keep their energy; tone mapping
     // and sRGB are applied in the last pass, since render targets skip them.
     let composer = null, bloom = null, bokeh = null;
-    loadChain(POST_URLS).then((ok) => {
+    (lite ? Promise.resolve(false) : loadChain(POST_URLS)).then((ok) => {
       if (!ok || disposed || !THREE.EffectComposer || !THREE.UnrealBloomPass) return;
       const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
       composer = new THREE.EffectComposer(renderer, rt);
@@ -867,7 +868,7 @@
     scene.add(dieAO);
 
     // dust hanging in the lamp's beam
-    const DUST = small ? 160 : 320;
+    const DUST = lite ? 60 : small ? 160 : 320;
     const dustPos = new Float32Array(DUST * 3), dustSeed = new Float32Array(DUST);
     for (let k = 0; k < DUST; k++) {
       // only inside the cone of the lamp, where light would catch it
@@ -889,7 +890,7 @@
     }));
     scene.add(dust);
     // smoke: rises from the ember, curls, leans towards the warm air under the lamp
-    const SMOKE = small ? 110 : 220;
+    const SMOKE = lite ? 50 : small ? 110 : 220;
     const smokeAge = new Float32Array(SMOKE), smokeSeed = new Float32Array(SMOKE), smokePos = new Float32Array(SMOKE * 3);
     for (let k = 0; k < SMOKE; k++) { smokeAge[k] = k / SMOKE; smokeSeed[k] = Math.random() * 100; }
     const smokeGeo = new THREE.BufferGeometry();
@@ -1137,7 +1138,7 @@
       hoverBox = p.box != null ? p.box : -1;
       canvas.classList.toggle("is-link", hoverBox >= 0 || !!p.card || !!p.die);
       if (hoverBox >= 0) { const b = boxes[hoverBox]; setTip(`${b.n} · ${b.title} — ${T("apostar", "place your bet")} →`); }
-      else if (p.die) setTip(T("Lance el dado", "Roll the die"));
+      else if (p.die) setTip(T("Lanza el dado", "Roll the die"));
       else if (p.card) setTip(T("Una nota para usted", "A note for you"));
       else if (chosen >= 0) setTip(`${boxes[chosen].title} — ${T("apostar", "place your bet")} →`);
       else setTip("");
@@ -1165,8 +1166,14 @@
     const R = portrait ? 8.4 : small ? 6.6 : 7.4;
     let last = performance.now();
     const target = new THREE.Vector3(0, portrait ? 0.15 : small ? -0.1 : 0.32, 0);
+    const slow = { n: 0, t: performance.now() }; // judged after the first 4 s at the table
     const frame = (now) => {
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const raw = now - last;
+      const dt = Math.min(0.05, raw / 1000); last = now;
+      if (composer && now > 4000 + slow.t) {
+        slow.n = raw > 34 ? slow.n + 1 : Math.max(0, slow.n - 1);
+        if (slow.n > 75) { composer = null; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.25)); resize(); if (window.PERF) window.PERF.goLite(); }
+      }
       if (!view.drag) { view.vth *= Math.pow(0.04, dt); view.th += view.vth + dt * 0.045; }
       const th = view.th + rx * 0.08;
       const h = view.h - ry * 0.12;
@@ -1273,11 +1280,11 @@
       const h = 64 + head.length * 22 + 24 + rows.length * rowH + 24 + foot.length * 20 + 40;
       const c = document.createElement("canvas"); c.width = w * S; c.height = h * S;
       const x = c.getContext("2d"); x.scale(S, S);
-      x.fillStyle = "#f2efe8"; x.fillRect(0, 0, w, h);
+      x.fillStyle = "#ecebe7"; x.fillRect(0, 0, w, h); // same paper as the site's receipt
       // the torn bottom edge
       x.fillStyle = "#050506";
       for (let i = 0; i < w; i += 12) { x.beginPath(); x.moveTo(i, h); x.lineTo(i + 6, h - 6); x.lineTo(i + 12, h); x.fill(); }
-      x.fillStyle = "#111"; x.textBaseline = "middle";
+      x.fillStyle = "#050506"; x.textBaseline = "middle";
       const mono = (sz, wgt = 500) => `${wgt} ${sz}px "Geist Mono", ui-monospace, monospace`;
       const rule = (yy) => { x.save(); x.strokeStyle = "rgba(0,0,0,0.35)"; x.setLineDash([3, 3]); x.beginPath(); x.moveTo(24, yy); x.lineTo(w - 24, yy); x.stroke(); x.restore(); };
       let y = 40;
@@ -1288,7 +1295,7 @@
       rows.forEach((r) => {
         if (!r) { rule(y - 6); y += 6; return; }
         x.textAlign = "left"; x.fillStyle = "#6b6b70"; x.fillText(r[0], 24, y);
-        x.textAlign = "right"; x.fillStyle = "#111"; x.fillText(r[1], w - 24, y);
+        x.textAlign = "right"; x.fillStyle = "#050506"; x.fillText(r[1], w - 24, y);
         y += rowH;
       });
       rule(y); y += 22;

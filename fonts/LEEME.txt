@@ -3,3 +3,4 @@ Mete aquí los archivos de Neue Haas Grotesk (con licencia) con estos nombres:
   NeueHaasGrotesk-Medium.woff2  (peso 500)
   NeueHaasGrotesk-Bold.woff2    (peso 600)
 Mientras no estén, la web usa Inter Tight.
+Cuando los pongas, descomenta las tres reglas @font-face al principio de styles.css.

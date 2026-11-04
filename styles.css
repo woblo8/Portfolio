@@ -4,10 +4,14 @@
    (o cambia las rutas). Si no existen, se usa Inter Tight.
    Si la usas vía Adobe Fonts, añade su <link> en index.html y
    pon aquí el nombre de familia que te indique Adobe.
+   Las reglas están comentadas mientras /fonts esté vacío: si no,
+   el navegador pide archivos que no existen (errores 404).
    ------------------------------------------------------------ */
+/*
 @font-face { font-family: "Neue Haas Grotesk"; src: url("fonts/NeueHaasGrotesk-Roman.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Neue Haas Grotesk"; src: url("fonts/NeueHaasGrotesk-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
 @font-face { font-family: "Neue Haas Grotesk"; src: url("fonts/NeueHaasGrotesk-Bold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+*/
 
 :root {
   --black: #050506;
@@ -511,3 +515,6 @@ body.xray-on .hint, body.xray-on .index { opacity: 0 !important; transition-dela
   box-shadow: 0 0 22px rgba(255, 255, 255, 0.22); transition: box-shadow 0.4s, transform 0.4s var(--ease);
 }
 .cta:hover { box-shadow: 0 0 34px rgba(255, 255, 255, 0.45); transform: translateY(-2px); }
+
+/* lite mode (slow device): keep the look, drop the moving film grain */
+html.lite .grain, html.lite .vt3-grain { animation: none; }
