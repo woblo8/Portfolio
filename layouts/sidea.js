@@ -41,7 +41,6 @@
       <div><dt>Discipline</dt><dd>${p.tags.map(esc).join(" / ")}</dd></div>
       <div><dt>Year</dt><dd>${esc(p.year)}</dd></div>
     </dl>
-    <div class="sa-cue"><span>Scroll to play</span><i></i></div>
   </section>
 
   <section class="sa-lyrics" data-sa="lyrics" ${T()}>

@@ -747,6 +747,8 @@
   }
 
   let io, settleTimer, layoutCleanup = null;
+  const scrollCueLabel = $("#scrollCue span");
+  page.addEventListener("scroll", () => page.classList.toggle("scrolled", page.scrollTop > 60), { passive: true });
   function stopLayout() { if (layoutCleanup) { layoutCleanup(); layoutCleanup = null; } }
   function openPage(html, kind, tag) {
     stopLayout();
@@ -758,7 +760,10 @@
     const lp = kind === "project" ? P[S.active] : null;
     const L = lp && lp.layout && window.LAYOUTS && window.LAYOUTS[lp.layout];
     page.classList.toggle("has-layout", !!L);
+    page.classList.remove("scrolled");
+    scrollCueLabel.textContent = L ? "Scroll to play" : "Scroll";
     if (L) layoutCleanup = L.init(page, pageInner, { project: lp });
+    if (kind === "about" && window.initPortrait) layoutCleanup = window.initPortrait(pageInner.querySelector(".about-portrait"));
     pageTag.textContent = tag || "";
     page.classList.add("open");
     page.setAttribute("aria-hidden", "false");
@@ -911,13 +916,22 @@
   }
 
   function aboutHTML() {
+    const portrait = SITE.portrait
+      ? `<figure class="about-portrait r" data-src="${esc(SITE.portrait)}" aria-label="${esc(SITE.name)}">
+          <canvas></canvas>
+          <figcaption><span>${esc(SITE.name)}</span><span class="about-hint">Hover to reveal</span></figcaption>
+        </figure>`
+      : "";
     return `
-      <header class="ph">
-        <div class="ph-code r"><b>About</b><span>/</span><span>${esc(SITE.name)}</span></div>
-        <h1 class="ph-title r">${esc(SITE.aboutTitle)}</h1>
-        <div class="neon-line r"></div>
-      </header>
-      <p class="lead r">${esc(SITE.about).replace(/\n/g, "<br>")}</p>
+      <section class="about">
+        <div class="about-text">
+          <div class="ph-code r"><b>About</b><span>/</span><span>${esc(SITE.name)}</span></div>
+          <h1 class="about-title r">${esc(SITE.aboutTitle)}</h1>
+          <div class="neon-line r"></div>
+          <p class="about-lead r">${esc(SITE.about).replace(/\n/g, "<br>")}</p>
+        </div>
+        ${portrait}
+      </section>
       <section class="block r"><h2>Disciplines</h2><p>${SITE.disciplines.map(esc).join("<br>")}</p></section>
       <section class="block r"><h2>Tools</h2><p>${SITE.tools.map(esc).join(" · ")}</p></section>`;
   }
@@ -926,7 +940,7 @@
     const rows = [
       SITE.email && `<a class="row r" href="mailto:${esc(SITE.email)}"><span>Email</span><strong>${esc(SITE.email)}</strong></a>`,
       SITE.linkedin && `<a class="row r" href="${esc(SITE.linkedin)}" target="_blank" rel="noopener"><span>LinkedIn</span><strong>Profile ↗</strong></a>`,
-      SITE.cv && `<a class="row r" href="${esc(SITE.cv)}" download><span>CV</span><strong>Download ↓</strong></a>`,
+      SITE.cv && `<a class="row r" href="${esc(SITE.cv)}" target="_blank" rel="noopener"><span>CV</span><strong>Open PDF ↗</strong></a>`,
     ].filter(Boolean).join("");
     const title = esc(SITE.contactTitle || "Let’s talk.").replace(/\n/g, "<br>");
     return `

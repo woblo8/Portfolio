@@ -24,7 +24,8 @@ window.PORTFOLIO = {
   email: "woblo.original@gmail.com",
   linkedin: "https://www.linkedin.com/in/carlos-infanzon-civantos",
   contactTitle: "Let’s build something\nworth remembering.",
-  cv: "",   // ← mete tu CV en assets/ y pon aquí "assets/cv.pdf"
+  cv: "assets/cv/Carlos-Infanzon-Civantos-CV.pdf",   // se abre en otra pestaña desde Contact
+  portrait: "assets/about/portrait.jpg",              // retrato de About (grabado en líneas)
   aboutTitle: "Objects, systems, worlds.",
   about:
     "Un dado, seis caras, ninguna al azar.\nLa ambición de abrir nuevas posibilidades. La precisión de darles forma.",
