@@ -27,122 +27,64 @@
 @keyframes vipSpin { to { transform: rotate(360deg); } }
 @keyframes vipBreath { 50% { box-shadow: inset 0 0 0 1.5px var(--gold), 0 0 24px rgba(216, 181, 111, 0.5), inset 0 0 14px rgba(216, 181, 111, 0.2); } }
 
-/* ---------- the table ---------- */
-.vt {
-  --lx: 50%; --ly: 30%;
-  position: relative; min-height: calc(100vh - 70px); margin: -20px calc(var(--gut) * -1) 0;
-  padding: 7vh var(--gut) 10vh; display: grid; justify-items: center; align-content: start; gap: 6vh;
-  isolation: isolate; overflow: visible;
+/* ---------- the table, in 3D ---------- */
+.page:has(.vt3) .scroll-cue { display: none; }
+.page:has(.vt3) .page-inner { max-width: none; padding: 0; }
+.page:has(.vt3) { overflow: hidden; }
+.vt3 { position: fixed; inset: 0; z-index: 0; }
+.vt3-gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.vt3-gl.is-drag { cursor: grabbing; }
+.vt3-gl.is-link { cursor: pointer; }
+html.has-cursor .vt3-gl { cursor: none; }
+/* the room: darkness at the edges so the table floats in the black of the site */
+.vt3-veil {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 75% 70% at 50% 58%, transparent 55%, rgba(5, 5, 6, 0.85) 100%),
+              linear-gradient(rgba(5, 5, 6, 0.9), transparent 22%);
 }
-/* the felt: a green oval that dissolves into the black of the room */
-.vt-felt {
-  position: absolute; z-index: -2; left: 50%; top: 52%; width: min(120vw, 1560px); aspect-ratio: 1000 / 560;
-  transform: translate(-50%, -50%);
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(ellipse 50% 50% at 50% 50%, #136443 0%, #0e5238 30%, #0a3d2a 52%, #062a1d 68%, rgba(5, 5, 6, 0) 74%);
-  background-size: 220px 220px, 100% 100%;
-  background-blend-mode: soft-light, normal;
-  -webkit-mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 75%);
-          mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 75%);
+.vt3-head {
+  position: absolute; top: clamp(70px, 11vh, 120px); left: 0; right: 0; text-align: center; pointer-events: none;
+  display: grid; justify-items: center; gap: 14px;
 }
-.vt-marks { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.vt-marks .m-rail { fill: none; stroke: var(--gold); stroke-width: 1.2; opacity: 0.55; filter: drop-shadow(0 0 4px rgba(216, 181, 111, 0.6)); vector-effect: non-scaling-stroke; }
-.vt-marks .m-rail2 { fill: none; stroke: var(--gold); stroke-width: 0.6; opacity: 0.25; vector-effect: non-scaling-stroke; }
-.vt-marks .m-line { stroke: var(--gold); stroke-width: 0.6; opacity: 0.2; vector-effect: non-scaling-stroke; }
-.vt-marks .m-arc { font-family: var(--mono); font-size: 10px; letter-spacing: 0.34em; fill: var(--gold); opacity: 0.5; }
-/* the lamp above the table: soft, it leans towards the guest */
-.vt-lamp {
-  position: absolute; z-index: -1; inset: 0; pointer-events: none; mix-blend-mode: screen;
-  background: radial-gradient(ellipse 38% 30% at var(--lx) var(--ly), rgba(255, 244, 214, 0.1), transparent 70%),
-              radial-gradient(ellipse 60% 40% at 50% 34%, rgba(255, 240, 200, 0.07), transparent 70%);
-  transition: background-position 0.6s;
-}
-
-.vt-plaque {
-  position: absolute; top: 2vh; right: var(--gut); display: grid; gap: 4px; justify-items: end;
-  padding: 10px 14px; border: 1px solid rgba(216, 181, 111, 0.5); border-radius: 3px;
-  box-shadow: 0 0 18px rgba(216, 181, 111, 0.12), inset 0 0 10px rgba(216, 181, 111, 0.06);
-  transform: rotate(-3deg);
-}
-.vt-plaque span { font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold); opacity: 0.7; }
-.vt-plaque b { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.22em; color: var(--gold-hi); text-shadow: 0 0 8px rgba(216, 181, 111, 0.6); }
-
-.vt-head { text-align: center; display: grid; justify-items: center; gap: 18px; margin-top: 4vh; }
 .vt-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); text-shadow: 0 0 10px rgba(216, 181, 111, 0.45); }
-.vt-head h1 { font-size: clamp(46px, 7.4vw, 124px); font-weight: 600; letter-spacing: -0.055em; line-height: 0.88; text-transform: uppercase; color: var(--bone); }
-.vt-head h1 em { font-style: normal; color: #fff; text-shadow: 0 0 22px rgba(255, 255, 255, 0.25); }
-.vt-head p { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(236, 235, 231, 0.7); }
-
-/* betting boxes printed on the felt */
-.vt-boxes { margin-top: 2vh; display: grid; grid-template-columns: repeat(3, minmax(0, 220px)); gap: 18px; }
-.vt-box {
-  position: relative; display: grid; gap: 8px; text-align: left; padding: 18px 18px 16px; min-height: 150px; align-content: start;
-  border: 1px solid rgba(216, 181, 111, 0.45); border-radius: 4px; background: rgba(4, 30, 20, 0.35);
-  color: var(--bone); transition: border-color 0.4s, box-shadow 0.4s, transform 0.5s var(--ease), background 0.4s;
+.vt3-head h1 { font-size: clamp(34px, 5.2vw, 84px); font-weight: 600; letter-spacing: -0.05em; line-height: 0.9; text-transform: uppercase; color: var(--bone); }
+.vt3-head h1 em { font-style: normal; color: #fff; text-shadow: 0 0 22px rgba(255, 255, 255, 0.22); }
+.vt3-tip {
+  position: absolute; left: 50%; bottom: 112px; transform: translate(-50%, 6px); opacity: 0; pointer-events: none;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold-hi);
+  text-shadow: 0 0 10px rgba(216, 181, 111, 0.6); transition: opacity 0.35s, transform 0.5s var(--ease); white-space: nowrap;
 }
-.vt-box .vt-n { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--gold); }
-.vt-box b { font-size: 24px; font-weight: 600; letter-spacing: -0.03em; text-transform: uppercase; line-height: 1; }
-.vt-box small { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(236, 235, 231, 0.55); }
-.vt-box .vt-go { margin-top: auto; padding-top: 12px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); opacity: 0; transform: translateX(-6px); transition: opacity 0.4s, transform 0.5s var(--ease); }
-.vt-box:hover { border-color: var(--gold-hi); background: rgba(6, 40, 27, 0.55); transform: translateY(-4px); box-shadow: 0 0 24px rgba(216, 181, 111, 0.22), inset 0 0 18px rgba(216, 181, 111, 0.08); }
-.vt-box:hover .vt-go { opacity: 1; transform: none; }
-
-.vt-bottom { margin-top: 11vh; display: flex; gap: 8vw; align-items: center; justify-content: center; flex-wrap: wrap; }
-
-/* the face-down card with a note */
-.vt-card { width: 168px; height: 236px; perspective: 900px; padding: 0; transform: rotate(-6deg); transition: transform 0.6s var(--ease); }
-.vt-card:hover { transform: rotate(-3deg) translateY(-6px); }
-.vt-card.is-open { transform: rotate(0deg) scale(1.35); z-index: 3; }
-.vt-card-in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.9s var(--ease); }
-.vt-card.is-open .vt-card-in { transform: rotateY(180deg); }
-.vt-card-back, .vt-card-front {
-  position: absolute; inset: 0; border-radius: 10px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  display: grid; padding: 16px; box-shadow: 0 18px 30px rgba(0, 0, 0, 0.55);
+.vt3-tip.on { opacity: 1; transform: translate(-50%, 0); }
+.vt3-foot {
+  position: absolute; left: 0; right: 0; bottom: clamp(24px, 5vh, 46px); display: grid; justify-items: center; gap: 16px;
 }
-.vt-card-back {
-  place-items: center; align-content: center; gap: 14px; color: var(--gold);
-  background: repeating-linear-gradient(45deg, rgba(216, 181, 111, 0.09) 0 1px, transparent 1px 9px), #0b0b0c;
-  box-shadow: inset 0 0 0 1px rgba(216, 181, 111, 0.55), inset 0 0 0 7px #0b0b0c, inset 0 0 0 8px rgba(216, 181, 111, 0.3), 0 18px 30px rgba(0, 0, 0, 0.55);
-}
-.vt-card-back i { font-style: normal; font-size: 40px; text-shadow: 0 0 14px rgba(216, 181, 111, 0.7); }
-.vt-card-back small { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; text-align: center; }
-.vt-card-front { transform: rotateY(180deg); background: #f3f1ea; color: #111; align-content: space-between; text-align: left; }
-.vt-card-front small { font-family: var(--mono); font-size: 7.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #8a6b32; }
-.vt-card-front p { font-size: 9.5px; line-height: 1.45; letter-spacing: -0.005em; }
-.vt-card-front em { font-style: normal; font-family: var(--mono); font-size: 8px; letter-spacing: 0.14em; color: #555; }
-
-/* the stack of chips with their name and the one bet that matters */
-.vt-stack { display: grid; justify-items: center; gap: 16px; }
-.vt-chips { position: relative; width: 74px; height: 74px; }
-.vt-chips i {
-  position: absolute; left: 0; bottom: calc(var(--k) * 6px); width: 74px; height: 74px; border-radius: 50%;
-  background: radial-gradient(circle, #0b0b0c 0 52%, transparent 53%), repeating-conic-gradient(var(--gold) 0 10deg, #0b0b0c 10deg 30deg);
-  box-shadow: inset 0 0 0 1.5px var(--gold), 0 2px 0 #3a2c12, 0 0 14px rgba(216, 181, 111, 0.25);
-  transform: rotateX(62deg); transform-origin: 50% 100%;
-}
-.vt-chips span {
-  position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%) rotateX(62deg); white-space: nowrap;
-  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.18em; color: var(--gold-hi); text-shadow: 0 0 6px rgba(216, 181, 111, 0.8);
-}
+.vt3-hint { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke); }
 .vt-cta {
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #0b0b0c; text-decoration: none;
   background: linear-gradient(180deg, var(--gold-hi), var(--gold)); padding: 13px 22px; border-radius: 99px;
   box-shadow: 0 0 22px rgba(216, 181, 111, 0.35); transition: box-shadow 0.4s, transform 0.4s var(--ease);
 }
 .vt-cta:hover { box-shadow: 0 0 34px rgba(216, 181, 111, 0.6); transform: translateY(-2px); }
-.vt-stack > small { font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); opacity: 0.6; }
-
+/* the note inside the card */
+.vt3-note {
+  position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; padding: 16px;
+  background: rgba(5, 5, 6, 0.6); backdrop-filter: blur(6px); opacity: 0; visibility: hidden;
+  transition: opacity 0.5s var(--ease), visibility 0s linear 0.5s;
+}
+.vt3-note.on { opacity: 1; visibility: visible; transition: opacity 0.5s var(--ease), visibility 0s; }
+.vt3-note-card {
+  width: min(360px, 100%); aspect-ratio: 5 / 7; background: #f3f1ea; color: #111; border-radius: 14px; padding: 28px;
+  display: grid; align-content: space-between; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(216, 181, 111, 0.5);
+  transform: rotateY(90deg) scale(0.9); transition: transform 0.8s var(--ease);
+}
+.vt3-note.on .vt3-note-card { transform: none; }
+.vt3-note-card small { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #8a6b32; }
+.vt3-note-card p { font-size: 17px; line-height: 1.45; letter-spacing: -0.01em; }
+.vt3-note-card em { font-style: normal; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: #555; }
+.vt3-note-close { justify-self: end; font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #111; }
 @media (max-width: 860px) {
-  .vt { gap: 5vh; padding-top: 4vh; }
-  .vt-felt { width: 230vw; top: 46%; }
-  .vt-marks .m-arc { display: none; }
-  .vt-plaque { position: static; transform: rotate(-2deg); justify-self: center; }
-  .vt-head { margin-top: 0; }
-  .vt-boxes { grid-template-columns: 1fr; width: 100%; max-width: 360px; }
-  .vt-box { min-height: 0; }
-  .vt-box .vt-go { opacity: 1; transform: none; }
-  .vt-card.is-open { transform: scale(1.2); }
+  .vt3-head { top: 76px; }
+  .vt3-tip { bottom: 128px; font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .index > button.chip-vip, .index > button.chip-vip svg { animation: none; }

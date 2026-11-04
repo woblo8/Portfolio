@@ -951,7 +951,7 @@
     if (overlay === "project") { S.mode = "idle"; S.camZ = baseZ; }
     hideInfo();
     openPage(window.VIP_TABLE.html({ vip: VIP, projects: P, site: SITE, esc, pad }), "vip", T("Mesa privada", "Private table"));
-    window.VIP_TABLE.init(pageInner);
+    layoutCleanup = window.VIP_TABLE.init(pageInner);
     emit("table");
   }
 
