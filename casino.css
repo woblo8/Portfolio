@@ -1,0 +1,121 @@
+/* ============================================================
+   CASINO
+   ============================================================ */
+/* sound toggle */
+.menu .sound-toggle b { font-weight: 500; color: var(--smoke); transition: color 0.3s, text-shadow 0.3s; }
+.menu .sound-toggle[aria-pressed="true"] b { color: #fff; text-shadow: var(--neon-glow); }
+.menu .sound-toggle::after { display: none; }
+
+/* the croupier */
+.croupier {
+  position: fixed; left: 50%; bottom: calc(var(--gut) + 74px); transform: translate(-50%, 8px); z-index: 12; pointer-events: none;
+  font-size: 15px; letter-spacing: 0.01em; font-style: italic; color: var(--mist); white-space: nowrap;
+  opacity: 0; transition: opacity 0.8s var(--ease), transform 0.9s var(--ease);
+}
+.croupier.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* streak */
+.streak {
+  position: fixed; left: 50%; top: 17vh; transform: translate(-50%, 10px) scale(0.96); z-index: 12; pointer-events: none;
+  font-weight: 600; font-size: clamp(28px, 3.6vw, 60px); letter-spacing: -0.03em; text-transform: uppercase; color: #fff;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.7), 0 0 2px #fff;
+  opacity: 0; transition: opacity 0.6s var(--ease), transform 0.9s var(--ease);
+}
+.streak.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+/* double or nothing */
+.info .again { display: none; }
+body.can-again.has-info .info .again {
+  display: inline-flex; pointer-events: auto; align-items: center; gap: 10px; margin: 36px 0 0 18px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke);
+  transition: color 0.4s, text-shadow 0.4s;
+}
+body.can-again.has-info .info .again:hover { color: #fff; text-shadow: var(--neon-glow); }
+.info .again span { display: inline-block; transition: transform 0.8s var(--ease); }
+.info .again:hover span { transform: rotate(-200deg); }
+
+/* chips as the index */
+.index { gap: 10px; align-items: flex-end; }
+.index > button {
+  position: relative; width: 36px; height: 36px; padding: 0; border-radius: 50%;
+  background:
+    radial-gradient(circle, #1d1d20 0 50%, rgba(255, 255, 255, 0.16) 51% 53%, transparent 54%),
+    repeating-conic-gradient(from 7deg, #2c2c30 0 12deg, #121214 12deg 30deg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 3px 0 #0a0a0b, 0 6px 10px rgba(0, 0, 0, 0.6);
+  transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease);
+}
+.index > button .chip-face { position: relative; z-index: 2; font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; color: var(--mist); }
+.index > button::before, .index > button::after {
+  content: ""; position: absolute; inset: 0; left: 0; right: 0; bottom: 0; height: auto; border-radius: 50%; z-index: -1;
+  background: repeating-conic-gradient(from 7deg, #232327 0 12deg, #0f0f11 12deg 30deg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 0 #0a0a0b;
+  opacity: 0; transform: none; transition: transform 0.45s var(--ease), opacity 0.3s;
+}
+.index > button:hover { transform: translateY(-10px); }
+.index > button:hover::before { opacity: 1; transform: translateY(5px); }
+.index > button:hover::after { opacity: 1; transform: translateY(10px); }
+.index > button.is-active { box-shadow: inset 0 0 0 1px #fff, 0 0 14px rgba(255, 255, 255, 0.3), 0 3px 0 #0a0a0b, 0 6px 10px rgba(0, 0, 0, 0.6); }
+.index > button.is-active::after { opacity: 0; }
+.index > button.is-active:hover::after { opacity: 1; }
+.index > button.is-active .chip-face { color: #fff; }
+
+/* cards in Contact */
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2vw; margin-top: 7vh; max-width: 900px; }
+.card { display: block; aspect-ratio: 5 / 7; perspective: 1200px; text-decoration: none; }
+.card-inner { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 1s cubic-bezier(0.7, 0, 0.2, 1); }
+.card:hover .card-inner, .card:focus-visible .card-inner { transform: rotateY(180deg); }
+.card-back, .card-front { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.card-back {
+  display: grid; place-items: center;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 9px), #111113;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), inset 0 0 0 10px #111113, inset 0 0 0 11px rgba(255, 255, 255, 0.1), 0 30px 60px -20px #000;
+}
+.card-back i { font-style: normal; font-family: var(--mono); font-size: 12px; letter-spacing: 0.34em; color: #fff; text-shadow: var(--neon-glow); padding: 10px 14px; background: #111113; }
+.card-front {
+  transform: rotateY(180deg); background: #ecebe7; color: #050506;
+  display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 0 clamp(14px, 1.6vw, 24px);
+  box-shadow: 0 30px 60px -20px #000;
+}
+.card-front small { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #6b6b70; }
+.card-front b { font-weight: 600; font-size: clamp(14px, 1.35vw, 21px); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.card-corner { position: absolute; top: 14px; left: 16px; font-family: var(--mono); font-size: 13px; font-weight: 500; }
+.card-corner.is-bottom { top: auto; left: auto; bottom: 14px; right: 16px; transform: rotate(180deg); }
+@media (hover: none) { .card-inner { transform: rotateY(180deg); } }
+
+/* the odds, on the back of About */
+.odds { padding: 12vh 0 4vh; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.odds-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--gut); row-gap: 3vh; align-items: end; margin-bottom: 7vh; }
+.odds-k { grid-column: 1 / -1; font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--smoke); }
+.odds-head h2 { font-weight: 600; font-size: clamp(36px, 4.6vw, 84px); line-height: 0.92; letter-spacing: -0.05em; }
+.odds-head p { max-width: 44ch; font-size: 16px; line-height: 1.55; color: var(--mist); }
+.odds-row {
+  display: grid; grid-template-columns: 48px minmax(120px, 1.1fr) minmax(0, 2fr) 70px 60px; align-items: center; gap: 18px;
+  padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--mist); font-variant-numeric: tabular-nums;
+}
+.odds-row > span:nth-child(4), .odds-row > span:nth-child(5) { text-align: right; }
+.odds-row.is-head { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke); }
+.odds-row.is-foot { color: #fff; border-bottom: 0; }
+.odds-bar { position: relative; height: 2px; background: rgba(255, 255, 255, 0.08); }
+.odds-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #fff; box-shadow: var(--neon-glow); transition: width 1.6s var(--ease); }
+.odds.is-drawn .odds-bar i { width: var(--w); }
+.odds-bar::after { content: ""; position: absolute; left: var(--fair); top: -7px; height: 16px; width: 1px; background: rgba(255, 255, 255, 0.35); }
+
+/* cursor roulette */
+.cursor-ball { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px #fff; opacity: 0; }
+.cursor.is-roulette { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.9); }
+.cursor.is-roulette span { opacity: 0 !important; }
+.cursor.is-roulette .cursor-ball { opacity: 1; animation: rouletteBall 0.32s linear infinite; }
+.cursor.is-landing .cursor-ball { animation-duration: 1.3s; }
+@keyframes rouletteBall { from { transform: rotate(0deg) translateX(30px); } to { transform: rotate(360deg) translateX(30px); } }
+
+@media (max-width: 860px) {
+  .cards { grid-template-columns: 1fr; max-width: 320px; }
+  .odds-head { grid-template-columns: 1fr; }
+  .odds-row { grid-template-columns: 36px 1fr 60px 50px; }
+  .odds-row > span:nth-child(3) { display: none; }
+  .croupier { bottom: 150px; }
+  .menu .sound-toggle { display: none; }
+}

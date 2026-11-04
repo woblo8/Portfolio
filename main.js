@@ -23,6 +23,8 @@
   const pad = (n) => String(n + 1).padStart(2, "0");
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const body = document.body;
+  const bus = {};
+  const emit = (name, data) => (bus[name] || []).forEach((fn) => { try { fn(data); } catch (e) { /* never break the object */ } });
 
   /* ---------- static text ---------- */
   $("#brandName").textContent = SITE.name;
@@ -493,6 +495,7 @@
   floor.renderOrder = 1;
   scene.add(floor);
 
+
   const shadowRecvMat = new THREE.ShadowMaterial({ opacity: 0.5, depthWrite: false });
   const shadowRecv = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), shadowRecvMat);
   shadowRecv.rotation.x = -Math.PI / 2;
@@ -564,7 +567,8 @@
 
   P.forEach((p, i) => {
     const b = document.createElement("button");
-    b.textContent = pad(i);
+    b.innerHTML = `<span class="chip-face">${pad(i)}</span>`;
+    b.setAttribute("aria-label", `${pad(i)} — ${p.title}`);
     b.title = p.title;
     b.addEventListener("click", () => goTo(i));
     indexNav.appendChild(b);
@@ -675,6 +679,7 @@
   }
 
   function launch(p, v, w) {
+    emit("throw");
     hideInfo();
     B.p.copy(p);
     B.v.copy(v);
@@ -732,6 +737,7 @@
   }
   let lastRipple = 0;
   function impact(v) {
+    emit("impact", { v });
     const now = performance.now();
     if (!reduce && now - lastRipple > 140) { lastRipple = now; spawnRipple(B.p.x, B.p.z, v); }
     if (reduce) return;
@@ -843,6 +849,7 @@
     scrollCueLabel.textContent = L ? "Scroll to play" : "Scroll";
     if (L) layoutCleanup = L.init(page, pageInner, { project: lp });
     if (kind === "about" && window.initPortrait) layoutCleanup = window.initPortrait(pageInner.querySelector(".about-portrait"));
+    if (kind === "about" && window.CASINO) window.CASINO.mountOdds(pageInner.querySelector("#odds"));
     pageTag.textContent = tag || "";
     page.classList.add("open");
     page.setAttribute("aria-hidden", "false");
@@ -1012,21 +1019,34 @@
         ${portrait}
       </section>
       <section class="block r"><h2>Disciplines</h2><p>${SITE.disciplines.map(esc).join("<br>")}</p></section>
-      <section class="block r"><h2>Tools</h2><p>${SITE.tools.map(esc).join(" · ")}</p></section>`;
+      <section class="block r"><h2>Tools</h2><p>${SITE.tools.map(esc).join(" · ")}</p></section>
+      <section class="odds r" id="odds"></section>`;
   }
 
   function contactHTML() {
-    const rows = [
-      SITE.email && `<a class="row r" href="mailto:${esc(SITE.email)}"><span>Email</span><strong>${esc(SITE.email)}</strong></a>`,
-      SITE.linkedin && `<a class="row r" href="${esc(SITE.linkedin)}" target="_blank" rel="noopener"><span>LinkedIn</span><strong>Profile ↗</strong></a>`,
-      SITE.cv && `<a class="row r" href="${esc(SITE.cv)}" target="_blank" rel="noopener"><span>CV</span><strong>Open PDF ↗</strong></a>`,
-    ].filter(Boolean).join("");
+    const card = (href, corner, label, value, ext) => `
+      <a class="card r" href="${esc(href)}"${ext ? ' target="_blank" rel="noopener"' : ""}>
+        <span class="card-inner">
+          <span class="card-back"><i>C·I·C</i></span>
+          <span class="card-front">
+            <span class="card-corner">${corner}</span>
+            <small>${label}</small>
+            <b>${value}</b>
+            <span class="card-corner is-bottom">${corner}</span>
+          </span>
+        </span>
+      </a>`;
+    const rows = `<div class="cards">${[
+      SITE.email && card(`mailto:${SITE.email}`, "@", "Email", esc(SITE.email), false),
+      SITE.linkedin && card(SITE.linkedin, "in", "LinkedIn", "Profile ↗", true),
+      SITE.cv && card(SITE.cv, "CV", "Curriculum", "Open PDF ↗", true),
+    ].filter(Boolean).join("")}</div>`;
     const title = esc(SITE.contactTitle || "Let’s talk.").replace(/\n/g, "<br>");
     return `
       <section class="contact">
         <h1 class="contact-title r">${title}</h1>
         <div class="neon-line r"></div>
-        <div class="rows">${rows}</div>
+        ${rows}
       </section>`;
   }
 
@@ -1047,7 +1067,7 @@
 
   menu.addEventListener("click", (e) => {
     const b = e.target.closest("button");
-    if (!b || !introDone) return;
+    if (!b || !b.dataset.open || !introDone) return;
     const kind = b.dataset.open;
     if (kind === "projects") { if (overlay === "project") exitProject(); else if (overlay) closePage(); return; }
     if (S.mode === "enter" || S.mode === "exit") return;
@@ -1639,6 +1659,30 @@
     }
   }
 
+  function throwPower(power) {
+    if (overlay || !["idle", "lock", "turn", "ghost"].includes(S.mode)) return false;
+    if (S.mode === "ghost") { materialize(); S.mode = "idle"; }
+    played();
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    launchFromHere(
+      new V3(rand(1.2, 2.4) * dir * Math.min(power, 1.25), rand(3.6, 4.4) * power, rand(-0.6, 0.3)),
+      new V3(rand(-6, 6) * power, rand(-4, 4) * power, -dir * rand(7, 11) * power)
+    );
+    return true;
+  }
+  window.DIE = {
+    on: (name, fn) => (bus[name] = bus[name] || []).push(fn),
+    goTo: (i) => goTo(i),
+    throwPower,
+    hitTest: (e) => hitDie(e),
+    glow() {
+      materials.forEach((m) => { if (m.userData.i === S.active) m.userData.g = 2.4; });
+      outlinePulse = 0.6;
+    },
+    get state() { return { mode: S.mode, active: S.active, overlay, introDone, hasInfo }; },
+    projects: P,
+  };
+
   /* ---------- the die notices you: a degree or two towards the pointer ---------- */
   const LOOK = { x: 0, y: 0 };
   let lookAmp = 0, lookX = 0, lookY = 0;
@@ -1723,7 +1767,7 @@
     CUR.x = CUR.tx; // no lag: the point sits exactly on the pointer
     CUR.y = CUR.ty;
     const overDie = (hovering || drag) && !overlay;
-    const target = drag ? 0.5 : overDie ? 1 : CUR.link ? 0.42 : 0.1;
+    const target = cursorEl.classList.contains("is-roulette") ? 0.62 : drag ? 0.5 : overDie ? 1 : CUR.link ? 0.42 : 0.1;
     CUR.s = damp(CUR.s, target, 14, dt);
     cursorEl.classList.toggle("is-die", overDie && !drag);
     cursorEl.classList.toggle("is-link", !overDie && CUR.link);
@@ -1773,7 +1817,7 @@
         S.q.slerpQuaternions(S.from, S.to, turn);
         basePos.set(lerp(S.p0.x, 0, lift), lerp(S.p0.y, 0, lift), lerp(S.p0.z, 0, lift));
         // the text comes back while the object is still rising
-        if (t >= 0.45 && !S.shown) { S.shown = true; showInfo(S.target); }
+        if (t >= 0.45 && !S.shown) { S.shown = true; showInfo(S.target); emit("land", { index: S.target }); }
         if (t >= 1) {
           S.q.copy(S.to);
           S.mode = "idle";

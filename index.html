@@ -11,6 +11,7 @@
   <!-- Geist Mono = microinformación. Inter Tight = solo fallback mientras no estén los archivos de Neue Haas Grotesk (ver styles.css) -->
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="casino.css" />
   <link rel="stylesheet" href="layouts/sidea.css" />
   <link rel="stylesheet" href="layouts/ton618.css" />
   <link rel="stylesheet" href="layouts/safelife.css" />
@@ -27,7 +28,9 @@
   <div class="xray" id="xray" aria-hidden="true"><span class="xray-tag">XR — 001 &nbsp;/&nbsp; MANUS</span></div>
   <div class="ghost-line" id="ghostLine" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
-  <div class="cursor" id="cursor" aria-hidden="true"><span>Drag</span></div>
+  <div class="cursor" id="cursor" aria-hidden="true"><span>Drag</span><i class="cursor-ball"></i></div>
+  <div class="croupier" id="croupier" aria-live="polite"></div>
+  <div class="streak" id="streak" aria-hidden="true"></div>
   <div class="grain" aria-hidden="true"></div>
 
   <header class="top">
@@ -39,6 +42,7 @@
       <button data-open="projects" class="is-active">Projects</button>
       <button data-open="about">About</button>
       <button data-open="contact">Contact</button>
+      <button class="sound-toggle" id="soundBtn" aria-pressed="false">Sound <b>off</b></button>
     </nav>
   </header>
 
@@ -49,6 +53,7 @@
     <div class="info-line"></div>
     <p class="info-desc" id="iDesc"></p>
     <button class="enter" id="enterBtn">Enter project <span>→</span></button>
+    <button class="again" id="againBtn" aria-label="Throw again">Again? <span>↻</span></button>
   </section>
 
   <div class="hint" id="hint">
@@ -91,5 +96,6 @@
   <script src="layouts/safelife.js"></script>
   <script src="layouts/portrait.js"></script>
   <script src="main.js"></script>
+  <script src="casino.js"></script>
 </body>
 </html>
