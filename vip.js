@@ -759,29 +759,84 @@
     const glassPos = onLedge(2.12);
     const tumbler = new THREE.Group();
     {
-      const g = new THREE.Mesh(lathe([[0, 0], [0.13, 0], [0.135, 0.01], [0.14, 0.23], [0.132, 0.232], [0.125, 0.04], [0, 0.04]]), glassMat({ thickness: 0.03 }));
+      // a transparent shell (not transmission): transmissive objects cannot see each other,
+      // and the ice inside must be visible through the glass
+      const g = new THREE.Mesh(lathe([[0, 0], [0.13, 0], [0.135, 0.01], [0.14, 0.23], [0.132, 0.232], [0.125, 0.04], [0, 0.04]]), new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.1, roughness: 0.02, metalness: 0, depthWrite: false,
+        clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6, specularIntensity: 1, ior: 1.5,
+      }));
+      // the lip and the heavy base catch the light as bright lines
+      const lip = new THREE.Mesh(new THREE.TorusGeometry(0.136, 0.0035, 8, 64), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, roughness: 0.02, clearcoat: 1, envMapIntensity: 2, depthWrite: false }));
+      lip.rotation.x = Math.PI / 2; lip.position.y = 0.231; lip.renderOrder = 3;
+      tumbler.add(lip);
+      g.renderOrder = 3;
       const whisky = new THREE.Mesh(new THREE.CylinderGeometry(0.123, 0.121, 0.085, 48), new THREE.MeshPhysicalMaterial({
         // opaque on purpose: glass only shows what is opaque behind it
-        color: new THREE.Color(0x8a4512).convertSRGBToLinear(), emissive: new THREE.Color(0x5a2406).convertSRGBToLinear(), emissiveIntensity: 0.35,
-        roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 0.35,
+        // deep amber in the body, lit from within where the lamp passes through it
+        color: new THREE.Color(0x5a2208).convertSRGBToLinear(), emissive: new THREE.Color(0x8a3a0c).convertSRGBToLinear(), emissiveIntensity: 0.55,
+        roughness: 0.1, clearcoat: 0.6, clearcoatRoughness: 0.05, envMapIntensity: 0.25,
       }));
+      // the surface: brighter, glossy, a meniscus that catches the light
+      const surface = new THREE.Mesh(new THREE.CircleGeometry(0.122, 48), new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color(0x7a3a10).convertSRGBToLinear(), emissive: new THREE.Color(0x5a2406).convertSRGBToLinear(), emissiveIntensity: 0.35,
+        roughness: 0.02, clearcoat: 1, clearcoatRoughness: 0.0, envMapIntensity: 1.2, specularIntensity: 1,
+      }));
+      surface.rotation.x = -Math.PI / 2; surface.position.y = 0.04 + 0.0855;
+      tumbler.add(surface);
       whisky.position.y = 0.04 + 0.0425;
+      whisky.renderOrder = 1;
       g.castShadow = true;
       tumbler.add(g, whisky);
-      const cube = (() => {
-        const b = new THREE.BoxGeometry(1, 1, 1, 4, 4, 4), p = b.attributes.position, v = new THREE.Vector3(), cc = new THREE.Vector3(), r = 0.18, inner = 0.5 - r;
+      // every cube its own shape: rounded by melting, faces slightly dished, never quite square
+      const cube = (seed, size = 0.075) => {
+        const b = new THREE.BoxGeometry(1, 1, 1, 8, 8, 8), p = b.attributes.position, v = new THREE.Vector3(), cc = new THREE.Vector3(), r = 0.22, inner = 0.5 - r;
+        const sx = 1 + Math.sin(seed * 3.1) * 0.12, sy = 0.86 + Math.cos(seed * 1.7) * 0.08, sz = 1 + Math.sin(seed * 5.3) * 0.1;
         for (let i = 0; i < p.count; i++) {
           v.fromBufferAttribute(p, i);
           cc.set(Math.max(-inner, Math.min(inner, v.x)), Math.max(-inner, Math.min(inner, v.y)), Math.max(-inner, Math.min(inner, v.z)));
           v.sub(cc).normalize().multiplyScalar(r).add(cc);
-          p.setXYZ(i, v.x * 0.075, v.y * 0.075, v.z * 0.075);
+          const n = Math.sin(v.x * 11 + seed) * Math.cos(v.y * 9 - seed) * Math.sin(v.z * 13 + seed * 2) * 0.035; // melt ripples
+          v.multiplyScalar(1 + n);
+          p.setXYZ(i, v.x * size * sx, v.y * size * sy, v.z * size * sz);
         }
         b.computeVertexNormals();
         return b;
+      };
+      // a fine normal map: frost, tiny pits and the cracks that run through real ice
+      const iceNormal = (() => {
+        const S = 256, c = mk(S, S), x = c.getContext("2d");
+        x.fillStyle = "rgb(128,128,255)"; x.fillRect(0, 0, S, S);
+        for (let k = 0; k < 900; k++) { const px = Math.random() * S, py = Math.random() * S, rr = 1 + Math.random() * 3;
+          x.fillStyle = `rgba(${100 + Math.random() * 56},${100 + Math.random() * 56},255,0.5)`; x.beginPath(); x.arc(px, py, rr, 0, Math.PI * 2); x.fill(); }
+        x.strokeStyle = "rgba(170,110,255,0.6)"; x.lineWidth = 1.2;
+        for (let k = 0; k < 7; k++) { x.beginPath(); let px = Math.random() * S, py = Math.random() * S; x.moveTo(px, py);
+          for (let j = 0; j < 6; j++) { px += (Math.random() - 0.5) * 60; py += (Math.random() - 0.5) * 60; x.lineTo(px, py); } x.stroke(); }
+        const t = canvasTex(c, false); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
       })();
-      const iceMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0xc9d6dc).convertSRGBToLinear(), roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.45 });
+      const iceMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, transmission: 1, thickness: 0.07, ior: 1.31, roughness: 0.07, metalness: 0,
+        attenuationColor: new THREE.Color(0xdcecf6), attenuationDistance: 0.35,
+        normalMap: iceNormal, normalScale: new THREE.Vector2(0.35, 0.35),
+        clearcoat: 1, clearcoatRoughness: 0.03, specularIntensity: 1, envMapIntensity: 0.9,
+        depthWrite: false, // so the cloudy core and the bubbles inside still show
+      });
+      // the white heart of a frozen cube, where air got trapped
+      const coreMat = new THREE.MeshStandardMaterial({ color: 0xf2f6f8, roughness: 0.9, transparent: true, opacity: 0.3, depthWrite: false });
+      const bubbleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false });
+      const bubbleGeo = new THREE.SphereGeometry(0.0016, 6, 4);
       tumbler.userData.ice = [[-0.04, 0.03, 0.4], [0.045, -0.02, 1.3], [0.0, 0.05, 2.2]].map(([x, z, r], k) => {
-        const m = new THREE.Mesh(cube, iceMat);
+        const m = new THREE.Mesh(cube(k * 2.3 + 1), iceMat);
+        m.renderOrder = 2;
+        const core = new THREE.Mesh(cube(k * 5.1 + 3, 0.032), coreMat);
+        core.renderOrder = 2;
+        m.add(core);
+        for (let j = 0; j < 9; j++) {
+          const bb = new THREE.Mesh(bubbleGeo, bubbleMat);
+          bb.position.set((Math.random() - 0.5) * 0.035, (Math.random() - 0.5) * 0.028, (Math.random() - 0.5) * 0.035); // clustered near the core, as trapped air is
+          bb.scale.setScalar(0.5 + Math.random());
+          bb.renderOrder = 2;
+          m.add(bb);
+        }
         m.position.set(x, 0.125 + k * 0.012, z);
         m.rotation.set(r * 0.3, r, r * 0.2);
         m.userData.rest = m.position.clone(); m.userData.rot = m.rotation.clone();
@@ -1019,7 +1074,7 @@
           let x = x0, z = u * u * 0.012 + v * v * 0.006 + Math.sin(u * 3.1 + v) * 0.003;
           if (fold && x0 > 0) {
             // the right half folded back over the left, not quite pressed flat
-            const phi = Math.PI - 0.07 - (1 - Math.abs(v)) * 0.03;
+            const phi = Math.PI - 0.035 - (1 - Math.abs(v)) * 0.012; // pressed nearly flat, as in a wallet
             x = Math.cos(phi) * x0; z = Math.sin(phi) * x0 + 0.004 + z * 0.4;
           }
           p.setXYZ(i, x, y0, z);
@@ -1032,12 +1087,9 @@
       // betting box and the die's landing zone: nothing goes through anything
       const notes = [
         // only at the two ends of the oval: the one place with no lettering, no box and no chip
-        [2.6, -0.1, 1.35, 0.010, true],     // right: a loose little pile, as if left in a hurry
-        [2.55, -0.05, 1.62, 0.017, true],
-        [2.64, 0.02, 1.15, 0.024, true],
-        [2.58, 0.05, 1.9, 0.031, true],
-        [-2.58, -0.05, 1.55, 0.010, true],  // left: two, crossed
-        [-2.62, -0.2, 0.45, 0.017, true],
+        // one folded note at each end: no two notes touch, nothing passes through anything
+        [2.58, 0.0, 1.4, 0.006, true],
+        [-2.6, 0.0, 1.75, 0.006, true],
       ];
       notes.forEach(([nx, nz, yaw, y, isFolded]) => {
         const geo = isFolded ? folded : flat;
