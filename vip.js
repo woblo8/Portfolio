@@ -241,7 +241,10 @@
     x.beginPath(); x.moveTo(0, h); x.lineTo(w * 0.47, h * 0.56); x.moveTo(w, h); x.lineTo(w * 0.53, h * 0.56); x.stroke();
     x.restore();
     x.strokeStyle = "rgba(190,150,80,0.85)"; x.lineWidth = Math.max(3, w * 0.005); x.strokeRect(x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth);
-    return c;
+    // drawn with the flap at the top, used with the flap toward the viewer: flip it
+    const m = mk(w, h), mx = m.getContext("2d");
+    mx.translate(0, h); mx.scale(1, -1); mx.drawImage(c, 0, 0);
+    return m;
   }
   // the card inside: black lacquer, gilt border, the note set like an invitation
   function noteCardCanvas(w, h, name, note) {
@@ -838,17 +841,20 @@
     envBody.position.y = ENV_T / 2 + 0.001;
     envBody.castShadow = envBody.receiveShadow = true;
     card.add(envBody);
-    // the flap, hinged on the far edge: cotton paper outside, black and gold liner inside
+    // the flap, hinged on the edge nearest you: it opens toward you and comes to rest with
+    // its tip on the felt, so the card can slide out over it without touching anything
+    const FLAP_OPEN = Math.PI + Math.asin((ENV_T + 0.0016) / FLAP_L); // past flat, until its tip touches the felt
     const flapPivot = new THREE.Group();
-    flapPivot.position.set(0, ENV_T + 0.0016, -ENV_D / 2);
+    flapPivot.position.set(0, ENV_T + 0.0016, ENV_D / 2);
     card.add(flapPivot);
     const flapShape = new THREE.Shape();
     flapShape.moveTo(-ENV_W / 2, 0); flapShape.lineTo(ENV_W / 2, 0); flapShape.lineTo(0.04, FLAP_L - 0.022);
     flapShape.quadraticCurveTo(0, FLAP_L + 0.012, -0.04, FLAP_L - 0.022); flapShape.closePath();
     const flapGeo = new THREE.ShapeGeometry(flapShape, 16);
     { const p = flapGeo.attributes.position, uv = flapGeo.attributes.uv;
-      for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / ENV_W + 0.5, 1 - p.getY(i) / ENV_D); }
-    // shape faces up after the turn below: paper is its back side, the liner its front
+      for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / ENV_W + 0.5, p.getY(i) / ENV_D); }
+    // turned to lie on the envelope pointing away from you: the shape's front faces up (paper),
+    // its back faces down (the liner, which faces up once the flap is open)
     // its paper has a soft shadow along the two cut edges: it reads as a layer on top
     const flapTex = (() => {
       const w = 1408, h = 928, c = mk(w, h), x = c.getContext("2d");
@@ -858,11 +864,13 @@
       x.beginPath(); x.moveTo(0, 0); x.lineTo(tip[0], tip[1]); x.lineTo(w, 0); x.stroke(); x.restore();
       x.strokeStyle = "rgba(255,255,255,0.6)"; x.lineWidth = 2;
       x.beginPath(); x.moveTo(6, 0); x.lineTo(tip[0], tip[1] - 8); x.lineTo(w - 6, 0); x.stroke();
-      return canvasTex(c);
+      const m = mk(w, h), mx = m.getContext("2d"); // flipped like the body: the hinge is at the bottom
+      mx.translate(0, h); mx.scale(1, -1); mx.drawImage(c, 0, 0);
+      return canvasTex(m);
     })();
-    const flapOut = new THREE.Mesh(flapGeo, paperMat({ side: THREE.BackSide, map: flapTex }));
-    const flapIn = new THREE.Mesh(flapGeo, new THREE.MeshStandardMaterial({ map: canvasTex(linerCanvas(704, 464)), roughness: 0.55, envMapIntensity: 0.2 }));
-    [flapOut, flapIn].forEach((m) => { m.rotation.x = Math.PI / 2; m.castShadow = true; m.receiveShadow = true; flapPivot.add(m); });
+    const flapOut = new THREE.Mesh(flapGeo, paperMat({ side: THREE.FrontSide, map: flapTex }));
+    const flapIn = new THREE.Mesh(flapGeo, new THREE.MeshStandardMaterial({ map: canvasTex(linerCanvas(704, 464)), roughness: 0.55, envMapIntensity: 0.2, side: THREE.BackSide }));
+    [flapOut, flapIn].forEach((m) => { m.rotation.x = -Math.PI / 2; m.castShadow = true; m.receiveShadow = true; flapPivot.add(m); });
     // the wax seal at the tip, poured across the edge: one half on the flap, one on the body
     const waxTex = canvasTex(waxSeal(512));
     const waxCap = new THREE.MeshPhysicalMaterial({ map: waxTex, bumpMap: waxTex, bumpScale: 0.45, transparent: true, alphaTest: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, envMapIntensity: 0.15, side: THREE.DoubleSide });
@@ -882,13 +890,17 @@
       g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       return g;
     };
-    const tipZ = -ENV_D / 2 + FLAP_L - 0.035;
-    const sealBody = sealHalf(true); sealBody.position.set(0, ENV_T + 0.0016, tipZ); card.add(sealBody);
-    const sealFlap = sealHalf(false); sealFlap.position.set(0, 0.0004, FLAP_L - 0.035); flapPivot.add(sealFlap);
+    const tipZ = ENV_D / 2 - (FLAP_L - 0.035);
+    const sealBody = sealHalf(false); sealBody.position.set(0, ENV_T + 0.0016, tipZ); card.add(sealBody);
+    const sealFlap = sealHalf(true); sealFlap.position.set(0, 0.0004, -(FLAP_L - 0.035)); flapPivot.add(sealFlap);
     // the card inside, with the note on it: a real texture, readable when it comes to you
-    const noteFace = new THREE.MeshStandardMaterial({ map: canvasTex(noteCardCanvas(2048, 1340, ctx.name, ctx.note)), roughness: 0.78, envMapIntensity: 0.05 }); // satin black: no glare under the lamp
-    const gilt = new THREE.MeshStandardMaterial({ color: 0xb08d4e, metalness: 0.9, roughness: 0.35 });
-    const lacquer = new THREE.MeshStandardMaterial({ color: 0x0a0a0b, roughness: 0.4 });
+    // the mouth of the envelope: whatever of the card is still behind it is not drawn
+    renderer.localClippingEnabled = true;
+    const mouth = new THREE.Plane(new THREE.Vector3(0, 0, 1), -(card.position.z + ENV_D / 2));
+    const clip = { clippingPlanes: [mouth], clipShadows: true }; // its hidden part casts no shadow either
+    const noteFace = new THREE.MeshStandardMaterial({ ...clip, map: canvasTex(noteCardCanvas(2048, 1340, ctx.name, ctx.note)), roughness: 0.78, envMapIntensity: 0.05 }); // satin black: no glare under the lamp
+    const gilt = new THREE.MeshStandardMaterial({ ...clip, color: 0xb08d4e, metalness: 0.9, roughness: 0.35 });
+    const lacquer = new THREE.MeshStandardMaterial({ ...clip, color: 0x0a0a0b, roughness: 0.4 });
     const CARD_W = ENV_W - 0.06, CARD_D = ENV_D - 0.06;
     const noteCard = new THREE.Mesh(new THREE.BoxGeometry(CARD_W, 0.004, CARD_D), [gilt, gilt, noteFace, lacquer, gilt, gilt]);
     noteCard.castShadow = true;
@@ -1707,13 +1719,20 @@
       if (NOTE.busy || NOTE.open) return;
       NOTE.busy = true; noteSeen = true;
       vt.classList.add("is-note"); setTip("");
-      await tweenTo("cam", 1, 1.5);                       // down to the envelope
-      tweenTo("crack", 1, 0.35, easeOut);                 // the wax gives
-      rustle(0.6);
-      await tweenTo("flap", 1, 1.35);                     // the flap turns on its hinge
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms * motionK));
+      // each step starts a little before the last one ends: no dead stops
+      const camDone = tweenTo("cam", 1, 1.6);
+      await wait(1150);
+      tweenTo("crack", 1, 0.4, easeOut); rustle(0.6);    // the wax gives
+      await wait(180);
+      const flapDone = tweenTo("flap", 1, 1.4);           // the flap opens toward you
+      await wait(1050);
       rustle(1);
-      await tweenTo("slide", 1, 1.3);                     // the card comes out of the top
-      await tweenTo("lift", 1, 1.5);                      // and rises to face you
+      const slideDone = tweenTo("slide", 1, 1.5);         // the card slides out over it
+      await wait(1150);
+      await Promise.all([camDone, flapDone]);
+      await tweenTo("lift", 1, 1.6);                      // and rises to face you
+      await slideDone;
       noteEl.classList.add("on", "reading"); noteEl.setAttribute("aria-hidden", "false");
       noteEl.querySelector(".vt3-note-close").focus({ preventScroll: true });
       NOTE.open = true; NOTE.busy = false;
@@ -1722,12 +1741,16 @@
       if (NOTE.busy || !NOTE.open) return;
       NOTE.busy = true;
       noteEl.classList.remove("on", "reading"); noteEl.setAttribute("aria-hidden", "true");
-      await tweenTo("lift", 0, 1.3);                      // back down over the envelope
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms * motionK));
+      await tweenTo("lift", 0, 1.4);                      // back down in front of the envelope
       rustle(0.8);
-      await tweenTo("slide", 0, 1.2);                     // slides back in
-      await tweenTo("flap", 0, 1.25);                     // the flap folds down
-      await tweenTo("crack", 0, 0.3, easeOut);            // and the seal closes on itself
-      await tweenTo("cam", 0, 1.5);                       // back to walking round the table
+      const slideBack = tweenTo("slide", 0, 1.4);         // slides back in
+      await wait(1100);
+      const flapBack = tweenTo("flap", 0, 1.3);           // the flap folds over
+      await wait(1150);
+      tweenTo("crack", 0, 0.35, easeOut);                 // and the seal closes on itself
+      await Promise.all([slideBack, flapBack]);
+      await tweenTo("cam", 0, 1.6);                       // back to walking round the table
       vt.classList.remove("is-note");
       NOTE.open = false; NOTE.busy = false;
     }
@@ -1742,9 +1765,10 @@
       return () => {
         const half = THREE.MathUtils.degToRad(camera.fov / 2), t = Math.tan(half), asp = camera.aspect;
         // the envelope and its open flap: about 1.1 wide and 1.0 deep, seen from 50° above
-        const fitW = 1.15 / (2 * t * asp), fitD = 0.95 / (2 * t);
-        const dist = Math.max(fitW, fitD) * 1.08, a = THREE.MathUtils.degToRad(50);
-        look.set(card.position.x, 0.02, card.position.z - 0.14);
+        // the envelope, the flap laid open in front and the card on it: about 1.1 × 1.2
+        const fitW = 1.15 / (2 * t * asp), fitD = 1.05 / (2 * t);
+        const dist = Math.max(fitW, fitD) * 1.08, a = THREE.MathUtils.degToRad(55);
+        look.set(card.position.x, 0.02, card.position.z + 0.3);
         pos.set(look.x, look.y + Math.sin(a) * dist, look.z + Math.cos(a) * dist);
         // the card, square to the lens, filling most of the view
         const dir = look.clone().sub(pos).normalize();
@@ -1768,23 +1792,31 @@
       }
       // the seal parts a hair, then the flap carries its half away
       sealFlap.position.y = 0.0004 + NOTE.crack * 0.002;
-      sealFlap.rotation.x = -NOTE.crack * 0.06;
-      flapPivot.rotation.x = -NOTE.flap * Math.PI * 0.94;
+      sealFlap.rotation.x = NOTE.crack * 0.06;
+      flapPivot.rotation.x = NOTE.flap * FLAP_OPEN;
       // the card: inside → out through the top → up to the lens
       card.updateMatrixWorld();
-      cardIn.set(0, ENV_T / 2 + 0.001, 0).applyMatrix4(card.matrixWorld);
-      cardOut.set(0, ENV_T + 0.006 + Math.sin(NOTE.slide * Math.PI) * 0.03, -ENV_D * 0.82 * NOTE.slide).applyMatrix4(card.matrixWorld);
+      // out through the mouth, just above the open flap's hinge, toward you
+      const lift0 = ENV_T + 0.0016 + 0.0034;
+      cardIn.set(0, lift0, 0).applyMatrix4(card.matrixWorld);
+      cardOut.set(0, lift0, (ENV_D / 2 + CARD_D / 2 + 0.02) * NOTE.slide).applyMatrix4(card.matrixWorld);
       card.getWorldQuaternion(envQ);
-      noteCard.position.copy(NOTE.slide > 0 ? cardOut : cardIn);
       if (NOTE.lift > 0) {
-        const k = NOTE.lift;
-        noteCard.position.lerpVectors(cardOut, P.readPos, k);
-        noteCard.position.y += Math.sin(k * Math.PI) * 0.12; // an arc, not a straight line
-        noteCard.quaternion.slerpQuaternions(envQ, P.readQ, k);
+        // up and over, in a curve: rises first, then comes forward to the lens
+        const k = NOTE.lift, ctrl = cardOut.clone(); ctrl.y += 0.45;
+        const a = (1 - k) * (1 - k), b = 2 * (1 - k) * k, c = k * k;
+        noteCard.position.set(
+          a * cardOut.x + b * ctrl.x + c * P.readPos.x,
+          a * cardOut.y + b * ctrl.y + c * P.readPos.y,
+          a * cardOut.z + b * ctrl.z + c * P.readPos.z);
+        noteCard.quaternion.slerpQuaternions(envQ, P.readQ, easeIO(Math.min(1, k * 1.15)));
+        mouth.constant = 1e3; // fully out: nothing to hide any more
       } else {
+        noteCard.position.copy(cardOut);
         noteCard.quaternion.copy(envQ);
+        mouth.constant = -(card.position.z + ENV_D / 2);
       }
-      noteCard.visible = NOTE.slide > 0.001 || NOTE.lift > 0; // hidden inside the closed envelope
+      noteCard.visible = NOTE.slide > 0.001 || NOTE.lift > 0; // nothing to draw inside the closed envelope
     }
 
     const R = portrait ? 8.4 : small ? 6.6 : 7.4;
@@ -1844,7 +1876,7 @@
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    window.__vt = { scene, camera, view, renderer, throwDie, roll, openNote: () => openNote(), closeNote: () => closeNote(), get composer() { return composer; } };
+    window.__vt = { scene, camera, view, renderer, throwDie, roll, openNote: () => openNote(), closeNote: () => closeNote(), note: NOTE, get composer() { return composer; } };
 
     return () => {
       disposed = true;
