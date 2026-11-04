@@ -1411,9 +1411,8 @@
   }
   function updateCursor(dt) {
     if (!fine) return;
-    const k = 1 - Math.exp(-22 * dt);
-    CUR.x += (CUR.tx - CUR.x) * k;
-    CUR.y += (CUR.ty - CUR.y) * k;
+    CUR.x = CUR.tx; // no lag: the point sits exactly on the pointer
+    CUR.y = CUR.ty;
     const overDie = (hovering || drag) && !overlay;
     const target = drag ? 0.5 : overDie ? 1 : CUR.link ? 0.42 : 0.1;
     CUR.s = damp(CUR.s, target, 14, dt);

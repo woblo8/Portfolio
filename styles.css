@@ -389,7 +389,7 @@ body.xray-on .hint, body.xray-on .index { opacity: 0 !important; transition-dela
     width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%;
     background: #fff; color: #050506;
     transform: translate3d(-100px, -100px, 0) scale(0.1);
-    transition: transform 0.08s linear, background 0.4s var(--ease), box-shadow 0.4s var(--ease), opacity 0.3s;
+    transition: background 0.4s var(--ease), box-shadow 0.4s var(--ease), opacity 0.3s;
     will-change: transform;
   }
   .cursor span {
