@@ -1,7 +1,8 @@
 // Vercel serverless function: "La casa", played on the server so the ranking can be trusted.
 // The browser only says what it does (roll, stand, double, collect); every roll is made
 // here with crypto and the game state never leaves the server. Storage: Upstash Redis
-// (KV_REST_API_URL / KV_REST_API_TOKEN or UPSTASH_REDIS_REST_URL / _TOKEN).
+// (KV_REST_API_URL / KV_REST_API_TOKEN or UPSTASH_REDIS_REST_URL / _TOKEN), or, without it,
+// Vercel Blob with a signed game state (see below).
 //
 //   GET  /api/house                 → { week: [...], all: [...] }   top 10 of the week and of all time
 //   POST /api/house { op: "start" } → { id, s }
@@ -36,10 +37,112 @@ const roll = () => crypto.randomInt(1, 7);
 const pub = (s) => ({ chips: s.chips, best: s.best, hand: s.hand, phase: s.phase, bet: s.bet, you: s.you, house: s.house, submitted: !!s.submitted });
 const board = (flat) => { const out = []; for (let i = 0; i < (flat || []).length; i += 2) out.push({ name: String(flat[i]).split("·")[0], score: Number(flat[i + 1]) }); return out; };
 
+// ---------- without Redis: Vercel Blob, and a game that travels signed ----------
+// The state goes to the browser sealed with an HMAC (the key never leaves the server),
+// and every roll is derived from that seal: sending an old state back gives the same
+// dice again, so there is nothing to win by replaying. Only signed scores reach the board,
+// stored as tiny files whose names carry the score (listing them is the leaderboard).
+const SECRET = () => crypto.createHash("sha256").update("woblo-house:" + (process.env.HOUSE_SECRET || process.env.BLOB_READ_WRITE_TOKEN || "")).digest();
+const b64 = (b) => Buffer.from(b).toString("base64url");
+function seal(s) {
+  const body = b64(JSON.stringify(s));
+  return `${body}.${b64(crypto.createHmac("sha256", SECRET()).update(body).digest()).slice(0, 32)}`;
+}
+function unseal(tok) {
+  const [body, sig] = String(tok || "").split(".");
+  if (!body || !sig || body.length > 2000) return null;
+  const want = b64(crypto.createHmac("sha256", SECRET()).update(body).digest()).slice(0, 32);
+  if (sig.length !== want.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(want))) return null;
+  try { return JSON.parse(Buffer.from(body, "base64url").toString()); } catch (e) { return null; }
+}
+// one stream of dice per kind of roll, so a peek at your next roll says nothing about the house's
+function dice(s, a) {
+  const k = a === "stand" ? "h" : a === "double" ? "d" : "p";
+  s.n = s.n || { p: 0, h: 0, d: 0 };
+  return () => {
+    const i = s.n[k]++;
+    const h = crypto.createHmac("sha256", SECRET()).update(`${s.g}:${k}:${i}`).digest();
+    return 1 + (h.readUInt32BE(0) % 6);
+  };
+}
+let boardCache = { at: 0, data: null };
+async function blobBoard(force) {
+  if (!force && boardCache.data && Date.now() - boardCache.at < 20000) return boardCache.data;
+  const { list } = await import("@vercel/blob");
+  const read = async (prefix) => {
+    const out = []; let cursor;
+    do {
+      const page = await list({ prefix, cursor, limit: 1000 });
+      for (const b of page.blobs) {
+        const m = b.pathname.slice(prefix.length).match(/^(\d{7})-([A-Z]{3})-([a-f0-9]{8})/);
+        if (m) out.push({ name: m[2], score: Number(m[1]), g: m[3] });
+      }
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+    return out.sort((x, y) => y.score - x.score);
+  };
+  const [week, all] = await Promise.all([read(`house/w/${weekKey()}/`), read("house/a/")]);
+  boardCache = { at: Date.now(), data: { week, all } };
+  return boardCache.data;
+}
+async function blobHandler(req, res, body) {
+  if (req.method === "GET") {
+    const { week, all } = await blobBoard();
+    const strip = (l) => l.slice(0, 10).map(({ name, score }) => ({ name, score }));
+    res.status(200).json({ week: strip(week), all: strip(all), weekKey: weekKey() });
+    return;
+  }
+  if (body.op === "start") {
+    const s = Object.assign(E.newGame(), { g: crypto.randomBytes(4).toString("hex"), t: Date.now() });
+    res.status(200).json({ id: seal(s), s: pub(s) });
+    return;
+  }
+  const s = unseal(body.id);
+  if (!s || !/^[a-f0-9]{8}$/.test(s.g || "")) { res.status(400).json({ error: "bad-id" }); return; }
+  if (Date.now() - (s.t || 0) > GAME_TTL * 1000) { res.status(404).json({ error: "no-game" }); return; }
+  if (body.op === "act") {
+    if (s.submitted) { res.status(409).json({ error: "finished" }); return; }
+    let out;
+    try { out = E.step(s, String(body.a), { bet: body.bet }, dice(s, String(body.a))); }
+    catch (e) { res.status(400).json({ error: e.message }); return; }
+    out.s.n = s.n; out.s.g = s.g; out.s.t = s.t;
+    res.status(200).json({ id: seal(out.s), s: pub(out.s), ev: out.ev, say: out.say });
+    return;
+  }
+  if (body.op === "submit") {
+    const name = String(body.name || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    if (!/^[A-Z]{3}$/.test(name)) { res.status(400).json({ error: "bad-name" }); return; }
+    if (BLOCKED.has(name)) { res.status(400).json({ error: "blocked-name" }); return; }
+    if (s.acts < 3) { res.status(400).json({ error: "too-short" }); return; }
+    const { put, list } = await import("@vercel/blob");
+    const seen = await list({ prefix: `house/g/${s.g}`, limit: 1 });
+    if (seen.blobs.length) { res.status(409).json({ error: "already" }); return; }
+    const file = `${String(Math.min(9999999, s.best)).padStart(7, "0")}-${name}-${s.g}.txt`;
+    const opts = { access: "public", addRandomSuffix: false, contentType: "text/plain" };
+    await Promise.all([
+      put(`house/g/${s.g}.txt`, "1", opts),
+      put(`house/w/${weekKey()}/${file}`, "1", opts),
+      put(`house/a/${file}`, "1", opts),
+    ]);
+    const { week } = await blobBoard(true);
+    const i = week.findIndex((r) => r.g === s.g);
+    s.submitted = true; s.phase = "over";
+    res.status(200).json({ rank: i < 0 ? null : i + 1, score: s.best, s: pub(s), id: seal(s) });
+    return;
+  }
+  res.status(400).json({ error: "bad-op" });
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const R = redis();
-  if (!R) { res.status(503).json({ error: "storage-not-configured" }); return; }
+  if (!R) {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) { res.status(503).json({ error: "storage-not-configured" }); return; }
+    let body = req.body;
+    if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
+    try { await blobHandler(req, res, body || {}); } catch (e) { res.status(502).json({ error: "storage-unavailable" }); }
+    return;
+  }
   try {
     if (req.method === "GET") {
       const [week, all] = await Promise.all([

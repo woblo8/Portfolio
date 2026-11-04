@@ -59,12 +59,14 @@
         </div>
       </header>
       <div class="house-score">
-        <div><small>${T("Fichas", "Chips")}</small><b data-k="chips">${E.START}</b></div>
+        <div class="is-chips"><small>${T("Fichas", "Chips")}</small><b data-k="chips">${E.START}</b><span class="house-delta" data-k="delta"></span></div>
         <div><small>${T("Récord", "Best")}</small><b data-k="best">${E.START}</b></div>
         <div><small>${T("Mano", "Hand")}</small><b data-k="hand">1</b></div>
       </div>
       <section class="house-play">
         <div class="house-felt">
+          <svg class="house-print" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true"><path id="housePrintArc" d="M40 104 Q200 70 360 104" fill="none"/><text><textPath href="#housePrintArc" startOffset="50%" text-anchor="middle">${T("LA CASA PAGA 1 A 1 · DOBLE O NADA DE 4 A 6", "THE HOUSE PAYS 1 TO 1 · DOUBLE OR NOTHING ON 4 TO 6")}</textPath></text></svg>
+          <div class="house-fx" aria-hidden="true"></div>
           <div class="house-lane" data-who="you">
             <small>${T("Tú", "You")}</small><b data-k="you">0</b><ol data-k="yourRolls"></ol>
           </div>
@@ -79,6 +81,7 @@
           </div>
         </div>
         <p class="house-say" aria-live="polite"></p>
+        <p class="house-streak"></p>
         <div class="house-bets" role="group" aria-label="${T("Apuesta", "Bet")}">
           <button type="button" data-bet="10">10</button>
           <button type="button" data-bet="25">25</button>
@@ -96,14 +99,18 @@
         </form>
         <p class="house-cashout"><button type="button" data-a="cashout">${T("Retirarme y apuntar mi marca", "Cash out and sign my score")}</button></p>
         <details class="house-rules">
-          <summary>${T("Reglas", "Rules")}</summary>
-          <ul>
-            <li>${T("Apuestas antes de cada mano. Cada tirada suma a tu mano.", "Bet before each hand. Every roll adds to your hand.")}</li>
-            <li>${T("Un 1 y pierdes la mano. Plántate cuando quieras.", "A 1 and the hand is lost. Stand whenever you like.")}</li>
-            <li>${T("La casa tira hasta superarte. Si le sale un 1, ganas tú.", "The house rolls until it beats you. A 1 and you win.")}</li>
-            <li>${T("Ganas 1 a 1. Luego, doble o nada: 4–6 dobla, 1–3 lo pierde.", "Wins pay 1:1. Then double or nothing: 4–6 doubles, 1–3 loses it.")}</li>
-            <li>${T("Tu marca es el máximo de fichas que llegues a tener. Las tiradas se hacen en el servidor.", "Your score is the most chips you ever hold. The rolls are made on the server.")}</li>
-          </ul>
+          <summary><span>${T("Cómo se juega", "How to play")}</span><em>${T("30 segundos", "30 seconds")}</em></summary>
+          <ol class="hr-steps">
+            <li><b>01</b><div><strong>${T("Apuesta", "Bet")}</strong><p>${T("Elige una ficha: 10, 25, 50 o todo.", "Pick a chip: 10, 25, 50 or all in.")}</p></div></li>
+            <li><b>02</b><div><strong>${T("Tira y suma", "Roll and add up")}</strong><p>${T("Cada dado suma a tu mano. Plántate cuando quieras.", "Every die adds to your hand. Stand whenever you like.")}</p>
+              <p class="hr-row"><i class="hr-d is-bad">1</i><span>${T("pierdes la apuesta", "you lose the bet")}</span></p></div></li>
+            <li><b>03</b><div><strong>${T("Juega la casa", "The house plays")}</strong><p>${T("Tira hasta superar tu mano.", "It rolls until it beats your hand.")}</p>
+              <p class="hr-row"><i class="hr-d">1</i><span>${T("la casa se pasa: ganas tu apuesta", "the house busts: you win your bet")}</span></p></div></li>
+            <li><b>04</b><div><strong>${T("¿Doble o nada?", "Double or nothing?")}</strong><p>${T("Si ganas, arriesga lo ganado a una tirada, o cobra.", "When you win, risk it on one roll, or collect.")}</p>
+              <p class="hr-row"><i class="hr-d">4</i><i class="hr-d">5</i><i class="hr-d">6</i><span>${T("doblas", "doubled")}</span></p>
+              <p class="hr-row"><i class="hr-d is-bad">1</i><i class="hr-d is-bad">2</i><i class="hr-d is-bad">3</i><span>${T("lo pierdes", "lost")}</span></p></div></li>
+          </ol>
+          <p class="hr-goal"><span>${T("Tu marca", "Your score")}</span>${T("El máximo de fichas que llegues a tener. Empiezas con 100.", "The most chips you ever hold. You start with 100.")}</p>
         </details>
       </section>
       <section class="house-board" hidden>
@@ -123,6 +130,7 @@
   const sign = $(".house-sign"), nameIn = $("#houseName"), signNote = $("#houseSignNote");
   const betBtns = [...root.querySelectorAll("[data-bet]")];
 
+  if (!store.get(BEST_KEY)) $(".house-rules").open = true;
   /* ---------- state ---------- */
   const G = {
     mode: null,           // "remote" (server, ranked) or "local"
@@ -133,10 +141,10 @@
 
   const LINES = {
     welcome: () => T("Bienvenido a la casa. Elige tu apuesta y tira.", "Welcome to the house. Choose your bet and roll."),
-    bust: (b) => T(`Un uno. La casa se lleva ${b}.`, `A one. The house takes ${b}.`),
-    more: () => T("¿Otra, o te plantas?", "Another, or do you stand?"),
+    bust: (b) => pick(T([`Un uno. La casa se lleva ${b}.`, `El uno maldito. Adiós a ${b}.`, `Uno. La casa sonríe y se lleva ${b}.`], [`A one. The house takes ${b}.`, `The cursed one. Goodbye, ${b}.`, `One. The house smiles and takes ${b}.`])),
+    more: () => pick(T(["¿Otra, o te plantas?", "La mano sigue viva. ¿Otra?", "Bien. ¿Tientas a la suerte otra vez?"], ["Another, or do you stand?", "The hand is still alive. Another?", "Nice. Tempt fate once more?"])),
     bold: () => T("Eso ya es mucho riesgo… o mucha fe.", "That's a lot of nerve… or faith."),
-    houseBust: (b) => T(`¡Un uno para la casa! Ganas ${b}.`, `A one for the house! You win ${b}.`),
+    houseBust: (b) => pick(T([`¡Un uno para la casa! Ganas ${b}.`, `¡La casa se pasa! +${b} para ti.`, `La banca rompe. Cobras ${b}.`], [`A one for the house! You win ${b}.`, `The house busts! +${b} for you.`, `The bank breaks. You take ${b}.`])),
     houseWins: (h, b) => T(`La casa hace ${h}. Se lleva ${b}.`, `The house makes ${h}. It takes ${b}.`),
     doubled: (v, b) => T(`Un ${v}. Doblas: +${b}.`, `A ${v}. Doubled: +${b}.`),
     lostDouble: (v, b) => T(`Un ${v}. La casa recupera ${b}.`, `A ${v}. The house wins back ${b}.`),
@@ -146,6 +154,7 @@
     double: () => T("Doble o nada. Una sola tirada…", "Double or nothing. One roll…"),
     offline: () => T("Sin conexión con la casa: jugamos aquí, sin ranking.", "The house is offline: we play here, unranked."),
   };
+  const pick = (l) => l[Math.floor(Math.random() * l.length)];
   function speak(text) { say.textContent = text; say.classList.remove("on"); void say.offsetWidth; say.classList.add("on"); }
   function pip(list, v, bust) { const li = document.createElement("li"); li.textContent = v; if (bust) li.className = "bust"; list.appendChild(li); }
   const best = () => Math.max(G.s.best, G.localBest);
@@ -202,14 +211,17 @@
   async function step(a) {
     if (G.mode === "remote") {
       const j = await post({ op: "act", id: G.id, a, bet: G.betKey });
+      if (j.id) G.id = j.id;
       return { s: j.s, ev: j.ev, say: j.say };
     }
     return E.step(G.s, a, { bet: G.betKey }, rnd6);
   }
 
+  let countFrom = null;
   async function act(a) {
     if (G.busy) return;
-    if (a === "again") { G.busy = true; render(); await newGame(); G.busy = false; speak(T("Fichas nuevas. Hagan juego.", "Fresh chips. Place your bets.")); render(); return; }
+    countFrom = null;
+    if (a === "again") { streak = 0; showStreak(); G.busy = true; render(); await newGame(); G.busy = false; speak(T("Fichas nuevas. Hagan juego.", "Fresh chips. Place your bets.")); render(); return; }
     if (a === "cashout") { G.s = Object.assign({}, G.s, { phase: "over" }); render(); nameIn.focus(); return; }
     G.busy = true; render();
     try {
@@ -226,8 +238,14 @@
         if (who === "you") { pip(k("yourRolls"), v, v === 1); if (v !== 1) you += v; k("you").textContent = you; }
         if (who === "house") { pip(k("houseRolls"), v, v === 1); if (v !== 1) house += v; k("house").textContent = house || "—"; }
       }
+      const before = G.s.chips;
       G.s = out.s;
       if (G.mode === "local") { G.s.you = you; G.s.house = house; }
+      const won = G.s.chips - before;
+      if (won) { delta(won); countFrom = before; }
+      if (won > 0) { streak += 1; burst((out.say || [])[0] === "doubled" || won >= 100); }
+      else if (won < 0) { streak = 0; shake(); }
+      showStreak();
       if (best() > G.localBest) { G.localBest = best(); store.set(BEST_KEY, String(G.localBest)); flashBest(); }
       const [key, ...args] = out.say || [];
       if (key && LINES[key]) speak(LINES[key](...args));
@@ -239,8 +257,37 @@
         : T("Algo se ha caído de la mesa. Vuelve a intentarlo.", "Something fell off the table. Try again."));
     } finally {
       G.busy = false; render();
+      if (countFrom != null) countTo(countFrom, G.s.chips);
       if (!sign.hidden) setTimeout(() => nameIn.focus({ preventScroll: true }), 200);
     }
+  }
+  let streak = 0;
+  function countTo(from, to) {
+    const el = k("chips"); if (from === to || reduce) { el.textContent = to; return; }
+    const t0 = performance.now(), d = 650;
+    const tick = (t) => { const p = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(from + (to - from) * e); if (p < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }
+  function delta(n) {
+    const el = k("delta"); el.textContent = (n > 0 ? "+" : "−") + Math.abs(n);
+    el.className = "house-delta " + (n > 0 ? "is-up" : "is-down"); void el.offsetWidth; el.classList.add("on");
+  }
+  function burst(big) {
+    const f = $(".house-felt"); f.classList.remove("is-win"); void f.offsetWidth; f.classList.add("is-win");
+    if (reduce) return;
+    const fx = $(".house-fx"), n = big ? 22 : 14;
+    for (let i = 0; i < n; i++) {
+      const c = document.createElement("i"), ang = (Math.PI * 2 * i) / n + Math.random() * 0.5, r = 70 + Math.random() * 90;
+      c.style.setProperty("--x", Math.cos(ang) * r + "px"); c.style.setProperty("--y", Math.sin(ang) * r * 0.6 - 30 + "px");
+      c.style.setProperty("--r", (Math.random() * 720 - 360) + "deg"); c.style.animationDelay = Math.random() * 80 + "ms";
+      fx.appendChild(c); setTimeout(() => c.remove(), 1300);
+    }
+  }
+  function shake() { const f = $(".house-felt"); f.classList.remove("is-bust"); void f.offsetWidth; f.classList.add("is-bust"); }
+  function showStreak() {
+    const el = $(".house-streak");
+    if (streak >= 2) el.textContent = T(`Racha × ${streak}`, `Streak × ${streak}`);
+    el.classList.toggle("on", streak >= 2); el.classList.toggle("is-hot", streak >= 4);
   }
   function flashBest() { const c = k("best").parentElement; c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 900); }
 
