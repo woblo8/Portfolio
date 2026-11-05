@@ -82,6 +82,7 @@
         if (p.layout === "sidea") return `${p.folder}/screens/${p.sidea.chapters[0].screen}`;
         if (p.layout === "ton618") return `${p.folder}/${p.ton.hero}`;
         if (p.layout === "safelife") return `${p.folder}/process/urban.jpg`;
+        if (p.layout === "jackpot") return `${p.folder}/images/box.jpg`;
         return "";
       };
       const text = (p) => {
@@ -94,6 +95,12 @@
           return `<p>${esc(d.problem)} ${esc(d.idea)}</p>` +
             `<p>${d.verbs.map((v) => `<b>${esc(v.w)}.</b> ${esc(v.t)}`).join(" ")}</p>` +
             `<p>${d.parts.map((x) => `<b>${esc(x.label)}</b> — ${esc(x.text)}`).join("<br>")}</p>`;
+        }
+        if (p.layout === "jackpot") {
+          const d = p.jackpot;
+          return `<p>${esc(d.idea)}</p>` +
+            `<p>${d.moves.map((v) => `<b>${esc(v.w)}.</b> ${esc(v.t)}`).join(" ")}</p>` +
+            `<p>${d.facts.map((x) => `<b>${esc(x.v)}</b> ${esc(x.k)}`).join(" · ")}</p>`;
         }
         return (p.sections || []).map((s) => `<p><b>${esc(s.heading)}.</b> ${esc(s.text)}</p>`).join("");
       };

@@ -1,7 +1,7 @@
 /* ============================================================
    CONTENIDO DEL PORTFOLIO — edita solo este archivo.
-   El dado tiene 6 caras (orden 01 → 06): tres proyectos y tres entradas
-   (Sobre mí, Contacto, CV). slug = la URL de cada cara: woblo.io/side-a
+   El dado tiene 6 caras (orden 01 → 06): cuatro proyectos y dos entradas
+   (Sobre mí, Contacto). slug = la URL de cada cara: woblo.io/side-a
 
    IDIOMAS: cada texto va en español y en inglés con bi("es", "en").
    Si un texto es igual en los dos idiomas, escríbelo normal.
@@ -208,8 +208,63 @@ window.PROJECTS = [
       outro: bi("Luz y movimiento\nen un único objeto urbano.", "Lighting and movement\nbecome a single urban object."),
     },
   },
-  // ---- caras 04–06: no son proyectos, son entradas ----
-  // Cuando tengas otro proyecto, sustituye una de estas por un proyecto normal.
+  {
+    title: "JACKPOT STACK",
+    slug: "jackpot-stack",
+    summary: {
+      what: bi("Un juego de mesa de estrategia donde construyes un casino y subes de Don Nadie a Magnate Supremo.", "A strategy board game where you build a casino and climb from Nobody to Supreme Magnate."),
+      who: bi("Para 2–4 jugadores que quieren rivalidad, faroles y mesa, lejos de las pantallas.", "For 2–4 players who want rivalry, bluffing and a table, away from screens."),
+      me: bi("Trabajo de Fin de Grado: mecánicas, reglas, cartas, identidad, prototipos y packaging.", "Final degree project: mechanics, rules, cards, identity, prototypes and packaging."),
+    },
+    folder: "projects/04-jackpot-stack",
+    category: bi("Juego de mesa · TFG", "Board game · Thesis"),
+    year: "2025",
+    role: bi("Diseño de juego · Gráfico · Packaging", "Game design · Graphics · Packaging"),
+    tags: bi(["Diseño de juego", "Identidad", "Prototipado"], ["Game design", "Identity", "Prototyping"]),
+    motif: "hex",
+    short: bi("Un juego de mesa de casinos, trampas con código y ambición: de Don Nadie a Magnate Supremo.", "A board game of casinos, coded traps and ambition: from Nobody to Supreme Magnate."),
+    intro: bi("De Don Nadie a Magnate Supremo.", "From Nobody to Supreme Magnate."),
+    sections: [],
+    images: [],
+    // JACKPOT STACK tiene su propia página: sube de estatus con el scroll y descifra una trampa con el dado.
+    layout: "jackpot",
+    jackpot: {
+      facts: [
+        { v: "2–4", k: bi("Jugadores", "Players") },
+        { v: "60–90′", k: bi("Por partida", "Per game") },
+        { v: "+12", k: bi("Años", "Years") },
+        { v: "10", k: bi("Rondas", "Rounds") },
+      ],
+      idea: bi("Cada jugador levanta su casino hexágono a hexágono alrededor de una banca central. Gana quien acabe sin deudas con el casino abierto o, tras diez rondas, quien tenga más Stacks. Por el camino: apuestas, sobornos, VIPs y trampas con códigos secretos.", "Each player builds a casino hexagon by hexagon around a central bank. The winner is whoever ends with no debt and the casino still open or, after ten rounds, holds the most Stacks. Along the way: bets, bribes, VIPs and traps with secret codes."),
+      moves: [
+        { w: bi("Construye", "Build"), t: bi("Máquinas y pisos nuevos: más ingresos, más estatus.", "Machines and new floors: more income, more status.") },
+        { w: bi("Atrae VIPs", "Attract VIPs"), t: bi("Subastas secretas por los apostadores que lo cambian todo.", "Secret auctions for the high rollers who change everything.") },
+        { w: bi("Pon trampas", "Set traps"), t: bi("Cada máquina guarda un código que los rivales tienen que descifrar.", "Every machine holds a code your rivals have to crack.") },
+        { w: bi("Sube de estatus", "Climb"), t: bi("Cinco rangos, cada uno con sus ventajas y sus riesgos.", "Five ranks, each with its perks and its risks.") },
+      ],
+      phases: [
+        { w: bi("Ingresos", "Income"), t: bi("Tus máquinas te pagan Stacks desde la banca.", "Your machines pay you Stacks from the bank.") },
+        { w: bi("Construcción", "Building"), t: bi("Máquinas, pisos, mejoras… y trampas.", "Machines, floors, upgrades… and traps.") },
+        { w: bi("Apuestas", "Betting"), t: bi("En tu casino o en el de otro, con el dado de cada máquina.", "In your casino or someone else’s, with each machine’s die.") },
+        { w: bi("Inspección", "Inspection"), t: bi("El Dado de Riesgo intenta descifrar las trampas rivales.", "The Risk Die tries to crack your rivals’ traps.") },
+        { w: bi("Eventos", "Events"), t: bi("Crisis, auditorías y fiestas que afectan a todos.", "Crises, audits and parties that hit everyone.") },
+      ],
+      trap: bi("Una trampa activa el código de la máquina (aquí, 6-3-3). Para desactivarla hay que acertar cada dígito con el Dado de Riesgo: si fallas uno, se acaba tu turno. O te la juegas a una sola tirada: 1–2 pierdes, 5–6 la desactivas.", "A trap activates the machine’s code (here, 6-3-3). To disarm it you must hit every digit with the Risk Die: miss one and your turn is over. Or gamble on a single roll: 1–2 you lose, 5–6 you disarm it."),
+      parts: [
+        { img: "board.jpg", label: bi("Tablero modular", "Modular board"), text: bi("Hexágonos que crecen alrededor de la banca central.", "Hexagons that grow around the central bank.") },
+        { img: "stacks.jpg", label: bi("Stacks", "Stacks"), text: bi("Billetes de 1.000 a 1.000.000: la moneda del juego.", "Notes from 1,000 to 1,000,000: the game’s currency.") },
+        { img: "card-1.jpg", label: bi("Cartas", "Cards"), text: bi("Máquinas, personajes, mejoras y eventos.", "Machines, characters, upgrades and events.") },
+        { img: "magnate.jpg", label: bi("Personajes", "Characters"), text: bi("Cada jugador, una habilidad única.", "Every player, a unique ability.") },
+      ],
+      process: [
+        { label: bi("Investigación", "Research"), text: bi("Fatiga digital y una demanda creciente de juego analógico, en un mercado saturado de juegos de mesa. Había que destacar con un tema y un ritmo propios.", "Digital fatigue and a growing demand for analogue play, in a saturated board-game market. It had to stand out with its own theme and pace."), imgs: ["sketch-1.jpg", "sketch-2.jpg"] },
+        { label: bi("Prototipo digital", "Digital prototype"), text: bi("Las primeras partidas, en Tabletop Simulator: probar reglas rápido, antes de imprimir nada.", "The first games, in Tabletop Simulator: testing rules fast, before printing anything."), imgs: ["digital.jpg"] },
+        { label: bi("Prototipo de papel", "Paper prototype"), text: bi("Cartulina, dados y hexágonos recortados. Iterar con jugadores reales (MDA) para equilibrar ingresos, costes y riesgos.", "Card, dice and cut-out hexagons. Iterating with real players (MDA) to balance income, costs and risk."), imgs: ["paper-2.jpg", "paper-1.jpg", "paper-3.jpg"] },
+      ],
+      outro: bi("De Don Nadie\na Magnate Supremo.", "From Nobody\nto Supreme Magnate."),
+    },
+  },
+  // ---- caras 05–06: no son proyectos, son entradas ----
   {
     kind: "about",
     slug: "sobre-mi",
@@ -234,20 +289,6 @@ window.PROJECTS = [
     tags: bi(["Correo", "LinkedIn", "CV"], ["Email", "LinkedIn", "CV"]),
     motif: "square",
     short: bi("Un correo o una llamada: escríbeme o reserva una llamada de 30 minutos.", "An email or a call: write to me or book a 30-minute call."),
-    intro: "",
-    sections: [],
-    images: [],
-  },
-  {
-    kind: "cv",
-    slug: "cv",
-    title: "CV",
-    category: bi("Entrada", "Entry"),
-    year: "2026",
-    meta: bi("Currículum · PDF", "Résumé · PDF"),
-    tags: bi(["Experiencia", "Formación", "Herramientas"], ["Experience", "Education", "Tools"]),
-    motif: "cube",
-    short: bi("Todo en una página: experiencia, formación y herramientas. Se abre el PDF.", "Everything on one page: experience, education and tools. Opens the PDF."),
     intro: "",
     sections: [],
     images: [],

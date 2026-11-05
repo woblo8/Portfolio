@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/:slug(side-a|ton-618|safelife|sobre-mi|contacto)",
+      "source": "/:slug(side-a|ton-618|safelife|jackpot-stack|sobre-mi|contacto)",
       "destination": "/"
     }
   ],

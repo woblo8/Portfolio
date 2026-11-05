@@ -274,6 +274,13 @@
       ctx.beginPath(); ctx.moveTo(cx - s, cy); ctx.lineTo(cx + s, cy); ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === "hex") {
+      // a stack of hexagons: the board tiles of JACKPOT STACK
+      const hex = (x, y, r) => { ctx.beginPath(); for (let k = 0; k < 6; k++) { const t = Math.PI / 6 + k * Math.PI / 3; ctx[k ? "lineTo" : "moveTo"](x + r * Math.cos(t), y + r * Math.sin(t)); } ctx.closePath(); };
+      const r = s * 0.34, dx = r * Math.sqrt(3);
+      [[0, 0, 1], [-dx, 0, 0.5], [dx, 0, 0.5], [-dx / 2, -r * 1.5, 0.35], [dx / 2, -r * 1.5, 0.35], [-dx / 2, r * 1.5, 0.35], [dx / 2, r * 1.5, 0.35]].forEach(([x, y, a]) => { ctx.globalAlpha = a; hex(cx + x, cy + y, r * 0.9); ctx.stroke(); });
+      ctx.globalAlpha = 1;
+      hex(cx, cy, r * 0.32); ctx.fill();
     } else if (kind === "square") {
       for (let i = 0; i < 3; i++) {
         ctx.globalAlpha = 0.9 - i * 0.28;
