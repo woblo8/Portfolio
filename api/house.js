@@ -16,7 +16,6 @@ const crypto = require("crypto");
 const E = require("../house-engine.js");
 
 const GAME_TTL = 6 * 3600 * 1000;    // an abandoned game expires after six hours
-const BLOCKED = new Set(["ASS", "FUK", "FUC", "FCK", "SEX", "PUT", "PTA", "CUL", "NAZ", "KKK", "POL", "PIS", "CAC", "MRD", "HDP", "FAG", "DIK", "DIC", "COK", "CUM", "TIT", "WTF"]);
 
 // ---------- the seal ----------
 const SECRET = () => crypto.createHash("sha256").update("woblo-house:" + (process.env.HOUSE_SECRET || process.env.BLOB_READ_WRITE_TOKEN || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "")).digest();
@@ -160,6 +159,13 @@ module.exports = async (req, res) => {
       res.status(200).json({ id: seal(s), mult: s.mult, round: pub(deal(s)) });
       return;
     }
+    // one glass less (down to three): the multiplier is divided by 1.5
+    if (body.op === "unglass") {
+      if (!E.canRemoveGlass(s)) { res.status(400).json({ error: "cannot-remove" }); return; }
+      E.removeGlass(s);
+      res.status(200).json({ id: seal(s), mult: s.mult, round: pub(deal(s)) });
+      return;
+    }
     // the wheel, every five rounds: it only multiplies
     if (body.op === "spin") {
       if (!E.wheelDue(s)) { res.status(400).json({ error: "no-spin" }); return; }
@@ -189,9 +195,10 @@ module.exports = async (req, res) => {
       return;
     }
     if (body.op === "submit") {
-      const name = String(body.name || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-      if (!/^[A-Z]{3}$/.test(name)) { res.status(400).json({ error: "bad-name" }); return; }
-      if (BLOCKED.has(name)) { res.status(400).json({ error: "blocked-name" }); return; }
+      // three letters, and nothing offensive or odd: the board is on a portfolio
+      const nc = E.nameCheck(body.name);
+      if (!nc.ok) { res.status(400).json({ error: nc.why === "blocked" ? "blocked-name" : "bad-name", why: nc.why }); return; }
+      const name = nc.name;
       const score = E.score(s);
       if (!s.over || !(s.won >= 1) || !(score > E.START)) { res.status(400).json({ error: "too-short" }); return; }
       if (!(await store.claim(s.g))) { res.status(409).json({ error: "already" }); return; }

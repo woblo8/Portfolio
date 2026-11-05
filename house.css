@@ -894,3 +894,26 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house-lives i.on { color: #ff4d6a; text-shadow: 0 0 6px rgba(255, 60, 90, 0.8); }
 .house.is-god .house-lives i.on { color: #ffe08a; text-shadow: 0 0 6px #ffd36b; }
 .hg-plate .g-heart { stroke: #ff4d6a; }
+
+/* ---------- up to ten glasses: they shrink to fit (--k is set from the gap between them) ---------- */
+.house { --cw: 92px; --gh: 112px; }
+@media (max-width: 860px) { .house { --cw: 74px; --gh: 96px; } }
+.shell-cup { width: calc(var(--cw) * var(--k, 1)); margin-left: calc(var(--cw) * var(--k, 1) / -2); }
+.shell-glass { height: calc(var(--gh) * var(--k, 1)); }
+.shell-die { width: calc(38px * max(0.72, var(--k, 1))); height: calc(38px * max(0.72, var(--k, 1))); margin-left: calc(-19px * max(0.72, var(--k, 1))); padding: calc(6px * max(0.72, var(--k, 1))); }
+
+/* one glass less, one glass more */
+.hb-glasses { width: 100%; display: grid; grid-template-columns: auto 1fr; gap: 6px; }
+.hb-unglass { min-width: 58px; display: grid; place-items: center; align-content: center; gap: 1px; padding: 6px 10px; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); transition: box-shadow 0.3s, background 0.3s; }
+.hb-unglass b { font-size: 18px; font-weight: 400; line-height: 1; color: #fff; }
+.hb-unglass small { font-family: var(--mono); font-size: 9.5px; color: var(--smoke); }
+.hb-unglass:not(:disabled):hover { box-shadow: inset 0 0 0 1px #fff; background: rgba(255, 255, 255, 0.02); }
+.hb-unglass:disabled { opacity: 0.35; }
+
+/* a help waiting to come back */
+.hs-n.is-cooling .hs-buy { opacity: 0.4; filter: grayscale(0.6); }
+.hs-n.is-cooling em { color: var(--smoke); }
+
+/* the name field says no in red */
+.house-sign.is-bad input { box-shadow: inset 0 0 0 1.5px #ff5a64 !important; color: #ff8a92; }
+.house-sign.is-bad #houseSignNote { color: #ff8a92; }

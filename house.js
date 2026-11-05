@@ -103,11 +103,14 @@
         <!-- before each round: which dice, a glass more, the shop -->
         <div class="house-bet" hidden>
           <div class="hb-dice" data-k="dice" role="radiogroup" aria-label="${T("Dados", "Dice")}"></div>
-          <button type="button" class="hb-glass" data-glass>
-            <span class="hb-glass-ico" aria-hidden="true"></span>
-            <span><b>${T("Añadir un vaso", "Add a glass")}</b><small data-k="glassInfo"></small></span>
-            <em>×${String(E.GLASS_MULT).replace(".", T(",", "."))}</em>
-          </button>
+          <div class="hb-glasses">
+            <button type="button" class="hb-unglass" data-unglass aria-label="${T("Quitar un vaso", "Remove a glass")}"><b>−</b><small>÷${String(E.GLASS_MULT).replace(".", T(",", "."))}</small></button>
+            <button type="button" class="hb-glass" data-glass>
+              <span class="hb-glass-ico" aria-hidden="true"></span>
+              <span><b>${T("Añadir un vaso", "Add a glass")}</b><small data-k="glassInfo"></small></span>
+              <em>×${String(E.GLASS_MULT).replace(".", T(",", "."))}</em>
+            </button>
+          </div>
           <small class="hb-info" id="betInfo" data-k="betInfo"></small>
           <div class="house-shop" data-k="shop" role="group" aria-label="${T("Ayudas", "Helps")}"></div>
         </div>
@@ -153,11 +156,11 @@
       svg: [[3, 30, "×1", "1"], [4, 62, "×2", "10"], [5, 94, "×3", "20"]].map(([n, y, p, r]) => Array.from({ length: n }, (_, i) => glassAt(70 + i * 18, y - 10, 13, 17)).join("") + `<text x="196" y="${y + 6}" class="g-t g-big">${p}</text><text x="40" y="${y + 6}" class="g-t">R${r}</text>`).join("") },
     { k: T("Dados", "Dice"), t: T("Antes de cada ronda eliges los dados: uno (×1), con señuelo negro (×2), una pareja que hay que acertar entera (×3) o colores: blanco ×1, rojo ×3, oro ×10.", "Before each round you pick the dice: one (×1), with a black decoy (×2), a pair you must find both of (×3) or colours: white ×1, red ×3, gold ×10."),
       svg: `${dieAt(40, 60, 16)}<text x="40" y="92" class="g-t">×1</text>${dieAt(88, 60, 16)}${dieAt(108, 60, 16, "g-die g-decoy")}<text x="98" y="92" class="g-t">×2</text>${dieAt(150, 60, 16)}${dieAt(170, 60, 16)}<text x="160" y="92" class="g-t">×3</text>${dieAt(204, 46, 12)}${dieAt(204, 62, 12, "g-die g-redd")}${dieAt(204, 78, 12, "g-die g-goldd")}<text x="204" y="100" class="g-t">×10</text>` },
-    { k: T("El multiplicador", "The multiplier"), t: T("Todo lo que ganas pasa por él. Súbelo añadiendo vasos (×1,5 cada uno, para siempre) y con la ruleta, que sale cada 5 rondas y nunca resta.", "Everything you win goes through it. Raise it by adding glasses (×1.5 each, for good) and with the wheel, every 5 rounds, which never takes away."),
+    { k: T("El multiplicador", "The multiplier"), t: T("Todo lo que ganas pasa por él. Súbelo añadiendo vasos (×1,5 cada uno, hasta 10) o quítalos si se pone imposible (÷1,5, mínimo 3). La ruleta sale cada 5 rondas y nunca resta.", "Everything you win goes through it. Raise it by adding glasses (×1.5 each, up to 10) or take them away if it gets impossible (÷1.5, at least 3). The wheel comes every 5 rounds and never takes away."),
       svg: `${glassAt(40, 40, 22, 30)}${glassAt(66, 40, 22, 30)}<path class="g-arrow" d="M84 50 H96 M90 44 V56"/>${glassAt(114, 40, 22, 30, "g-glow")}<circle cx="186" cy="58" r="34"/>${Array.from({ length: 10 }, (_, i) => { const a = (i * 36 * Math.PI) / 180; return `<path d="M186 58 L${(186 + Math.cos(a) * 34).toFixed(1)} ${(58 + Math.sin(a) * 34).toFixed(1)}" class="g-dash"/>`; }).join("")}<circle cx="186" cy="58" r="6"/><path d="M186 18 L182 10 H190 Z" class="g-glow"/><text x="78" y="100" class="g-t g-big">×1,5</text><text x="186" y="106" class="g-t g-big">×1,2 – ×10</text>` },
     { k: T("Tres vidas", "Three lives"), t: T("Cada fallo te quita una vida y la mitad de la mesa. Al tercero, la partida vale 0: retírate a tiempo, tu marca son las fichas con las que te vas.", "Each miss takes a life and half the table. At the third, the game is worth 0: cash out in time, your score is the chips you leave with."),
       svg: `<path class="g-heart" d="M70 66 C54 54 58 42 70 50 C82 42 86 54 70 66 Z"/><path class="g-heart" d="M120 66 C104 54 108 42 120 50 C132 42 136 54 120 66 Z"/><path class="g-dash" d="M170 66 C154 54 158 42 170 50 C182 42 186 54 170 66 Z"/><path class="g-arrow" d="M156 40 L184 68 M184 40 L156 68"/><text x="120" y="96" class="g-t">${T("cada fallo: −1 vida · −50% mesa", "each miss: −1 life · −50% table")}</text>` },
-    { k: T("Ayudas", "Helps"), t: T("Canjea fichas de la mesa por ayudas. Cada pocas rondas se desbloquea una nueva, cada vez más cara.", "Trade table chips for helps. Every few rounds a new one unlocks, each dearer than the last."),
+    { k: T("Ayudas", "Helps"), t: T("Canjea fichas de la mesa por ayudas. Cada pocas rondas se desbloquea una nueva, más cara; y cada una, al usarla, tarda unas rondas en volver.", "Trade table chips for helps. Every few rounds a new one unlocks, each dearer than the last."),
       svg: `<path d="M20 70 H220" class="g-dash"/>` + Object.keys(E.SHOP).map((id, i) => { const x = 36 + i * 34, y = 70 - 8 - i * 5; return `<path d="M${x} 70 V${y}" class="g-dash"/><circle cx="${x}" cy="${y - 9}" r="9" class="${id === "glass" ? "g-glow" : id === "pact" ? "g-red" : ""}"/><text x="${x}" y="${y - 6}" class="g-t g-icon">${({ hint: "◉", lucky: "♣", slow: "⧗", insure: "☂", pact: "♅", glass: "◇" })[id]}</text><text x="${x}" y="86" class="g-t">${E.SHOP[id].at}</text>`; }).join("") + `<text x="120" y="104" class="g-t">${T("ronda", "round")}</text>` },
     { k: T("Rangos", "Ranks"), t: T("Cuanto más aguantas, más cambia la mesa: de turista a diablo, a dios… y más allá.", "The longer you last, the more the table changes: from tourist to devil, to god… and beyond."),
       svg: [[1, "♠"], [5, "♣"], [10, "♦"], [15, "♥"], [20, "☀"], [30, "✺"]].map(([r, g], i) => { const x = 30 + i * 36, y = 92 - i * 13; return `<path d="M${x - 16} ${y} H${x + 16} V${y + 14}" class="${i === 3 ? "g-red" : i >= 4 ? "g-glow" : ""}"/><text x="${x}" y="${y - 6}" class="g-t g-icon ${i === 3 ? "g-red-t" : i >= 4 ? "g-gold-t" : ""}">${g}</text><text x="${x}" y="${y + 11}" class="g-t">${r}</text>`; }).join("") },
@@ -232,7 +235,7 @@
     chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false,
     streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set(),
     safe: 0, buy: {}, shown: {}, cashed: false,
-    mult: 1, add: 0, spun: 0, dice: "one", picks: [], wheelBusy: false, lives: E.LIVES,
+    mult: 1, add: 0, spun: 0, dice: "one", picks: [], wheelBusy: false, lives: E.LIVES, cd: {},
     lastR: 0, cp: 1, cpId: null, // the checkpoint: where a finished game lets you sit back down
     record: +(store.get(BEST_KEY) || 0), // your best score ever, in this browser
   };
@@ -452,15 +455,16 @@
   const unlocking = (r) => Object.keys(E.SHOP).filter((id) => E.SHOP[id].at === r);
   const shopState = (id) => {
     const r = G.round ? G.round.r : 1, at = E.SHOP[id].at;
-    const ok = E.canBuy(id, { r, chips: G.chips, buy: G.buy, over: false });
-    return { at, locked: r < at, got: !!G.buy[id], ok, p: E.price(id, G.chips) };
+    const st = { r, chips: G.chips, buy: G.buy, over: false, cd: G.cd };
+    const ok = E.canBuy(id, st), ready = E.readyAt(id, st);
+    return { at, locked: r < at, cooling: r >= at && r < ready, ready, got: !!G.buy[id], ok, p: E.price(id, G.chips) };
   };
   // the shop: a row of neon icons; the icon buys, the little corner opens the card
   function paintShop() {
     k("shop").innerHTML = Object.keys(E.SHOP).map((id) => {
       const it = ITEMS[id], st = shopState(id);
-      const cls = ["hs-n", st.locked ? "is-locked" : "", st.got ? "is-got" : "", !st.locked && !st.got && !st.ok ? "is-poor" : ""].join(" ");
-      const tail = st.locked ? T(`R${st.at}`, `R${st.at}`) : st.got ? "✓" : fmt(st.p);
+      const cls = ["hs-n", st.locked ? "is-locked" : "", st.cooling && !st.got ? "is-cooling" : "", st.got ? "is-got" : "", !st.locked && !st.cooling && !st.got && !st.ok ? "is-poor" : ""].join(" ");
+      const tail = st.locked ? T(`R${st.at}`, `R${st.at}`) : st.got ? "✓" : st.cooling ? T(`R${st.ready}`, `R${st.ready}`) : fmt(st.p);
       return `<div class="${cls}" style="--c:${it.c}">
         <button type="button" class="hs-buy" data-buy="${id}" ${st.ok ? "" : "disabled"} aria-label="${it.n()} · ${it.t()} · ${tail}">${svgIcon(id, 30)}</button>
         <b class="hs-name">${it.n()}</b>
@@ -484,8 +488,8 @@
         <p class="hc-long">${it.long()}</p>
       </div>
       <footer>
-        <div class="hc-price"><small>${T("Precio ahora", "Price now")}</small><b>${fmt(st.p)}</b><em>${Math.round(E.SHOP[id].pct * 100)}% ${T("de la mesa · mín.", "of the table · min.")} ${fmt(E.SHOP[id].min)}</em></div>
-        <button type="button" class="hc-buy" data-cardbuy="${id}" ${st.ok && G.phase === "bet" ? "" : "disabled"}>${st.locked ? T(`Ronda ${st.at}`, `Round ${st.at}`) : st.got ? T("Activa", "Active") : !st.ok ? T("Sin fichas", "Not enough") : T("Comprar", "Buy")}</button>
+        <div class="hc-price"><small>${T("Precio ahora", "Price now")}</small><b>${fmt(st.p)}</b><em>${Math.round(E.SHOP[id].pct * 100)}% ${T("de la mesa · mín.", "of the table · min.")} ${fmt(E.SHOP[id].min)} · ${T("una vez cada", "once every")} ${E.SHOP[id].cd} ${T("rondas", "rounds")}</em></div>
+        <button type="button" class="hc-buy" data-cardbuy="${id}" ${st.ok && G.phase === "bet" ? "" : "disabled"}>${st.locked ? T(`Ronda ${st.at}`, `Round ${st.at}`) : st.got ? T("Activa", "Active") : st.cooling ? T(`Vuelve en la ronda ${st.ready}`, `Back at round ${st.ready}`) : !st.ok ? T("Sin fichas", "Not enough") : T("Comprar", "Buy")}</button>
       </footer>`;
     const m = root.querySelector(".house-machine"); m.scrollTop = 0; m.classList.add("is-guide");
     card.hidden = false; requestAnimationFrame(() => card.classList.add("on"));
@@ -502,12 +506,13 @@
   });
   root.querySelector(".house-machine").appendChild(card);
   async function buyItem(id) {
-    if (G.phase !== "bet" || !E.canBuy(id, { r: G.round.r, chips: G.chips, buy: G.buy, over: false })) return;
+    if (G.phase !== "bet" || !E.canBuy(id, { r: G.round.r, chips: G.chips, buy: G.buy, over: false, cd: G.cd })) return;
     const before = G.chips;
     try {
       if (G.mode === "remote") { const j = await post({ op: "buy", id: G.id, item: id }); G.id = j.id; G.chips = j.chips; G.buy = j.buy || {}; }
-      else { const st = { chips: G.chips, buy: G.buy }; E.buy(st, id); G.chips = st.chips; G.buy = st.buy; }
+      else { const st = { r: G.round.r, chips: G.chips, buy: G.buy, cd: G.cd }; E.buy(st, id); G.chips = st.chips; G.buy = st.buy; }
     } catch (e) { speak(T("La casa no le vende eso ahora.", "The house won't sell you that now.")); return; }
+    G.cd = Object.assign({}, G.cd, { [id]: G.round.r + E.SHOP[id].cd });
     countTo(before, G.chips); delta(G.chips - before);
     const sn = snd(); if (sn) { sn.chip(0.9); setTimeout(() => sn.chip(0.6), 90); }
     speak(BOUGHT[id]());
@@ -546,6 +551,7 @@
     const gb = root.querySelector("[data-glass]");
     gb.disabled = !can;
     k("glassInfo").textContent = can ? T(`${n} → ${n + 1} vasos, para toda la partida`, `${n} → ${n + 1} glasses, for the rest of the game`) : T(`Mesa llena: ${E.MAX_CUPS} vasos`, `Table full: ${E.MAX_CUPS} glasses`);
+    root.querySelector("[data-unglass]").disabled = !E.canRemoveGlass({ r: R.r, add: G.add, over: false });
   }
   function paintMult(bump) {
     const el = k("mult");
@@ -553,6 +559,18 @@
     const box = el.parentElement;
     box.classList.toggle("is-hot", G.mult >= 5); box.classList.toggle("is-wild", G.mult >= 25);
     if (bump) { box.classList.remove("bump"); void box.offsetWidth; box.classList.add("bump"); }
+  }
+  async function removeGlass() {
+    if (G.phase !== "bet" || !E.canRemoveGlass({ r: G.round.r, add: G.add, over: false })) return;
+    try {
+      if (G.mode === "remote") { const j = await post({ op: "unglass", id: G.id }); G.id = j.id; G.mult = j.mult; G.round = j.round; G.add -= 1; }
+      else { const st = { add: G.add, mult: G.mult }; E.removeGlass(st); G.add = st.add; G.mult = st.mult; G.round = E.round(G.round.r, Math.random, G.add); }
+    } catch (e) { speak(T("No se puede jugar con menos de tres vasos.", "You can't play with fewer than three glasses.")); return; }
+    buildCups(G.round.n); slotOf = cups.map((_, i) => i); place();
+    const sn = snd(); if (sn) sn.glass(0.5);
+    paintMult(true);
+    speak(T(`Un vaso menos: ${G.round.n} en la mesa. Multiplicador ${fmtMult(G.mult)}.`, `One glass less: ${G.round.n} on the table. Multiplier ${fmtMult(G.mult)}.`));
+    render();
   }
   async function addGlass() {
     if (G.phase !== "bet" || !E.canAddGlass({ r: G.round.r, add: G.add, over: false })) return;
@@ -619,9 +637,10 @@
     cups = [...stage.querySelectorAll(".shell-cup")];
     root.style.setProperty("--cups", n);
   }
-  const gap = () => Math.min(150, (stage.clientWidth * 0.94) / cups.length);
+  const gap = () => Math.min(150, (stage.clientWidth * 0.96) / cups.length);
+  const fitCups = () => root.style.setProperty("--k", Math.min(1, gap() / 104).toFixed(3));
   const xOf = (slot) => (slot - (cups.length - 1) / 2) * gap();
-  function place() { cups.forEach((c, i) => { c.style.transform = `translateX(${xOf(slotOf[i])}px)`; c.style.zIndex = 2; }); }
+  function place() { fitCups(); cups.forEach((c, i) => { c.style.transform = `translateX(${xOf(slotOf[i])}px)`; c.style.zIndex = 2; }); }
   function dieUnder(cup, el = die) { el.style.transform = `translateX(${xOf(slotOf[cup])}px)`; }
   function placeDice(R, mode) {
     xDice.forEach((x) => { x.className = "shell-die is-x"; });
@@ -670,7 +689,7 @@
   /* ---------- a game ---------- */
   async function newGame(fromCp) {
     const cp = fromCp ? G.cp : 1, cpId = fromCp ? G.cpId : null, wasLocal = G.mode === "local";
-    Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false, safe: 0, buy: {}, shown: {}, cashed: false, mult: 1, add: 0, spun: 0, dice: "one", picks: [], lives: E.LIVES, streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set() });
+    Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false, safe: 0, buy: {}, shown: {}, cashed: false, mult: 1, add: 0, spun: 0, dice: "one", picks: [], lives: E.LIVES, cd: {}, streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set() });
     try {
       if (cp > 1 && (wasLocal || !cpId)) throw Object.assign(new Error("local"), { status: 503 });
       const j = await post(cp > 1 ? { op: "start", from: cpId } : { op: "start" });
@@ -944,6 +963,7 @@
     const dc = e.target.closest("[data-dice]");
     if (dc && !dc.disabled && G.phase === "bet") { G.dice = dc.dataset.dice; const sn = snd(); if (sn) sn.chip(0.5); render(); return; }
     if (e.target.closest("[data-glass]") && G.phase === "bet") { addGlass(); return; }
+    if (e.target.closest("[data-unglass]") && G.phase === "bet") { removeGlass(); return; }
   });
 
   /* ---------- feel: counting chips, a delta that floats up, chips that fly, a shake on a miss ---------- */
@@ -1018,11 +1038,23 @@
 
   /* ---------- the ranking ---------- */
   nameIn.value = store.get(NAME_KEY) || "";
-  nameIn.addEventListener("input", () => { nameIn.value = nameIn.value.toUpperCase().normalize("NFD").replace(/[^A-Z]/g, "").slice(0, 3); });
+  const NAME_WHY = {
+    digits: () => T("Solo letras: nada de números ni símbolos.", "Letters only: no numbers or symbols."),
+    letters: () => T("Solo letras de la A a la Z.", "Only letters A to Z."),
+    length: () => T("Tres letras, como en las recreativas.", "Three letters, arcade style."),
+    blocked: () => T("Esas iniciales no. Este ranking es parte de un portfolio: elige otras, por favor.", "Not those initials. This board is part of a portfolio: pick others, please."),
+  };
+  nameIn.addEventListener("input", () => {
+    nameIn.value = nameIn.value.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f\s]/g, "").slice(0, 3);
+    const c = nameIn.value.length === 3 ? E.nameCheck(nameIn.value) : (/[^A-Z]/.test(nameIn.value) ? E.nameCheck(nameIn.value.padEnd(3, "A")) : { ok: true });
+    signNote.textContent = c.ok ? "" : NAME_WHY[c.why]();
+    sign.classList.toggle("is-bad", !c.ok);
+  });
   sign.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = nameIn.value;
-    if (!/^[A-Z]{3}$/.test(name)) { signNote.textContent = T("Tres letras, como en las recreativas.", "Three letters, arcade style."); return; }
+    const nc = E.nameCheck(name);
+    if (!nc.ok) { signNote.textContent = NAME_WHY[nc.why](); sign.classList.add("is-bad"); return; }
     signNote.textContent = "…";
     try {
       const j = await post({ op: "submit", id: G.id, name, p: PLAYER });
@@ -1033,7 +1065,7 @@
       render();
       openBoard(true);
     } catch (err) {
-      signNote.textContent = { "blocked-name": T("Esas iniciales no. Prueba otras.", "Not those initials. Try others."), "too-short": T("Gana al menos una mano y supera las 100 fichas para apuntarte.", "Win at least one hand and beat 100 chips to sign."), already: T("Esta partida ya está apuntada.", "This game is already signed.") }[err.message]
+      signNote.textContent = { "blocked-name": NAME_WHY.blocked(), "bad-name": NAME_WHY.letters(), "too-short": T("Gana al menos una mano y supera las 100 fichas para apuntarte.", "Win at least one hand and beat 100 chips to sign."), already: T("Esta partida ya está apuntada.", "This game is already signed.") }[err.message]
         || T("No se ha podido apuntar. Inténtalo otra vez.", "Couldn't sign it. Try again.");
     }
   });
