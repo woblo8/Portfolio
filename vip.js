@@ -1079,10 +1079,10 @@
     const gilt = new THREE.MeshStandardMaterial({ ...clip, color: 0xb08d4e, metalness: 0.9, roughness: 0.35 });
     const lacquer = new THREE.MeshStandardMaterial({ ...clip, color: 0x0a0a0b, roughness: 0.4 });
     const CARD_W = ENV_W - 0.06, CARD_D = ENV_D - 0.06;
-    // the back: the rest of the letter, if it runs on (drawn mirrored so it reads right once the card is turned)
+    // the back: the rest of the letter, if it runs on (drawn upside down so it reads right once the card is turned)
     const noteBack = notePages[1] ? (() => {
       const flip = mk(notePages[1].width, notePages[1].height), fx = flip.getContext("2d");
-      fx.translate(flip.width, 0); fx.scale(-1, 1); fx.drawImage(notePages[1], 0, 0);
+      fx.translate(flip.width, flip.height); fx.rotate(Math.PI); fx.drawImage(notePages[1], 0, 0);
       const t = canvasTex(flip);
       return new THREE.MeshStandardMaterial({ ...clip, map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.78, envMapIntensity: 0.05 });
     })() : null;
