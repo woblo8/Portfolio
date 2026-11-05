@@ -130,13 +130,24 @@ async function telegram(text) {
   return r.ok;
 }
 
-// Spanish to English, through Google Translate's public endpoint (no key); null if it fails
+// Spanish to English, paragraph by paragraph so the line breaks stay where they were.
+// Three free services, tried in turn: Google's two public endpoints, then MyMemory. null if all fail
 async function translate(text) {
+  const one = async (p) => {
+    const q = encodeURIComponent(p);
+    const tries = [
+      async () => { const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&dt=t&q=${q}`); if (!r.ok) return null; const j = await r.json(); return (j[0] || []).map((x) => x[0]).join(""); },
+      async () => { const r = await fetch(`https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=es&tl=en&q=${q}`); if (!r.ok) return null; const j = await r.json(); return Array.isArray(j) ? (Array.isArray(j[0]) ? j[0][0] : j[0]) : null; },
+      async () => { const r = await fetch(`https://api.mymemory.translated.net/get?langpair=es%7Cen&q=${q}`); if (!r.ok) return null; const j = await r.json(); return j && j.responseStatus === 200 ? j.responseData.translatedText : null; },
+    ];
+    for (const t of tries) { try { const out = await t(); if (out && out.trim()) return out.trim(); } catch (e) { /* next */ } }
+    return null;
+  };
   try {
-    const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&dt=t&q=${encodeURIComponent(text)}`);
-    if (!r.ok) return null;
-    const j = await r.json();
-    return (j[0] || []).map((p) => p[0]).join("").trim() || null;
+    const parts = String(text).split("\n");
+    const out = await Promise.all(parts.map((p) => (p.trim() ? one(p) : Promise.resolve(""))));
+    if (out.some((x) => x === null)) return null;
+    return out.join("\n").trim() || null;
   } catch (e) { return null; }
 }
 
