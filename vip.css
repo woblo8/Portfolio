@@ -220,7 +220,7 @@ html.has-cursor .vt3-gl { cursor: none; }
 
 /* ---------- a closer look at something on the table ---------- */
 .vt3-inspect { position: absolute; inset: 0; z-index: 3; visibility: hidden; pointer-events: none; cursor: grab; touch-action: none; }
-.vt3.is-note .vt3-inspect { visibility: visible; pointer-events: auto; }
+.vt3.is-inspect .vt3-inspect { visibility: visible; pointer-events: auto; }
 .vt3-inspect:active { cursor: grabbing; }
 .vt3-inspect-cap {
   position: absolute; left: 50%; bottom: clamp(22px, 6vh, 56px); width: min(440px, calc(100% - 32px)); transform: translate(-50%, 10px);

@@ -1944,7 +1944,7 @@
       scene.add(obj); INS.obj = obj;
       INS.hidden = kind === "glass" || kind === "cigar" ? INSPECT.hide[kind] : null;
       if (INS.hidden) INS.hidden.visible = false;
-      vt.classList.add("is-note"); setTip("");
+      vt.classList.add("is-note", "is-inspect"); setTip("");
       inspEl.querySelector(".k").textContent = kind.startsWith("chip") ? T("Ficha", "Chip") : kind === "bill" ? T("Billete", "Note") : kind === "glass" ? T("El vaso", "The glass") : T("El puro", "The cigar");
       inspEl.querySelector("b").textContent = INSPECT_TEXT[kind][0];
       inspEl.querySelector("p").textContent = INSPECT_TEXT[kind][1];
@@ -1960,7 +1960,7 @@
       await tweenTo("insp", 0, 0.95);
       scene.remove(INS.obj); INS.obj = null;
       if (INS.hidden) INS.hidden.visible = true;
-      vt.classList.remove("is-note");
+      vt.classList.remove("is-note", "is-inspect");
       INS.on = false; INS.busy = false;
     }
     // where it is held: in front of the lens, near enough to fill the middle of the view
