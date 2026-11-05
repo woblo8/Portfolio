@@ -155,6 +155,7 @@
     mode: null, id: null, round: null, phase: "idle", signed: false, meTab: "",
     chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false,
     streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set(),
+    lastR: 0, cp: 1, cpId: null, // the checkpoint: where a finished game lets you sit back down
     record: Math.max(E.START, +(store.get(BEST_KEY) || 0)), // your best ever, in this browser
   };
   let slotOf = [0, 1, 2]; // slotOf[cup] = where that glass stands now
@@ -364,7 +365,10 @@
     const A = {
       idle: [["start", T("Sentarse con 100 fichas", "Sit down with 100 chips"), true]],
       bet: [["bet", allIn() ? T("Todo o nada", "All or nothing") + " →" : `${T("Apostar", "Bet")} ${fmt(G.bet)} →`, true], ...(G.won ? [["cashout", T("Retirarse", "Cash out"), false]] : [])],
-      over: [["again", T("Otra partida", "Play again"), !canSign()]],
+      over: [
+        ...(G.cp > 1 ? [["resume", T(`Volver a la ronda ${G.cp}`, `Back to round ${G.cp}`) + " ↺", !canSign()]] : []),
+        ["again", G.cp > 1 ? T("Desde cero", "From scratch") : T("Otra partida", "Play again"), !canSign() && !(G.cp > 1)],
+      ],
     }[G.phase] || [];
     actions.innerHTML = A.map(([a, label, main]) => `<button type="button" data-a="${a}" class="${main ? "is-main" : ""}${a === "bet" && allIn() ? " is-allin" : ""}">${label}</button>`).join("");
     cups.forEach((c) => { c.disabled = G.phase !== "pick"; });
@@ -409,14 +413,16 @@
   const lift = (c, on) => c.classList.toggle("up", on);
 
   /* ---------- a game ---------- */
-  async function newGame() {
+  async function newGame(fromCp) {
+    const cp = fromCp ? G.cp : 1, cpId = fromCp ? G.cpId : null, wasLocal = G.mode === "local";
     Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false, streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set() });
     try {
-      const j = await post({ op: "start" });
+      if (cp > 1 && (wasLocal || !cpId)) throw Object.assign(new Error("local"), { status: 503 });
+      const j = await post(cp > 1 ? { op: "start", from: cpId } : { op: "start" });
       G.mode = "remote"; G.id = j.id; G.round = j.round;
       fetchBoard().then((b) => paintMe(b.me)).catch(() => {});
     } catch (e) {
-      G.mode = "local"; G.id = null; G.round = E.round(1, Math.random);
+      G.mode = "local"; G.id = null; G.round = E.round(cp, Math.random);
       if (e.status !== 503) speak(LINES.offline());
     }
     buildCups(G.round.n); slotOf = cups.map((_, i) => i); place();
@@ -426,7 +432,7 @@
     buildCups(G.round.n); slotOf = cups.map((_, i) => i); place();
     render();
     const r = G.round.r;
-    if (r === 5) award("r5"); if (r === 10) award("r10"); if (r === 15) award("r15"); if (r === 20) award("r20"); if (r === 30) award("r30");
+    [[5, "r5"], [10, "r10"], [15, "r15"], [20, "r20"], [30, "r30"]].forEach(([n, id]) => { if (r >= n) award(id); });
     const extra = r % 4 === 0 ? skillLine() : r % 3 === 0 ? stackLine() : null;
     speak(r > 1 && G.round.n > 3 && r % 10 === 0 ? T(`Ronda ${r}: entra un vaso más. La mesa paga ×${G.round.pay}.`, `Round ${r}: one more glass. The table pays ×${G.round.pay}.`) : extra || LINES.bet());
   }
@@ -454,6 +460,7 @@
     if (G.phase !== "pick") return;
     G.phase = "reveal"; render();
     const R = G.round, bet = G.bet, before = G.chips, wasAllIn = allIn();
+    G.lastR = R.r;
     let res;
     try {
       if (G.mode === "remote") { res = await post({ op: "pick", id: G.id, cup, bet }); G.id = res.id; }
@@ -518,7 +525,7 @@
     await wait(380);
     die.classList.remove("on");
     if (!G.round) {
-      G.phase = "over";
+      G.phase = "over"; keepCheckpoint();
       (window.WOBLO_TRACK && window.WOBLO_TRACK("game", `«La casa»: ${fmt(G.best)} fichas`));
       speak(LINES.broke() + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
       render();
@@ -536,7 +543,17 @@
     toBet();
   }
 
+  // a finished game leaves a checkpoint five rounds before where it ended (only for this visit)
+  function keepCheckpoint() { G.cp = E.checkpoint(G.lastR); G.cpId = G.id; }
   async function act(a) {
+    if (a === "resume" && G.phase === "over" && G.cp > 1) {
+      actions.innerHTML = "";
+      cups.forEach((c) => lift(c, false)); die.classList.remove("on");
+      await newGame(true);
+      toBet();
+      speak(T(`De vuelta en la ronda ${G.round.r}, con 100 fichas. La mesa paga ×${G.round.pay}.`, `Back at round ${G.round.r}, with 100 chips. The table pays ×${G.round.pay}.`));
+      return;
+    }
     if (a === "start" || a === "again") {
       actions.innerHTML = "";
       cups.forEach((c) => lift(c, false)); die.classList.remove("on");
@@ -549,7 +566,7 @@
     }
     if (a === "cashout" && G.phase === "bet") {
       try { if (G.mode === "remote") { const j = await post({ op: "cashout", id: G.id }); G.id = j.id; } } catch (e) { /* the score is the best held; the server keeps it */ }
-      G.phase = "over";
+      G.phase = "over"; keepCheckpoint();
       (window.WOBLO_TRACK && window.WOBLO_TRACK("game", `«La casa»: se retira con ${fmt(G.best)} fichas`));
       speak(LINES.cashed(G.best) + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
       render();

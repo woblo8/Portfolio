@@ -125,7 +125,16 @@ module.exports = async (req, res) => {
     body = body || {};
 
     if (body.op === "start") {
-      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r: 1, chips: E.START, best: E.START, won: 0, over: false };
+      // a checkpoint: a game that just ended lets you sit back down five rounds before where it ended,
+      // with a fresh 100 chips. Only from a finished game, sealed by us, within its six hours.
+      let r = 1;
+      if (body.from) {
+        const prev = unseal(body.from);
+        if (!prev || !prev.over || Date.now() - (prev.t || 0) > GAME_TTL) { res.status(400).json({ error: "bad-checkpoint" }); return; }
+        r = E.checkpoint(prev.r - 1);
+        if (r < 2) { res.status(400).json({ error: "bad-checkpoint" }); return; }
+      }
+      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, best: E.START, won: 0, over: false };
       res.status(200).json({ id: seal(s), round: pub(deal(s)), chips: s.chips, best: s.best });
       return;
     }

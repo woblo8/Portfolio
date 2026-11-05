@@ -39,5 +39,7 @@
   }
   // the smallest bet: a tenth of the stack (so nobody climbs the board without risk), at least 1
   const minBet = (chips) => Math.max(1, Math.min(chips, Math.ceil(chips / 10)));
-  return { START, round, msFor, cupsFor, payFor, minBet };
+  // where you sit back down after a game ends at round `last`: five rounds earlier (1 means no checkpoint)
+  const checkpoint = (last) => Math.max(1, Math.floor(last) - 5);
+  return { START, round, msFor, cupsFor, payFor, minBet, checkpoint };
 });
