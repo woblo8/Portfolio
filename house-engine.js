@@ -28,7 +28,20 @@
     const idx = () => Math.floor(rnd() * n);
     for (let i = 0, m = movesFor(r); i < m; i++) {
       const p = Array.from({ length: n }, (_, k) => k);
-      if (r >= 5 && rnd() < 0.25) {
+      if (n >= 4) {
+        // four glasses or more: every glass moves on every move, so more glasses really is harder.
+        // Either they all swap in pairs at once (an odd one out joins a little circle of three),
+        // or they all go round one big circle (a cycle through every glass, none stays put).
+        const order = p.slice();
+        for (let k = n - 1; k > 0; k--) { const j = Math.floor(rnd() * (k + 1)); [order[k], order[j]] = [order[j], order[k]]; }
+        if (rnd() < 0.65) {
+          let k = 0;
+          if (n % 2) { const [a, b, c] = order; p[a] = b; p[b] = c; p[c] = a; k = 3; }
+          for (; k < n; k += 2) { const a = order[k], b = order[k + 1]; p[a] = b; p[b] = a; }
+        } else {
+          for (let k = 0; k < n; k++) p[order[k]] = order[(k + 1) % n];
+        }
+      } else if (r >= 5 && rnd() < 0.25) {
         // three glasses at once, round a little circle
         const a = idx(); let b = idx(); while (b === a) b = idx(); let c = idx(); while (c === a || c === b) c = idx();
         p[a] = b; p[b] = c; p[c] = a;
