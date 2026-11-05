@@ -24,7 +24,9 @@
   function html({ vip, projects, site, esc, pad }) {
     const name = vip.name || "";
     const g = GUESTS[name.toLowerCase()] || {};
-    const note = g.note || T(
+    // a guest's note may be plain text or bi("es", "en")
+    const own = g.note && (typeof g.note === "string" ? g.note : T(g.note.es, g.note.en));
+    const note = own || T(
       `Gracias por sentarse a esta mesa. La he preparado para ${name}: tres proyectos, un dado y ninguna prisa. Si alguno le hace clic, la siguiente mano la jugamos juntos.`,
       `Thank you for taking a seat. I set this table for ${name}: three projects, one die and no hurry. If one of them clicks, we play the next hand together.`
     );
