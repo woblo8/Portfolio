@@ -109,7 +109,7 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 
 /* ---------- the feel: print on the felt, chips that fly, a shake on a one ---------- */
 .house-felt { position: relative; overflow: hidden; transition: box-shadow 0.5s; }
-.house-print { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 60%; pointer-events: none; }
+.house-print { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 34%; pointer-events: none; }
 .house-print text { font-family: var(--mono); font-size: 8.5px; letter-spacing: 2.6px; fill: rgba(255, 255, 255, 0.16); }
 .house-fx { position: absolute; left: 50%; top: 45%; width: 0; height: 0; pointer-events: none; z-index: 3; }
 .house-fx i {

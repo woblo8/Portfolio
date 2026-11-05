@@ -250,3 +250,12 @@ html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l
 .vt-receipt { filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5)); }
 /* the ticket stands above «La casa», never on it (on a phone the tab lives up top) */
 @media (min-width: 861px) { .receipt { bottom: calc(var(--gut) + 58px); } }
+/* phones: the small mono labels a touch bigger, so they can be read without squinting */
+@media (max-width: 600px) {
+  .brand-role { font-size: 10.5px; letter-spacing: 0.06em; }
+  .menu button { font-size: 11px; }
+  .hint-row { font-size: 10px; letter-spacing: 0.1em; gap: 6px; }
+  .hint em { font-size: 12px; }
+  .index > button .chip-face { font-size: 10px; }
+  .house-open { font-size: 10.5px; }
+}
