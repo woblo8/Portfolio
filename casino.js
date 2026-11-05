@@ -234,13 +234,72 @@
   // the private table borrows the same synthesiser (and the same on/off)
   window.CASINO = { mountOdds, sound: { audio, burst, chip, thud, tick, glass, get on() { return SND.on; } } };
 
-  /* ---------- private table ---------- */
+  /* ---------- private table: the guest is told, three ways, that a table is waiting ----------
+     when the intro ends the croupier announces it and a small invitation rises from the bottom;
+     the gold chip breathes until the table is opened; the header line is a way in too.
+     Closing the invitation, or sitting down once, is remembered for this table. */
   if (window.VIP) {
-    const n = window.VIP.name;
-    setTimeout(() => say(n
-      ? T(`Bienvenidos, ${n}. Su ficha le espera.`, `Welcome, ${n}. Your chip is waiting.`)
-      : T("Bienvenido a la mesa privada.", "Welcome to the private table."), 4200), 3200);
-    D.on("table", () => { say(T("Su mesa está lista.", "Your table is ready."), 2400); chip(1); setTimeout(() => chip(0.7), 110); });
+    const n = window.VIP.name || "";
+    const KEY = `woblo:vip-seen:${n.toLowerCase()}`;
+    const seen = () => store.get(KEY) === "1";
+    const chipVip = $(".chip-vip");
+    const sit = () => { if (chipVip) chipVip.click(); };
+    if (chipVip && !seen()) chipVip.classList.add("is-calling");
+
+    // the header: «Mesa privada · Acme» opens the table
+    const bv = $("#brandVip");
+    if (bv) {
+      bv.classList.add("is-link"); bv.setAttribute("role", "link"); bv.tabIndex = 0;
+      bv.title = T("Ir a su mesa", "Go to your table");
+      bv.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); sit(); });
+      bv.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); sit(); } });
+    }
+
+    // the invitation card
+    let invite = null;
+    function showInvite() {
+      if (invite || seen()) return;
+      invite = document.createElement("aside");
+      invite.className = "vip-invite";
+      invite.setAttribute("role", "dialog");
+      invite.setAttribute("aria-label", T("Su mesa privada", "Your private table"));
+      invite.innerHTML = `
+        <button type="button" class="vi-x" aria-label="${T("Cerrar", "Close")}">✕</button>
+        <span class="vi-k">${T("Mesa privada · Reservada", "Private table · Reserved")}</span>
+        <b class="vi-name">${T("Para", "For")} ${n.replace(/[&<>"]/g, "")}</b>
+        <p>${T("Hay una mesa preparada solo para usted, con una carta dentro del sobre.", "A table has been set just for you, with a letter inside the envelope.")}</p>
+        <button type="button" class="vi-go">${T("Sentarse a la mesa", "Take your seat")} <span>→</span></button>`;
+      body.appendChild(invite);
+      requestAnimationFrame(() => requestAnimationFrame(() => invite.classList.add("on")));
+      invite.querySelector(".vi-go").addEventListener("click", () => { hideInvite(); sit(); });
+      invite.querySelector(".vi-x").addEventListener("click", () => { store.set(KEY, "1"); hideInvite(); });
+    }
+    function hideInvite() {
+      if (!invite) return;
+      const el = invite; invite = null;
+      el.classList.remove("on"); setTimeout(() => el.remove(), 700);
+    }
+
+    // once the intro is over: the croupier, the chips, the invitation
+    let announced = false;
+    const announce = () => {
+      if (announced) return; announced = true;
+      setTimeout(() => {
+        say(n ? T(`Su mesa está lista, ${n}.`, `Your table is ready, ${n}.`) : T("Su mesa está lista.", "Your table is ready."), 4200);
+        chip(1); setTimeout(() => chip(0.7), 110); setTimeout(() => chip(0.5), 230);
+        showInvite();
+      }, 1400);
+    };
+    if (body.classList.contains("intro-done")) announce();
+    else new MutationObserver((list, obs) => { if (body.classList.contains("intro-done")) { obs.disconnect(); announce(); } }).observe(body, { attributes: true, attributeFilter: ["class"] });
+
+    // sitting down: everything settles
+    D.on("table", () => {
+      store.set(KEY, "1");
+      if (chipVip) chipVip.classList.remove("is-calling");
+      hideInvite();
+      say(T("Adelante. La mesa es suya.", "Please. The table is yours."), 2400); chip(1); setTimeout(() => chip(0.7), 110);
+    });
   }
 
   /* ---------- ES / EN ---------- */

@@ -259,3 +259,45 @@ html[lang="es"] .lang-toggle [data-l="es"], html[lang="en"] .lang-toggle [data-l
   .index > button .chip-face { font-size: 10px; }
   .house-open { font-size: 10.5px; }
 }
+
+/* ---------- a private table: how the guest finds it ---------- */
+/* the header line is a way in */
+.brand-vip.is-link { display: inline-block; align-self: flex-start; cursor: pointer; border-bottom: 1px solid rgba(216, 181, 111, 0.35); padding-bottom: 1px; transition: color 0.3s, border-color 0.3s, text-shadow 0.3s; }
+.brand-vip.is-link:hover, .brand-vip.is-link:focus-visible { color: #f1d8a0; border-color: #f1d8a0; text-shadow: 0 0 14px rgba(241, 216, 160, 0.7); outline: none; }
+.brand-vip.is-link::after { content: " →"; }
+/* the gold chip breathes until the table is opened */
+.index > .chip-vip.is-calling { animation: vipCall 2.4s ease-in-out infinite; }
+@keyframes vipCall {
+  0%, 100% { box-shadow: inset 0 0 0 1.5px #d8b56f, 0 0 0 0 rgba(216, 181, 111, 0.45), 0 0 14px rgba(216, 181, 111, 0.3); }
+  50% { box-shadow: inset 0 0 0 1.5px #f1d8a0, 0 0 0 10px rgba(216, 181, 111, 0), 0 0 30px rgba(216, 181, 111, 0.65); }
+}
+/* the invitation: a small black card that rises from the bottom right */
+.vip-invite {
+  position: fixed; right: var(--gut); bottom: calc(var(--gut) + 96px); z-index: 30; width: 300px; padding: 20px 20px 18px;
+  border-radius: 16px; color: var(--bone, #ecebe7);
+  background: radial-gradient(120% 80% at 50% 0%, rgba(216, 181, 111, 0.1), transparent 60%), rgba(10, 10, 11, 0.94);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgba(216, 181, 111, 0.55), inset 0 0 0 5px rgba(10, 10, 11, 0.94), inset 0 0 0 6px rgba(216, 181, 111, 0.22), 0 24px 60px rgba(0, 0, 0, 0.6);
+  opacity: 0; transform: translateY(24px); transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vip-invite.on { opacity: 1; transform: none; }
+.vi-x { position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; border-radius: 50%; font-family: var(--mono); font-size: 11px; color: #8c8c92; transition: color 0.3s, box-shadow 0.3s; }
+.vi-x:hover { color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
+.vi-k { display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.24em; text-transform: uppercase; color: #d8b56f; }
+.vi-name { display: block; margin-top: 10px; font-weight: 600; font-size: 24px; letter-spacing: -0.03em; line-height: 1.05; color: #fff; }
+.vip-invite p { margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--mist, #c4c3bf); }
+.vi-go {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 16px; padding: 12px 18px; border-radius: 99px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #1d1006;
+  background: linear-gradient(180deg, #f1d8a0, #d8b56f 55%, #b98f48); box-shadow: 0 8px 24px rgba(216, 181, 111, 0.28);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s;
+}
+.vi-go:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(216, 181, 111, 0.42); }
+.vi-go span { transition: transform 0.3s; } .vi-go:hover span { transform: translateX(3px); }
+/* out of the way while a page (a project, the table) is open */
+#page.open ~ .vip-invite { opacity: 0; pointer-events: none; }
+@media (max-width: 860px) {
+  .vip-invite { left: 16px; right: 16px; width: auto; top: 178px; bottom: auto; padding: 16px 18px 16px; transform: translateY(-16px); }
+  .vip-invite p { display: none; } .vi-name { font-size: 21px; margin-top: 8px; } .vi-go { margin-top: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .index > .chip-vip.is-calling { animation: none; box-shadow: inset 0 0 0 1.5px #f1d8a0, 0 0 22px rgba(216, 181, 111, 0.55); } }
