@@ -43,7 +43,6 @@
   const checkpoint = (last) => Math.max(1, Math.floor(last) - 5);
   /* the shop: helps bought with chips from the table, one of each per round, for the next hand.
      Each one opens at a round; the price is a share of your chips, with a floor.
-       double  · 3  · a hit pays twice, a miss costs twice
        hint    · 5  · when you choose, the house lifts one empty glass
        gold    · 8  · the golden die: a hit pays ×3
        slow    · 10 · the croupier shuffles at half speed
@@ -53,7 +52,6 @@
      And the safe: chips put there are yours for good. The score of a game is the safe,
      plus the table if you cash out; if you go broke you keep only the safe. */
   const SHOP = {
-    double: { at: 3, pct: 0.25, min: 60 },
     hint: { at: 5, pct: 0.35, min: 150 },
     gold: { at: 8, pct: 0.45, min: 300 },
     slow: { at: 10, pct: 0.4, min: 400 },
