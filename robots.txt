@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /mesas
+Disallow: /api/
+
+Sitemap: https://www.woblo.io/sitemap.xml

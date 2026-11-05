@@ -20,10 +20,20 @@
   const GOLD = "#d8b56f";
 
   let ctx = null; // what the open table needs: guest, projects…
+  // a guest written from the private page (/mesas): fetched as soon as the link is opened,
+  // so it is there by the time the chip is clicked; until then (or without it) the default letter
+  const slugOf = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  if (window.VIP && window.VIP.name) {
+    fetch(`/api/vip?guest=${encodeURIComponent(window.VIP.name)}`).then((r) => (r.ok ? r.json() : {})).then((g) => {
+      if (g && (g.note || g.order)) GUESTS[slugOf(window.VIP.name)] = { note: g.note || undefined, order: g.order || undefined };
+    }).catch(() => {});
+  }
+  // Carlos, previewing his own tables, does not get told about himself
+  const isAdmin = () => { try { return localStorage.getItem("woblo:admin") === "1"; } catch (e) { return false; } };
 
   function html({ vip, projects, site, esc, pad }) {
     const name = vip.name || "";
-    const g = GUESTS[name.toLowerCase()] || {};
+    const g = GUESTS[slugOf(name)] || GUESTS[name.toLowerCase()] || {};
     // a guest's note may be plain text or bi("es", "en")
     const own = g.note && (typeof g.note === "string" ? g.note : T(g.note.es, g.note.en));
     const note = own || T(
@@ -497,6 +507,26 @@
     const noteEl = vt.querySelector(".vt3-note");
     const small = innerWidth < 860;
     let disposed = false;
+    // the visit: one message when the guest sits down, one when they leave, with what they did
+    const visit = { sid: [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, "0")).join(""), t0: Date.now(), did: {}, ended: false };
+    const report = (ev) => {
+      if (isAdmin() || !ctx.name) return;
+      const body = JSON.stringify({ op: "visit", ev, name: ctx.name, sid: visit.sid, secs: (Date.now() - visit.t0) / 1000, did: visit.did });
+      if (ev === "end" && navigator.sendBeacon && navigator.sendBeacon("/api/vip", new Blob([body], { type: "application/json" }))) return;
+      fetch("/api/vip", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+    };
+    const endVisit = () => { if (visit.ended) return; visit.ended = true; report("end"); };
+    const onHidden = () => { if (document.visibilityState === "hidden") endVisit(); };
+    addEventListener("pagehide", endVisit);
+    document.addEventListener("visibilitychange", onHidden);
+    // what they touch: a project, the mail, the call
+    vt.addEventListener("click", (e) => {
+      const nx = e.target.closest("[data-next]");
+      if (nx) { const p = ctx.projects[+nx.dataset.next]; if (p) visit.did.p = p.title; }
+      const cta = e.target.closest(".vt-cta");
+      if (cta) { if (cta.classList.contains("is-ghost")) visit.did.c = 1; else visit.did.m = 1; }
+    }, true);
+    report("open");
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
     // integrated and software GPUs (on Windows, through ANGLE) take ages to compile rich shaders
     const gpu = (() => { try { const gl = renderer.getContext(), e = gl.getExtension("WEBGL_debug_renderer_info"); return e ? String(gl.getParameter(e.UNMASKED_RENDERER_WEBGL)) : ""; } catch (e) { return ""; } })();
@@ -1595,6 +1625,7 @@
     const WORDS = T(["Uno", "Dos", "Tres", "Cuatro", "Cinco", "Seis"], ["One", "Two", "Three", "Four", "Five", "Six"]);
     function throwDie() {
       if (roll.on) return;
+      visit.did.r = (visit.did.r || 0) + 1;
       chosen = -1;
       roll.on = true; roll.t = 0;
       roll.p0.copy(die.position);
@@ -1803,6 +1834,7 @@
       for (let k = 0; k < 5; k++) S2.burst(a, a.currentTime + k * 0.04 + Math.random() * 0.03, { freq: 2600 + Math.random() * 2400, type: "bandpass", q: 0.9, gain: 0.03 * v, dur: 0.06 });
     };
     async function openNote() {
+      visit.did.n = 1;
       if (NOTE.busy || NOTE.open) return;
       NOTE.busy = true; noteSeen = true;
       vt.classList.add("is-note"); setTip("");
@@ -1986,19 +2018,31 @@
     // compile every shader in one go, then lift the veil on the first real frame
     const veil = document.createElement("div");
     veil.className = "vt3-load";
-    veil.innerHTML = `<span>${T("Preparando la mesa", "Setting the table")}</span><i></i>`;
+    // a glass of whisky being poured: it fills while the table is set, and is full when it is ready
+    veil.innerHTML = `
+      <div class="wk" aria-hidden="true">
+        <i class="wk-pour"></i>
+        <div class="wk-glass">
+          <div class="wk-level"><div class="wk-liquid"><i class="wk-wave"></i><i class="wk-ice"></i><i class="wk-ice is-b"></i><i class="wk-bub"></i><i class="wk-bub is-b"></i></div></div>
+        </div>
+        <svg class="wk-edge" viewBox="0 0 80 96"><path d="M3 2 L77 2 L70 94 L10 94 Z"/><path class="wk-base" d="M10.6 86 L69.4 86"/></svg>
+      </div>
+      <span role="status">${T("Sirviendo la mesa", "Pouring your table")}</span>`;
     vt.appendChild(veil);
     const ready = Promise.race([Promise.all([envReady, postReady]), new Promise((r) => setTimeout(r, 4000))]);
     ready.then(() => new Promise((r) => requestAnimationFrame(r))).then(() => {
       if (disposed) return;
       try { renderer.compile(scene, camera); } catch (e) { /* compiles on first frame instead */ }
       last = performance.now(); slow.t = last;
-      raf = requestAnimationFrame((now) => { frame(now); requestAnimationFrame(() => veil.classList.add("off")); setTimeout(() => veil.remove(), 1200); });
+      raf = requestAnimationFrame((now) => { frame(now); veil.classList.add("full"); setTimeout(() => veil.classList.add("off"), 650); setTimeout(() => veil.remove(), 1700); });
     });
     window.__vt = { scene, camera, view, renderer, throwDie, roll, openNote: () => openNote(), closeNote: () => closeNote(), note: NOTE, get composer() { return composer; } };
 
     return () => {
       disposed = true;
+      endVisit();
+      removeEventListener("pagehide", endVisit);
+      document.removeEventListener("visibilitychange", onHidden);
       cancelAnimationFrame(raf);
       ambStop();
       if (rolls.length) showReceipt(ctx.name, rolls);

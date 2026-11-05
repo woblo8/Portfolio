@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Mesas privadas — woblo.io</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink: #050506; --bone: #ecebe7; --mist: #c4c3bf; --smoke: #8c8c92; --gold: #d8b56f; --line: rgba(255, 255, 255, 0.12);
+      --mono: "Geist Mono", ui-monospace, Menlo, monospace; --sans: "Inter Tight", "Helvetica Neue", Arial, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--ink); color: var(--bone); font-family: var(--sans); font-size: 15px; line-height: 1.5; padding: 48px 20px 80px; }
+    main { max-width: 760px; margin: 0 auto; display: grid; gap: 28px; }
+    .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--smoke); }
+    h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 600; letter-spacing: -0.04em; line-height: 1; margin-top: 8px; }
+    h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .card { padding: 22px; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); background: #0a0a0c; display: grid; gap: 16px; }
+    label { display: grid; gap: 6px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--smoke); }
+    input, textarea, select { font: inherit; font-family: var(--sans); font-size: 15px; letter-spacing: 0; text-transform: none; color: #fff; background: #111114; border: 0; border-radius: 10px; padding: 11px 13px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); outline: 0; width: 100%; }
+    input:focus, textarea:focus, select:focus { box-shadow: inset 0 0 0 1.5px var(--gold); }
+    textarea { min-height: 96px; resize: vertical; }
+    .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    button, .btn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; padding: 12px 18px; border-radius: 99px; border: 0; cursor: pointer; text-decoration: none;
+      color: var(--ink); background: var(--gold); }
+    button.ghost, .btn.ghost { color: var(--bone); background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); }
+    button.danger { color: #ffb3b3; background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 120, 120, 0.35); padding: 8px 12px; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .hint { font-size: 13px; color: var(--smoke); }
+    .out { display: none; gap: 10px; padding: 16px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(216, 181, 111, 0.5); }
+    .out.on { display: grid; }
+    .out code { font-family: var(--mono); font-size: 13px; color: var(--gold); word-break: break-all; }
+    ul { list-style: none; display: grid; gap: 8px; }
+    li.g { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.025); }
+    li.g b { font-weight: 600; }
+    li.g small { grid-column: 1; font-family: var(--mono); font-size: 11px; color: var(--smoke); word-break: break-all; }
+    li.g .btns { grid-row: 1 / span 2; grid-column: 2; }
+    li.g button { padding: 8px 12px; font-size: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--smoke); font-weight: 400; }
+    td.m { font-family: var(--mono); font-size: 12px; color: var(--mist); white-space: nowrap; }
+    .pill { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 99px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); margin: 0 4px 4px 0; color: var(--mist); }
+    .pill.on { color: var(--ink); background: var(--gold); box-shadow: none; }
+    .status { display: flex; gap: 8px; flex-wrap: wrap; }
+    [hidden] { display: none !important; }
+    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } th:nth-child(4), td:nth-child(4) { display: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="k">woblo.io · privado</span>
+      <h1>Mesas privadas</h1>
+    </header>
+
+    <!-- the key: kept in this browser only -->
+    <section class="card" id="gate">
+      <h2>Tu clave</h2>
+      <p class="hint">La clave es el valor de <b>VIP_ADMIN_KEY</b> en Vercel. Se guarda solo en este navegador, y desde aquí tus propias visitas a las mesas no te avisan.</p>
+      <form id="keyForm" class="btns">
+        <input id="key" type="password" autocomplete="current-password" placeholder="Clave" style="flex: 1; min-width: 200px" />
+        <button type="submit">Entrar</button>
+      </form>
+      <p class="hint" id="keyNote"></p>
+    </section>
+
+    <div id="app" hidden style="display: grid; gap: 28px">
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline">
+          <h2>Nueva mesa</h2>
+          <div class="status" id="status"></div>
+        </div>
+        <form id="guestForm" style="display: grid; gap: 14px">
+          <label>Empresa o persona<input id="name" required maxlength="40" placeholder="Acme" /></label>
+          <label>Carta (español)<textarea id="noteEs" maxlength="600" placeholder="Déjalo vacío para usar la carta de siempre."></textarea></label>
+          <label>Carta (inglés, opcional)<textarea id="noteEn" maxlength="600" placeholder="If empty, the Spanish one is used."></textarea></label>
+          <div>
+            <span class="k">Proyectos en la mesa, en orden</span>
+            <div class="row" id="order" style="margin-top: 6px"></div>
+          </div>
+          <div class="btns"><button type="submit" id="save">Crear mesa</button><button type="button" class="ghost" id="reset">Limpiar</button></div>
+        </form>
+        <div class="out" id="out">
+          <span class="k">Enlace listo</span>
+          <code id="link"></code>
+          <div class="btns"><button type="button" id="copy">Copiar enlace</button><a class="btn ghost" id="open" target="_blank" rel="noopener">Ver la mesa ↗</a></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Tus mesas</h2>
+        <ul id="guests"><li class="hint">…</li></ul>
+      </section>
+
+      <section class="card">
+        <h2>Últimas visitas</h2>
+        <div style="overflow-x: auto"><table><thead><tr><th>Cuándo</th><th>Mesa</th><th>Qué</th><th>Tiempo</th></tr></thead><tbody id="visits"><tr><td colspan="4" class="hint">…</td></tr></tbody></table></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="i18n.js"></script>
+  <script src="projects.js"></script>
+  <script>
+  (() => {
+    "use strict";
+    const $ = (id) => document.getElementById(id);
+    const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
+    const esc = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    const projects = (window.PROJECTS || []).map((p, i) => ({ i, title: p.title, kind: p.kind })).filter((p) => !p.kind);
+    let key = store.get("woblo:admin-key") || "";
+    let guests = [];
+
+    const api = async (method, body, query = "") => {
+      const r = await fetch(`/api/vip${query}`, { method, headers: { "Content-Type": "application/json", "x-admin-key": key }, body: body ? JSON.stringify(body) : undefined });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { const e = new Error(j.error || r.status); e.status = r.status; e.j = j; throw e; }
+      return j;
+    };
+
+    // the three slots for projects
+    $("order").innerHTML = [0, 1, 2].map((k) => `<select data-slot="${k}">${projects.map((p) => `<option value="${p.i}"${p.i === (projects[k] || {}).i ? " selected" : ""}>${esc(p.title)}</option>`).join("")}</select>`).join("");
+
+    async function enter() {
+      $("keyNote").textContent = "…";
+      try {
+        const j = await api("GET", null, "?admin=guests");
+        store.set("woblo:admin-key", key); store.set("woblo:admin", "1");
+        $("gate").hidden = true; $("app").hidden = false;
+        $("status").innerHTML = `<span class="pill${j.telegram ? " on" : ""}">Telegram ${j.telegram ? "conectado" : "sin conectar"}</span>`;
+        guests = j.guests || []; paintGuests(); loadVisits();
+      } catch (e) {
+        $("gate").hidden = false; $("app").hidden = true;
+        $("keyNote").textContent = e.status === 401
+          ? (e.j && e.j.configured === false ? "Falta crear VIP_ADMIN_KEY en Vercel (Settings → Environment Variables) y volver a desplegar." : "Esa clave no es.")
+          : "No se ha podido conectar. ¿Estás en www.woblo.io?";
+      }
+    }
+    $("keyForm").addEventListener("submit", (e) => { e.preventDefault(); key = $("key").value.trim(); enter(); });
+    if (key) enter();
+
+    const linkOf = (name) => `https://www.woblo.io/?vip=${encodeURIComponent(name)}`;
+    function paintGuests() {
+      $("guests").innerHTML = guests.length ? guests.map((g, k) => `
+        <li class="g"><b>${esc(g.name)}</b><small>${esc(linkOf(g.name))}${g.note ? " · carta propia" : ""}</small>
+          <div class="btns"><button class="ghost" data-copy="${k}">Copiar</button><button class="ghost" data-edit="${k}">Editar</button><button class="danger" data-del="${k}">Borrar</button></div></li>`).join("")
+        : `<li class="hint">Aún no hay mesas. Crea la primera arriba.</li>`;
+    }
+    $("guests").addEventListener("click", async (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      const g = guests[+(b.dataset.copy ?? b.dataset.edit ?? b.dataset.del)];
+      if (b.dataset.copy != null) { await navigator.clipboard.writeText(linkOf(g.name)); b.textContent = "Copiado"; setTimeout(() => (b.textContent = "Copiar"), 1400); }
+      if (b.dataset.edit != null) {
+        $("name").value = g.name; $("noteEs").value = (g.note && g.note.es) || ""; $("noteEn").value = (g.note && g.note.en !== g.note.es ? g.note.en : "") || "";
+        (g.order || []).forEach((v, k) => { const s = document.querySelector(`[data-slot="${k}"]`); if (s) s.value = v; });
+        $("save").textContent = "Guardar cambios"; window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      if (b.dataset.del != null && confirm(`¿Borrar la mesa de ${g.name}? El enlace seguirá abriendo la mesa, con la carta de siempre.`)) {
+        await api("POST", { op: "delete", slug: g.slug }); guests = guests.filter((x) => x !== g); paintGuests();
+      }
+    });
+
+    $("guestForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const order = [...document.querySelectorAll("[data-slot]")].map((s) => +s.value);
+      if (new Set(order).size < order.length) { alert("Elige tres proyectos distintos."); return; }
+      $("save").disabled = true;
+      try {
+        const j = await api("POST", { op: "save", name: $("name").value, note: { es: $("noteEs").value, en: $("noteEn").value }, order });
+        $("link").textContent = j.link; $("open").href = j.link; $("out").classList.add("on");
+        const r = await api("GET", null, "?admin=guests"); guests = r.guests || []; paintGuests();
+      } catch (err) { alert("No se ha podido guardar."); }
+      $("save").disabled = false; $("save").textContent = "Crear mesa";
+    });
+    $("reset").addEventListener("click", () => { $("guestForm").reset(); $("out").classList.remove("on"); $("save").textContent = "Crear mesa"; });
+    $("copy").addEventListener("click", async () => { await navigator.clipboard.writeText($("link").textContent); $("copy").textContent = "Copiado"; setTimeout(() => ($("copy").textContent = "Copiar enlace"), 1400); });
+
+    async function loadVisits() {
+      try {
+        const { visits } = await api("GET", null, "?admin=visits");
+        const nameOf = (slug) => (guests.find((g) => g.slug === slug) || {}).name || slug;
+        const what = (v) => v.ev === "open" ? `<span class="pill">Entra</span>` : [
+          `<span class="pill">Sale</span>`, v.did.includes("n") ? `<span class="pill on">Abrió la carta</span>` : "",
+          /r(\d+)/.test(v.did) ? `<span class="pill">Dado ×${v.did.match(/r(\d+)/)[1]}</span>` : "",
+          v.did.includes("p") ? `<span class="pill">Vio un proyecto</span>` : "", v.did.includes("c") ? `<span class="pill on">Reservar llamada</span>` : "",
+          v.did.includes("m") ? `<span class="pill on">Hablemos</span>` : ""].join("");
+        const when = (t) => new Date(t).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+        $("visits").innerHTML = visits.length ? visits.map((v) => `<tr><td class="m">${when(v.at)}</td><td>${esc(nameOf(v.slug))}</td><td>${what(v)}</td><td class="m">${v.ev === "end" ? `${Math.floor(v.secs / 60)}:${String(v.secs % 60).padStart(2, "0")}` : ""}</td></tr>`).join("")
+          : `<tr><td colspan="4" class="hint">Todavía nadie se ha sentado.</td></tr>`;
+      } catch (e) { $("visits").innerHTML = `<tr><td colspan="4" class="hint">No se han podido cargar.</td></tr>`; }
+    }
+  })();
+  </script>
+</body>
+</html>
