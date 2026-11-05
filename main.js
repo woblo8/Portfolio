@@ -48,6 +48,24 @@
 
   /* ---------- renderer / scene ---------- */
   const canvas = $("#gl");
+
+  // shaders compile on the GPU driver's own threads (KHR_parallel_shader_compile): three.js would
+  // otherwise stop and wait for each one to check it for errors, freezing the page for a second or more.
+  // Resolves when every program is linked (or after a few seconds; then the first frame finishes the job)
+  function compileAsync(renderer, scene, camera) {
+    const gl = renderer.getContext(), ext = gl.getExtension("KHR_parallel_shader_compile");
+    renderer.debug.checkShaderErrors = false;
+    try { renderer.compile(scene, camera); } catch (e) { return Promise.resolve(); }
+    if (!ext) return Promise.resolve();
+    const t0 = performance.now();
+    return new Promise((res) => {
+      const poll = () => {
+        const pending = renderer.info.programs.some((p) => p.program && !gl.getProgramParameter(p.program, ext.COMPLETION_STATUS_KHR));
+        if (!pending || performance.now() - t0 > 6000) res(); else setTimeout(poll, 30);
+      };
+      poll();
+    });
+  }
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
   const PR = Math.min(window.devicePixelRatio, 2);
   renderer.setPixelRatio(PR);
@@ -443,6 +461,7 @@
         m.userData.soft = true;
         paintFace(m); await nextTask();
         m.userData.engrave(); await nextTask();
+        if (renderer.initTexture) { [m.map, m.emissiveMap, m.roughnessMap, m.normalMap].forEach((t) => t && renderer.initTexture(t)); await nextTask(); }
         m.userData.soft = false;
       }
       for (const k in faceCache) delete faceCache[k];
@@ -2148,9 +2167,12 @@
 
     flash.style.opacity = S.flash.toFixed(3);
 
-    if (!(S.mode === "project" && S.flash < 0.01)) renderer.render(scene, camera);
+    if (glReady && !(S.mode === "project" && S.flash < 0.01)) renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
 
+  // the loader counts from the first frame; the die is only drawn once its shaders are ready
+  let glReady = false;
+  compileAsync(renderer, scene, camera).then(() => { glReady = true; });
   requestAnimationFrame(tick);
 })();

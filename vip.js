@@ -496,6 +496,24 @@
     return scriptP.get(src);
   };
 
+
+  // shaders compile on the GPU driver's own threads (KHR_parallel_shader_compile): three.js would
+  // otherwise stop and wait for each one to check it for errors, freezing the page for a second or more.
+  // Resolves when every program is linked (or after a few seconds; then the first frame finishes the job)
+  function compileAsync(renderer, scene, camera) {
+    const gl = renderer.getContext(), ext = gl.getExtension("KHR_parallel_shader_compile");
+    renderer.debug.checkShaderErrors = false;
+    try { renderer.compile(scene, camera); } catch (e) { return Promise.resolve(); }
+    if (!ext) return Promise.resolve();
+    const t0 = performance.now();
+    return new Promise((res) => {
+      const poll = () => {
+        const pending = renderer.info.programs.some((p) => p.program && !gl.getProgramParameter(p.program, ext.COMPLETION_STATUS_KHR));
+        if (!pending || performance.now() - t0 > 6000) res(); else setTimeout(poll, 30);
+      };
+      poll();
+    });
+  }
   const portraitView = () => innerHeight > innerWidth * 1.15;
 
   /* ---------- the scene ---------- */
@@ -2030,9 +2048,8 @@
       <span role="status">${T("Sirviendo la mesa", "Pouring your table")}</span>`;
     vt.appendChild(veil);
     const ready = Promise.race([Promise.all([envReady, postReady]), new Promise((r) => setTimeout(r, 4000))]);
-    ready.then(() => new Promise((r) => requestAnimationFrame(r))).then(() => {
+    ready.then(() => new Promise((r) => requestAnimationFrame(r))).then(() => (disposed ? null : compileAsync(renderer, scene, camera))).then(() => {
       if (disposed) return;
-      try { renderer.compile(scene, camera); } catch (e) { /* compiles on first frame instead */ }
       last = performance.now(); slow.t = last;
       raf = requestAnimationFrame((now) => { frame(now); veil.classList.add("full"); setTimeout(() => veil.classList.add("off"), 650); setTimeout(() => veil.remove(), 1700); });
     });
