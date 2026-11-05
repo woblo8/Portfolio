@@ -48,29 +48,30 @@
     .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); }
     .serif { font-family: var(--serif); font-weight: 500; letter-spacing: -0.01em; }
 
-    /* ---------- the room: the private table seen from above, in the dark ----------
-       a still of the VIP table, in black and white and out of focus, drifting very slowly;
-       the lamp's pool of light sways over the felt; the corners fall away to black */
+    /* ---------- the room: the boss's lounge, out of focus behind everything ----------
+       champagne chesterfields, a back-bar of bottles lit from behind, lamps, a haze of smoke.
+       Very blurred and dark so it never competes with the work; it shifts a little with the
+       pointer, as if you turned your head, and the bottles' light breathes */
     .room { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #050506; }
-    .room-table {
-      position: absolute; inset: -6%;
-      background: url("assets/despacho-mesa.jpg") center 42% / cover no-repeat;
-      filter: grayscale(1) brightness(0.42) contrast(1.15) blur(1.5px);
-      animation: roomDrift 70s ease-in-out infinite alternate;
+    .room-photo {
+      position: absolute; inset: -5%;
+      background: url("assets/despacho-salon.jpg") center / cover no-repeat;
+      filter: blur(10px) brightness(0.62) saturate(0.8);
+      transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(1.06);
+      transition: transform 1.6s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    @keyframes roomDrift { from { transform: scale(1.03) translate(-1%, -0.6%); } to { transform: scale(1.09) translate(1%, 0.8%); } }
-    .room-lamp {
-      position: absolute; inset: -10%; mix-blend-mode: screen;
-      background: radial-gradient(34% 30% at 50% 44%, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.05) 55%, transparent 75%);
-      animation: roomSway 11s ease-in-out infinite alternate;
+    .room-glow {
+      position: absolute; inset: 0; mix-blend-mode: screen;
+      background: radial-gradient(45% 35% at 50% 38%, rgba(255, 190, 110, 0.12), transparent 70%);
+      animation: roomBreath 7s ease-in-out infinite;
     }
-    @keyframes roomSway { from { transform: translate(-3.5%, -0.5%); } to { transform: translate(3.5%, 0.5%); } }
+    @keyframes roomBreath { 50% { opacity: 0.55; } }
     .room::after {
       content: ""; position: absolute; inset: 0;
-      background: radial-gradient(115% 85% at 50% 44%, transparent 30%, rgba(5, 5, 6, 0.94) 100%),
-                  linear-gradient(180deg, rgba(5, 5, 6, 0.45), rgba(5, 5, 6, 0.1) 35%, rgba(5, 5, 6, 0.86));
+      background: radial-gradient(120% 90% at 50% 40%, transparent 35%, rgba(5, 5, 6, 0.9) 100%),
+                  linear-gradient(180deg, rgba(5, 5, 6, 0.35), rgba(5, 5, 6, 0.15) 40%, rgba(5, 5, 6, 0.8));
     }
-    @media (prefers-reduced-motion: reduce) { .room-table, .room-lamp { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { .room-glow { animation: none; } .room-photo { transition: none; } }
 
     /* ---------- the door: you need the word to come in ---------- */
     .door {
@@ -343,7 +344,7 @@
   </style>
 </head>
 <body>
-  <div class="room" aria-hidden="true"><div class="room-table"></div><div class="room-lamp"></div></div>
+  <div class="room" aria-hidden="true"><div class="room-photo"></div><div class="room-glow"></div></div>
 
   <!-- the door -->
   <div class="door" id="door">
@@ -583,6 +584,12 @@
       } catch (e) { $("visits").innerHTML = `<li class="empty">El registro no responde ahora mismo.</li>`; }
     }
 
+    /* the lounge shifts a little with the pointer: depth, without moving anything you read */
+    if (!reduce) addEventListener("pointermove", (e) => {
+      const r = document.documentElement.style;
+      r.setProperty("--px", `${(e.clientX / innerWidth - 0.5) * -18}px`);
+      r.setProperty("--py", `${(e.clientY / innerHeight - 0.5) * -12}px`);
+    }, { passive: true });
   })();
   </script>
 </body>
