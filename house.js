@@ -74,7 +74,7 @@
         </div>
       </header>
       <div class="house-score">
-        <div class="is-bank"><span class="bank-chip" aria-hidden="true"></span><div><small>${T("Tus fichas", "Your chips")}</small><b data-k="chips">${E.START}</b></div><span class="house-delta" data-k="delta"></span></div>
+        <div class="is-bank"><span class="bank-chip" aria-hidden="true"></span><div><small>${T("Tus fichas", "Your chips")}</small><b data-k="chips">${E.START}</b><span class="house-lives" data-k="lives" aria-label="${T("Vidas", "Lives")}"></span></div><span class="house-delta" data-k="delta"></span></div>
         <div><small>${T("Ronda", "Round")}</small><b data-k="round">1</b></div>
         <div><small>${T("Récord", "Best")}</small><b data-k="best">0</b></div>
       </div>
@@ -155,8 +155,8 @@
       svg: `${dieAt(40, 60, 16)}<text x="40" y="92" class="g-t">×1</text>${dieAt(88, 60, 16)}${dieAt(108, 60, 16, "g-die g-decoy")}<text x="98" y="92" class="g-t">×2</text>${dieAt(150, 60, 16)}${dieAt(170, 60, 16)}<text x="160" y="92" class="g-t">×3</text>${dieAt(204, 46, 12)}${dieAt(204, 62, 12, "g-die g-redd")}${dieAt(204, 78, 12, "g-die g-goldd")}<text x="204" y="100" class="g-t">×10</text>` },
     { k: T("El multiplicador", "The multiplier"), t: T("Todo lo que ganas pasa por él. Súbelo añadiendo vasos (×1,5 cada uno, para siempre) y con la ruleta, que sale cada 5 rondas y nunca resta.", "Everything you win goes through it. Raise it by adding glasses (×1.5 each, for good) and with the wheel, every 5 rounds, which never takes away."),
       svg: `${glassAt(40, 40, 22, 30)}${glassAt(66, 40, 22, 30)}<path class="g-arrow" d="M84 50 H96 M90 44 V56"/>${glassAt(114, 40, 22, 30, "g-glow")}<circle cx="186" cy="58" r="34"/>${Array.from({ length: 10 }, (_, i) => { const a = (i * 36 * Math.PI) / 180; return `<path d="M186 58 L${(186 + Math.cos(a) * 34).toFixed(1)} ${(58 + Math.sin(a) * 34).toFixed(1)}" class="g-dash"/>`; }).join("")}<circle cx="186" cy="58" r="6"/><path d="M186 18 L182 10 H190 Z" class="g-glow"/><text x="78" y="100" class="g-t g-big">×1,5</text><text x="186" y="106" class="g-t g-big">×1,2 – ×10</text>` },
-    { k: T("Retírate a tiempo", "Cash out in time"), t: T("Tu marca son las fichas con las que te retiras. Si te quedas sin fichas, la partida vale 0.", "Your score is the chips you cash out with. Go broke and the game is worth 0."),
-      svg: `<rect x="128" y="26" width="64" height="64" rx="6"/><circle cx="160" cy="58" r="14"/><path d="M160 46 V52 M160 64 V70 M148 58 H154 M166 58 H172"/><rect x="134" y="32" width="52" height="52" rx="3" class="g-dash"/>${chipAt(64, 58, 12)}<path class="g-arrow g-move" d="M82 58 H118"/><path class="g-arrow g-move" d="M112 52 L118 58 L112 64"/><text x="64" y="96" class="g-t">${T("mesa", "table")}</text><text x="160" y="108" class="g-t">${T("tuyo", "yours")}</text>` },
+    { k: T("Tres vidas", "Three lives"), t: T("Cada fallo te quita una vida y la mitad de la mesa. Al tercero, la partida vale 0: retírate a tiempo, tu marca son las fichas con las que te vas.", "Each miss takes a life and half the table. At the third, the game is worth 0: cash out in time, your score is the chips you leave with."),
+      svg: `<path class="g-heart" d="M70 66 C54 54 58 42 70 50 C82 42 86 54 70 66 Z"/><path class="g-heart" d="M120 66 C104 54 108 42 120 50 C132 42 136 54 120 66 Z"/><path class="g-dash" d="M170 66 C154 54 158 42 170 50 C182 42 186 54 170 66 Z"/><path class="g-arrow" d="M156 40 L184 68 M184 40 L156 68"/><text x="120" y="96" class="g-t">${T("cada fallo: −1 vida · −50% mesa", "each miss: −1 life · −50% table")}</text>` },
     { k: T("Ayudas", "Helps"), t: T("Canjea fichas de la mesa por ayudas. Cada pocas rondas se desbloquea una nueva, cada vez más cara.", "Trade table chips for helps. Every few rounds a new one unlocks, each dearer than the last."),
       svg: `<path d="M20 70 H220" class="g-dash"/>` + Object.keys(E.SHOP).map((id, i) => { const x = 36 + i * 34, y = 70 - 8 - i * 5; return `<path d="M${x} 70 V${y}" class="g-dash"/><circle cx="${x}" cy="${y - 9}" r="9" class="${id === "glass" ? "g-glow" : id === "pact" ? "g-red" : ""}"/><text x="${x}" y="${y - 6}" class="g-t g-icon">${({ hint: "◉", lucky: "♣", slow: "⧗", insure: "☂", pact: "♅", glass: "◇" })[id]}</text><text x="${x}" y="86" class="g-t">${E.SHOP[id].at}</text>`; }).join("") + `<text x="120" y="104" class="g-t">${T("ronda", "round")}</text>` },
     { k: T("Rangos", "Ranks"), t: T("Cuanto más aguantas, más cambia la mesa: de turista a diablo, a dios… y más allá.", "The longer you last, the more the table changes: from tourist to devil, to god… and beyond."),
@@ -232,7 +232,7 @@
     chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false,
     streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set(),
     safe: 0, buy: {}, shown: {}, cashed: false,
-    mult: 1, add: 0, spun: 0, dice: "one", picks: [], wheelBusy: false,
+    mult: 1, add: 0, spun: 0, dice: "one", picks: [], wheelBusy: false, lives: E.LIVES,
     lastR: 0, cp: 1, cpId: null, // the checkpoint: where a finished game lets you sit back down
     record: +(store.get(BEST_KEY) || 0), // your best score ever, in this browser
   };
@@ -433,8 +433,8 @@
       long: () => T("Un trébol sobre el tapete. Si aciertas esta ronda, el premio se multiplica por tres, encima de tu multiplicador.", "A clover on the felt. Hit this round and the prize is tripled, on top of your multiplier.") },
     slow: { c: "#b98cff", n: () => T("Tiempo Bala", "Bullet Time"), t: () => T("Barajan a media velocidad", "Shuffled at half speed"),
       long: () => T("El crupier baraja a la mitad de velocidad durante una ronda. Ideal cuando la mesa ya va demasiado rápida.", "The croupier shuffles at half speed for one round. Just right when the table is getting too fast.") },
-    insure: { c: "#58a8ff", n: () => T("Plan B", "Plan B"), t: () => T("Si fallas, pierdes la mitad", "Miss and lose only half"),
-      long: () => T("Si fallas esta ronda, la casa te devuelve la mitad de lo que te jugabas.", "If you miss this round, the house gives back half of your stake.") },
+    insure: { c: "#58a8ff", n: () => T("Plan B", "Plan B"), t: () => T("Si fallas, no pierdes vida", "Miss and keep your life"),
+      long: () => T("Si fallas esta ronda, pierdes la mitad de la mesa como siempre, pero no la vida. Un fallo gratis.", "If you miss this round you lose half the table as usual, but not a life. A free miss.") },
     pact: { c: "#ff3b4a", n: () => T("Pacto Infernal", "Infernal Pact"), t: () => T("×5, o pierdes toda la mesa", "×5, or lose the whole table"),
       long: () => T("Firma y el acierto paga cinco veces más. Pero si fallas, el diablo se lleva todas las fichas de la mesa. La partida se acaba ahí.", "Sign and a hit pays five times more. But miss, and the devil takes every chip on the table. He doesn't touch the safe.") },
     glass: { c: "#e9f7ff", n: () => T("Visión de Cristal", "Crystal Vision"), t: () => T("Ves los dados todo el rato", "You see the dice all along"),
@@ -445,7 +445,7 @@
     hint: () => T("Tercer Ojo abierto. Cuando elija, la casa le quitará un vaso vacío.", "Tip-off bought. When you choose, the house will remove an empty glass."),
     lucky: () => T("Trébol Negro sobre el tapete. Si acierta, paga triple.", "Charm on the table. Hit it and it pays triple."),
     slow: () => T("Tiempo Bala. El crupier bostezará barajando.", "Slow motion. The croupier will yawn as he shuffles."),
-    insure: () => T("Plan B activado. Si falla, la casa le devuelve la mitad.", "Insured. Miss and the house gives back half."),
+    insure: () => T("Plan B activado. Si falla, conserva la vida.", "Plan B on. Miss and you keep your life."),
     pact: () => T("Pacto firmado. Quíntuple… o nada. Ni una ficha en la mesa.", "Pact signed. Five times… or nothing. Not one chip left on the table."),
     glass: () => T("Visión de Cristal. Lo más caro de la casa: no los pierda de vista.", "Crystal glasses. The dearest thing in the house: don't lose sight of them."),
   };
@@ -572,6 +572,7 @@
     k("chips").textContent = fmt(G.chips);
     k("round").textContent = R ? R.r : 1;
     k("best").textContent = fmt(G.record);
+    k("lives").innerHTML = Array.from({ length: E.LIVES }, (_, i) => `<i class="${i < G.lives ? "on" : ""}">♥</i>`).join("");
     ["chips", "best"].forEach((x) => k(x).classList.toggle("is-long", k(x).textContent.length > 9));
     const fx = Object.assign({}, G.shown, G.buy); // what this round bought, until its reveal is over
     root.classList.toggle("is-crystal", !!fx.glass);
@@ -584,7 +585,7 @@
       G.bet = E.stakeFor(G.chips);
       const pay = R ? R.pay : 1, top = G.dice === "colors" ? 10 : E.DICE[G.dice].mult;
       const win = E.gainFor(G.buy, G.bet, pay, top, G.mult), lose = E.lossFor(G.buy, G.bet, G.chips);
-      k("betInfo").textContent = T(`Te juegas ${fmt(G.bet)} · ganarías ${G.dice === "colors" ? "hasta " : ""}${fmt(win)} · arriesgas ${fmt(lose)}`, `You stake ${fmt(G.bet)} · you'd win ${G.dice === "colors" ? "up to " : ""}${fmt(win)} · you risk ${fmt(lose)}`);
+      k("betInfo").textContent = T(`Te juegas ${fmt(G.bet)} · ganarías ${G.dice === "colors" ? "hasta " : ""}${fmt(win)} · si fallas −${fmt(lose)}${G.buy.insure ? "" : " y una vida"}`, `You stake ${fmt(G.bet)} · you'd win ${G.dice === "colors" ? "up to " : ""}${fmt(win)} · a miss costs ${fmt(lose)}${G.buy.insure ? "" : " and a life"}`);
       paintDice();
       paintShop();
     }
@@ -669,7 +670,7 @@
   /* ---------- a game ---------- */
   async function newGame(fromCp) {
     const cp = fromCp ? G.cp : 1, cpId = fromCp ? G.cpId : null, wasLocal = G.mode === "local";
-    Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false, safe: 0, buy: {}, shown: {}, cashed: false, mult: 1, add: 0, spun: 0, dice: "one", picks: [], streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set() });
+    Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false, safe: 0, buy: {}, shown: {}, cashed: false, mult: 1, add: 0, spun: 0, dice: "one", picks: [], lives: E.LIVES, streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set() });
     try {
       if (cp > 1 && (wasLocal || !cpId)) throw Object.assign(new Error("local"), { status: 503 });
       const j = await post(cp > 1 ? { op: "start", from: cpId } : { op: "start" });
@@ -736,9 +737,9 @@
     try {
       if (G.mode === "remote") { res = await post({ op: "pick", id: G.id, cups: picks, mode }); G.id = res.id; }
       else {
-        const st = { r: R.r, chips: G.chips, safe: G.safe, best: G.best, won: G.won, buy: G.buy, over: false, mult: G.mult, add: G.add };
+        const st = { r: R.r, chips: G.chips, best: G.best, won: G.won, buy: G.buy, over: false, mult: G.mult, add: G.add, lives: G.lives };
         const { ok, dm } = E.settle(st, R, picks, mode);
-        res = { ok, dm, d: R.d, x: R.x, chips: st.chips, safe: st.safe, best: st.best, won: st.won, mult: st.mult, round: st.over ? null : E.round(R.r + 1, Math.random, G.add) };
+        res = { ok, dm, lives: st.lives, d: R.d, x: R.x, chips: st.chips, safe: 0, best: st.best, won: st.won, mult: st.mult, round: st.over ? null : E.round(R.r + 1, Math.random, G.add) };
       }
     } catch (e) {
       speak(T("Algo se ha caído de la mesa. Vuelve a intentarlo.", "Something fell off the table. Try again."));
@@ -747,6 +748,7 @@
     placeDice(R, mode); diceShow(true);
     cups.forEach((c) => c.classList.remove("is-chosen"));
     picks.forEach((c) => lift(cups[c], true));
+    const livesBefore = G.lives; if (res.lives != null) G.lives = res.lives;
     G.chips = res.chips; G.best = res.best; G.won = res.won; G.safe = res.safe != null ? res.safe : G.safe;
     G.shown = G.buy; G.buy = {};
     const s = snd();
@@ -782,6 +784,8 @@
       speak(G.chips > 0 && st === 3 ? T(`Tres fallos. Respire hondo. −${fmt(-diff)}.`, `Three misses. Breathe. −${fmt(-diff)}.`)
         : G.chips > 0 && st >= 5 ? T(`La casa le invita a una copa. Y se queda ${fmt(-diff)}.`, `The house buys you a drink. And keeps ${fmt(-diff)}.`)
         : LINES.wrong(fmt(-diff)));
+      if (G.lives < livesBefore && G.lives > 0) setTimeout(() => speak(G.lives === 1 ? T("Última vida. Piénselo bien.", "Last life. Think hard.") : T(`Le quedan ${G.lives} vidas.`, `${G.lives} lives left.`)), 1400);
+      else if (G.lives === livesBefore && G.lives > 0) setTimeout(() => speak(T("El Plan B le salva la vida.", "Plan B saves your life.")), 1400);
     }
     G.low = Math.min(G.low, G.chips);
     if (res.ok) {

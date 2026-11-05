@@ -104,7 +104,7 @@
        hint    · 5  · when you choose, the house lifts one empty glass
        lucky   · 8  · the charm: a hit pays ×3
        slow    · 10 · the croupier shuffles at half speed
-       insure  · 12 · a miss costs only half the stake
+       insure  · 12 · Plan B: a miss does not take a life
        pact    · 15 · the pact with the devil: a hit pays ×5, a miss takes every chip on the table
        glass   · 20 · crystal glasses: you see the dice all the way (the dearest of all)
      The score of a game is the table when you cash out; if you go broke it is 0. */
@@ -131,20 +131,27 @@
     return p[0] === R.d ? DICE[mode].mult : 0;
   }
   const gainFor = (b, stake, pay, diceMult, mult) => Math.round(stake * pay * diceMult * (mult || 1) * (b.lucky ? 3 : 1) * (b.pact ? 5 : 1));
+  /* three lives: a miss takes one life and half the table. The third miss ends the game, and the
+     table goes with it (a game you don't cash out scores 0). Plan B keeps the life (you still lose
+     half); the infernal pact takes the whole table, and with it the game. */
+  const LIVES = 3;
   function lossFor(b, stake, chips) {
     if (b.pact) return chips;
-    return Math.min(chips, b.insure ? Math.ceil(stake / 2) : stake);
+    return Math.min(chips, Math.ceil(chips / 2));
   }
   function settle(s, R, picks, mode) {
     const b = s.buy || {}, stake = stakeFor(s.chips), dm = judge(mode, R, picks), ok = dm > 0;
+    if (s.lives == null) s.lives = LIVES;
     const delta = ok ? gainFor(b, stake, R.pay, dm, s.mult) : -lossFor(b, stake, s.chips);
     s.chips += delta;
     if (ok) s.won += 1;
+    else if (!b.insure) s.lives -= 1;
     s.r += 1; s.buy = {};
+    if (s.lives <= 0) s.chips = 0;
     if (s.chips <= 0) { s.chips = 0; s.over = true; }
-    s.best = Math.max(s.best, s.chips + (s.safe || 0));
-    return { ok, delta, dm, stake };
+    s.best = Math.max(s.best, s.chips);
+    return { ok, delta, dm, stake, lives: s.lives };
   }
   const score = (s) => (s.cashed ? s.chips : 0);
-  return { START, round, msFor, cupsFor, cupsAt, MAX_CUPS, payFor, minBet, stakeFor, checkpoint, GLASS_MULT, DICE, COLORS, diceOk, canAddGlass, addGlass, WHEEL, wheelDue, spin, SHOP, price, canBuy, buy, canSave, save, judge, gainFor, lossFor, settle, score };
+  return { START, LIVES, round, msFor, cupsFor, cupsAt, MAX_CUPS, payFor, minBet, stakeFor, checkpoint, GLASS_MULT, DICE, COLORS, diceOk, canAddGlass, addGlass, WHEEL, wheelDue, spin, SHOP, price, canBuy, buy, canSave, save, judge, gainFor, lossFor, settle, score };
 });

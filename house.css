@@ -889,3 +889,8 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house.is-colors .shell-die:not(.is-red):not(.is-gold):not(.is-decoy) i:nth-child(odd) { background: #fff; box-shadow: 0 0 6px rgba(255, 255, 255, 0.9); }
 .house.is-colors .shell-die.is-x.is-gold::after { content: "×10"; position: absolute; left: 50%; top: -15px; transform: translateX(-50%); font-family: var(--mono); font-size: 9px; color: #ffd36b; text-shadow: 0 0 6px #ffd36b; }
 .house.is-colors .shell-die.is-x.is-red::after { content: "×3"; position: absolute; left: 50%; top: -15px; transform: translateX(-50%); font-family: var(--mono); font-size: 9px; color: #ff6a73; text-shadow: 0 0 6px #ff3b4a; }
+.house-lives { display: flex; gap: 3px; margin-top: 4px; font-size: 11px; line-height: 1; }
+.house-lives i { font-style: normal; color: rgba(255, 255, 255, 0.18); transition: color 0.4s, text-shadow 0.4s; }
+.house-lives i.on { color: #ff4d6a; text-shadow: 0 0 6px rgba(255, 60, 90, 0.8); }
+.house.is-god .house-lives i.on { color: #ffe08a; text-shadow: 0 0 6px #ffd36b; }
+.hg-plate .g-heart { stroke: #ff4d6a; }

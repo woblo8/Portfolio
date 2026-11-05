@@ -135,7 +135,7 @@ module.exports = async (req, res) => {
         r = E.checkpoint(prev.r - 1);
         if (r < 2) { res.status(400).json({ error: "bad-checkpoint" }); return; }
       }
-      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, safe: 0, best: E.START, won: 0, over: false, mult: 1, add: 0 };
+      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, safe: 0, best: E.START, won: 0, over: false, mult: 1, add: 0, lives: E.LIVES };
       res.status(200).json({ id: seal(s), round: pub(deal(s)), chips: s.chips, best: s.best });
       return;
     }
@@ -150,7 +150,7 @@ module.exports = async (req, res) => {
       if (!picks.length || picks.length > 2 || picks.some((c) => !Number.isInteger(c) || c < 0 || c >= R.n)) { res.status(400).json({ error: "bad-cup" }); return; }
       if (!E.diceOk(mode, s, R)) { res.status(400).json({ error: "bad-mode" }); return; }
       const { ok, dm, delta } = E.settle(s, R, picks, mode);
-      res.status(200).json({ ok, dm, delta, d: R.d, x: R.x, chips: s.chips, safe: s.safe || 0, mult: s.mult, best: s.best, won: s.won, id: seal(s), round: s.over ? null : pub(deal(s)) });
+      res.status(200).json({ ok, dm, delta, lives: s.lives, d: R.d, x: R.x, chips: s.chips, safe: s.safe || 0, mult: s.mult, best: s.best, won: s.won, id: seal(s), round: s.over ? null : pub(deal(s)) });
       return;
     }
     // one more glass on the table, for good: the multiplier grows ×1.5 and the round is dealt again
