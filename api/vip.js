@@ -1,7 +1,7 @@
 // Vercel serverless function: who comes in, and the private tables (?vip=Name).
 //
-// 0. Every visit to the site: one email to Carlos (NOTIFY_EMAIL), sent through ntfy.sh (NTFY_TOPIC,
-//    no account) or Resend (RESEND_API_KEY) when it is set up. Telegram too, if configured.
+// 0. Every visit to the site: a push to Carlos's phone (ntfy.sh, NTFY_TOPIC, no account), an email
+//    (NOTIFY_EMAIL through Resend, RESEND_API_KEY) and Telegram, whichever are set up.
 //    POST /api/vip { op: "hit", sid, path, ref, lang, vip } → 204
 //
 // 1. Visits: the table reports when a guest sits down and when they leave, and Carlos gets a
@@ -34,28 +34,31 @@ function isAdmin(req) {
 
 // one notice, every channel that is set up: email (Resend, else ntfy.sh) and Telegram
 const plain = (t) => String(t).replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+// email through Resend (RESEND_API_KEY; the free plan sends to the account owner from onboarding@resend.dev)
 async function email(subject, text) {
-  const to = process.env.NOTIFY_EMAIL;
-  if (!to) return false;
-  if (process.env.RESEND_API_KEY) {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: process.env.RESEND_FROM || "woblo.io <onboarding@resend.dev>", to: [to], subject, text }),
-    });
-    if (r.ok) return true;
-  }
+  const to = process.env.NOTIFY_EMAIL, key = process.env.RESEND_API_KEY;
+  if (!to || !key) return false;
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: process.env.RESEND_FROM || "woblo.io <onboarding@resend.dev>", to: [to], subject, text }),
+  });
+  return r.ok;
+}
+// a push to the phone through ntfy.sh: no account, the topic name is the secret (NTFY_TOPIC)
+async function push(subject, text, tag) {
   const topic = process.env.NTFY_TOPIC;
   if (!topic) return false;
-  // ntfy only takes plain ASCII in headers: the title travels encoded (RFC 2047)
   const r = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
     method: "POST",
-    headers: { Title: `=?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`, Email: to, Tags: "game_die", Priority: "default" },
+    // headers only take plain ASCII: the title travels encoded (RFC 2047)
+    headers: { Title: `=?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`, Tags: tag || "game_die", Priority: "default" },
     body: text,
   });
   return r.ok;
 }
 async function notify(subject, htmlText) {
-  await Promise.all([telegram(htmlText).catch(() => false), email(subject, plain(htmlText)).catch(() => false)]);
+  const text = plain(htmlText);
+  await Promise.all([telegram(htmlText).catch(() => false), email(subject, text).catch(() => false), push(subject, text).catch(() => false)]);
 }
 
 async function telegram(text) {
