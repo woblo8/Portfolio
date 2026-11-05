@@ -1092,8 +1092,9 @@
     if (document.fonts && document.fonts.load) document.fonts.load('300 64px "Inter Tight"').then(() => {
       if (disposed) return;
       const again = noteCardCanvas(2048, 1340, ctx.name, ctx.note);
-      noteTex.image.getContext("2d").drawImage(again[0], 0, 0); noteTex.needsUpdate = true;
-      if (noteBack && again[1]) { const t = noteBack.map, g = t.image.getContext("2d"); g.save(); g.translate(t.image.width, t.image.height); g.rotate(Math.PI); g.drawImage(again[1], 0, 0); g.restore(); t.needsUpdate = true; }
+      // (each canvas keeps the transform it was drawn with: start from a clean one)
+      const f = noteTex.image.getContext("2d"); f.setTransform(1, 0, 0, 1, 0, 0); f.drawImage(again[0], 0, 0); noteTex.needsUpdate = true;
+      if (noteBack && again[1]) { const t = noteBack.map, g = t.image.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.translate(t.image.width, t.image.height); g.rotate(Math.PI); g.drawImage(again[1], 0, 0); g.setTransform(1, 0, 0, 1, 0, 0); t.needsUpdate = true; }
     }).catch(() => {});
     noteCard.castShadow = true;
     scene.add(noteCard);
