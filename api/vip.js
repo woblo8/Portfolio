@@ -34,21 +34,84 @@ function isAdmin(req) {
 
 // one notice, every channel that is set up: email (Resend) and Telegram
 const plain = (t) => String(t).replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+// the letter the house sends, in the language of the portfolio: black, white with a little glow,
+// a tight grotesk headline, mono for the small print, a die for a seal. Tables and inline styles,
+// because that is all an inbox reliably keeps.
+// card: { kicker, title, em, lead, big, bigLabel, rows: [[label, value]], marks: [text] }
+const SANS = "'Neue Haas Grotesk Display Pro','Neue Haas Grotesk','Helvetica Neue',Helvetica,Arial,sans-serif";
+const MONO = "'Geist Mono','SF Mono',Menlo,Consolas,'Courier New',monospace";
+function letter(card) {
+  const e = (t) => html(String(t == null ? "" : t));
+  const when = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  const label = (t, c = "#8c8c92") => `font-family:${MONO};font-size:10px;letter-spacing:3px;text-transform:uppercase;color:${c}`;
+  const rows = (card.rows || []).filter((r) => r && r[1]).map(([k, v], i, all) => {
+    const line = i < all.length - 1 ? "border-bottom:1px solid #1c1c20;" : "";
+    return `<tr>
+      <td style="padding:16px 0;${line}${label()};vertical-align:top;width:40%">${e(k)}</td>
+      <td style="padding:14px 0;${line}font-family:${SANS};font-size:16px;line-height:1.4;color:#ecebe7;text-align:right">${e(v)}</td>
+    </tr>`;
+  }).join("");
+  const marks = (card.marks || []).map((m) => `<span style="display:inline-block;margin:0 3px 8px;padding:8px 14px;border:1px solid #3a3a40;border-radius:99px;${label("#ffffff")};font-size:9.5px;letter-spacing:2.5px">${e(m)}</span>`).join("");
+  // the seal: one face of the die, five points of light
+  const pip = (on) => `<td width="12" height="12" align="center" valign="middle" style="width:12px;height:12px;font-size:0;line-height:0">${on ? `<div style="width:6px;height:6px;border-radius:50%;background:#ffffff;box-shadow:0 0 6px #ffffff"></div>` : ""}</td>`;
+  const die = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;border:1px solid #ecebe7;border-radius:12px;padding:8px;box-shadow:0 0 18px rgba(255,255,255,0.18)">
+    <tr>${pip(1)}${pip(0)}${pip(1)}</tr><tr>${pip(0)}${pip(1)}${pip(0)}</tr><tr>${pip(1)}${pip(0)}${pip(1)}</tr></table>`;
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark only"><meta name="supported-color-schemes" content="dark only"><title>${e(card.title)}</title></head>
+<body style="margin:0;padding:0;background:#050506" bgcolor="#050506">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">${e(card.lead || "")}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#050506" style="background:#050506">
+<tr><td align="center" style="padding:40px 12px">
+  <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0b" style="width:100%;max-width:560px;background:#0a0a0b;border:1px solid #232328;border-radius:18px">
+    <tr><td style="padding:26px 32px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="${label("#ecebe7")};letter-spacing:4px">woblo.io</td>
+        <td align="right" style="${label()};letter-spacing:4px">La casa</td>
+      </tr></table>
+    </td></tr>
+    <tr><td align="center" style="padding:52px 32px 0">${die}</td></tr>
+    <tr><td style="padding:40px 40px 0">
+      <div style="${label()};letter-spacing:4px">${e(card.kicker)}</div>
+      <h1 style="margin:16px 0 0;font-family:${SANS};font-weight:600;font-size:44px;line-height:0.98;letter-spacing:-2px;color:#ffffff;text-shadow:0 0 22px rgba(255,255,255,0.18)">${e(card.title)}<br><span style="color:#8c8c92">${e(card.em)}</span></h1>
+      ${card.lead ? `<p style="margin:20px 0 0;font-family:${SANS};font-size:16px;line-height:1.55;color:#c4c3bf">${e(card.lead)}</p>` : ""}
+    </td></tr>
+    ${card.big ? `<tr><td style="padding:34px 40px 0">
+      <div style="font-family:${SANS};font-weight:600;font-size:76px;line-height:1;letter-spacing:-3px;color:#ffffff;text-shadow:0 0 26px rgba(255,255,255,0.22)">${e(card.big)}</div>
+      <div style="margin-top:10px;${label()};letter-spacing:4px">${e(card.bigLabel || "")}</div>
+    </td></tr>` : ""}
+    ${marks ? `<tr><td style="padding:26px 37px 0">${marks}</td></tr>` : ""}
+    ${rows ? `<tr><td style="padding:30px 40px 0"><div style="border-top:1px solid #ecebe7;opacity:0.9;font-size:0;line-height:0;box-shadow:0 0 10px rgba(255,255,255,0.35)">&nbsp;</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table></td></tr>` : ""}
+    <tr><td style="padding:38px 40px 0">
+      <a href="https://www.woblo.io/mesas" style="display:inline-block;padding:16px 26px;border-radius:99px;background:#ecebe7;font-family:${MONO};font-size:11px;letter-spacing:3.5px;text-transform:uppercase;color:#050506;text-decoration:none">Abrir el despacho &nbsp;&rarr;</a>
+    </td></tr>
+    <tr><td style="padding:46px 40px 30px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="${label("#5a5a60")};font-size:9px">La casa siempre gana</td>
+        <td align="right" style="${label("#5a5a60")};font-size:9px;letter-spacing:2px">${e(when)}</td>
+      </tr></table>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+}
+
 // email through Resend (RESEND_API_KEY; the free plan sends to the account owner from onboarding@resend.dev)
-async function email(subject, text) {
+async function email(subject, text, card) {
   const to = process.env.NOTIFY_EMAIL, key = process.env.RESEND_API_KEY;
   if (!to || !key) return false;
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: process.env.RESEND_FROM || "woblo.io <onboarding@resend.dev>", to: [to], subject, text }),
+    body: JSON.stringify({ from: process.env.RESEND_FROM || "woblo.io <onboarding@resend.dev>", to: [to], subject, text, html: card ? letter(card) : undefined }),
   });
   if (!r.ok) console.error("resend", r.status, (await r.text()).slice(0, 300));
   else console.log("resend ok", subject);
   return r.ok;
 }
-async function notify(subject, htmlText) {
+async function notify(subject, htmlText, card) {
   const text = plain(htmlText);
-  await Promise.all([telegram(htmlText).catch(() => false), email(subject, text).catch(() => false)]);
+  await Promise.all([telegram(htmlText).catch(() => false), email(subject, text, card).catch(() => false)]);
 }
 
 async function telegram(text) {
@@ -140,7 +203,13 @@ module.exports = async (req, res) => {
         ref ? `↩︎ Viene de ${html(ref)}` : "↩︎ Entrada directa",
         lang ? `🌐 Idioma: ${lang.toUpperCase()}` : "",
       ].filter(Boolean);
-      await notify(vip ? `🎲 ${vip} ha abierto su mesa privada` : `👀 Nueva visita en woblo.io${where ? " · " + where : ""}`, lines.join("\n"));
+      const countryName = (() => { try { return new Intl.DisplayNames(["es"], { type: "region" }).of(String(req.headers["x-vercel-ip-country"] || "")) || ""; } catch (e) { return ""; } })();
+      const place = [city, countryName].filter(Boolean).join(", ");
+      const card = vip
+        ? { kicker: "Mesa privada · ahora", title: vip, em: "ha abierto su mesa.", lead: "El enlace que le enviaste acaba de abrirse. La mesa está servida." }
+        : { kicker: "Aviso de la sala · ahora", title: "Alguien ha cruzado", em: "la puerta.", lead: place ? `Llega desde ${place}.` : "No ha dejado rastro de dónde viene." };
+      card.rows = [["Desde", place], ["Dispositivo", [device, browser].filter(Boolean).join(" · ")], ["Entró por", path !== "/" ? path : "La portada"], ["Viene de", ref || "Entrada directa"], ["Idioma", lang === "en" ? "Inglés" : lang === "es" ? "Español" : lang]];
+      await notify(vip ? `✦ ${vip} ha abierto su mesa privada` : `✦ Alguien ha cruzado la puerta${city ? " · " + city : ""}`, lines.join("\n"), card);
       return res.status(204).end();
     }
 
@@ -162,7 +231,13 @@ module.exports = async (req, res) => {
         text = [`🃏 <b>${html(name)}</b> se levanta de la mesa tras <b>${mmss(secs)}</b>.`, ...summary(did)].join("\n");
       }
       await Promise.all([
-        ev === "end" ? notify(`🃏 ${name} se levanta de su mesa (${mmss(secs)})`, text) : telegram(text).catch(() => false),
+        ev === "end" ? notify(`✦ ${name} se levanta de la mesa · ${mmss(secs)}`, text, {
+          kicker: "Mesa privada · se cierra", title: name, em: "se levanta de la mesa.",
+          lead: did.c ? "Ha pulsado «Reservar llamada». Es buen momento para escribirle." : did.n ? "Leyó tu carta antes de marcharse." : "Se marcha sin abrir la carta.",
+          big: mmss(secs), bigLabel: "en la mesa",
+          rows: [["Desde", where], ["Dispositivo", phone ? "Móvil" : "Ordenador"]],
+          marks: [did.n && "Abrió la carta", did.r && `Dado × ${did.r}`, did.p && `Entró en ${clean(did.p, 40)}`, did.c && "Reservar llamada", did.m && "Hablemos"].filter(Boolean),
+        }) : telegram(text).catch(() => false),
         hasBlob ? blob().then(({ put }) => {
           const flags = `${did.n ? "n" : ""}${did.r ? "r" + Math.min(99, +did.r) : ""}${did.c ? "c" : ""}${did.m ? "m" : ""}${did.p ? "p" : ""}`;
           return put(`vip/visits/${Date.now()}__${slug}__${ev}__${secs}__${flags}.txt`, "1", Object.assign({}, putOpts, { contentType: "text/plain" }));
