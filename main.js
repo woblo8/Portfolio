@@ -184,7 +184,10 @@
   PROJECT_FACE.forEach((f, p) => (FACE_PROJECT[f] = p));
 
   /* ---------- face textures: albedo, glow, engraving normals, roughness ---------- */
-  const TEX = 1024;
+  // the design is always drawn at 1024 (sharp type); the textures the GPU gets are 1024 on a
+  // screen that can show it, 512 on a phone or a slow device: a quarter of the pixels to paint and upload
+  const DES = 1024;
+  const TEX = PERF.lite || Math.min(innerWidth, innerHeight) < 700 ? 512 : 1024;
   const mkCanvas = (s = TEX) => { const c = document.createElement("canvas"); c.width = c.height = s; return c; };
   const noise = (() => {
     const c = mkCanvas(256);
@@ -267,7 +270,7 @@
   let displayFont = FALLBACK_FONT;
 
   function drawDesign(ctx, p, i, frame = true) {
-    const W = TEX, m = W * 0.135;
+    const W = DES, m = W * 0.135;
     ctx.clearRect(0, 0, W, W);
     ctx.fillStyle = ctx.strokeStyle = "#fff";
     if (frame) {
@@ -305,7 +308,7 @@
     if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
   }
 
-  const design = mkCanvas();
+  const design = mkCanvas(DES);
   // the engraving relief is computed at half size: four times less work, and a
   // soft normal map is all an engraving needs
   const NTEX = TEX / 2;
@@ -376,14 +379,14 @@
     a.fillStyle = a.createPattern(noise, "repeat");
     a.fillRect(0, 0, TEX, TEX);
     a.globalAlpha = 0.16;
-    a.drawImage(design, 0, 0);
+    a.drawImage(design, 0, 0, TEX, TEX);
     a.globalAlpha = 1;
     // glow layer: only the engraving lights up, never the frame of the face
     const e = glow.getContext("2d");
     e.fillStyle = "#000";
     e.fillRect(0, 0, TEX, TEX);
     drawDesign(design.getContext("2d"), p, i, false);
-    e.drawImage(design, 0, 0);
+    e.drawImage(design, 0, 0, TEX, TEX);
     drawDesign(design.getContext("2d"), p, i, true);
     const r = rgh.getContext("2d");
     r.globalAlpha = 1;
@@ -394,7 +397,7 @@
     r.fillStyle = r.createPattern(noise, "repeat");
     r.fillRect(0, 0, TEX, TEX);
     r.globalAlpha = 0.55;
-    r.drawImage(design, 0, 0);
+    r.drawImage(design, 0, 0, TEX, TEX);
     r.globalAlpha = 1;
     [mat.map, mat.emissiveMap, mat.roughnessMap].forEach((t) => (t.needsUpdate = true));
     mat.userData.engrave = () => { drawDesign(design.getContext("2d"), p, i, true); engraveNormals(nrm); mat.normalMap.needsUpdate = true; };

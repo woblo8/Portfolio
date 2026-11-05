@@ -4,6 +4,7 @@
 
 /* ---------- the way in: a quiet neon tab on the main view ---------- */
 .house-open {
+  visibility: visible; /* hidden by index.html until this file arrives */
   position: fixed; left: var(--gut); bottom: var(--gut); z-index: 11;
   display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px 10px 12px; border-radius: 99px;
   font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mist);
