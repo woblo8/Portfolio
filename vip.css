@@ -86,13 +86,19 @@ html.has-cursor .vt3-gl { cursor: none; }
 /* while the note is out, the room steps back */
 .vt3 .vt3-head, .vt3 .vt3-foot, .vt3 .vt3-tip { transition: opacity 0.8s var(--ease); }
 .vt3.is-note .vt3-head, .vt3.is-note .vt3-foot, .vt3.is-note .vt3-tip, .vt3.is-note .vt3-label { opacity: 0 !important; pointer-events: none; }
-.vt3-note-close {
+/* under the card while it is read: turn it over (when the letter runs on), put it back */
+.vt3-note-bar {
   position: absolute; left: 50%; bottom: clamp(24px, 7vh, 64px); transform: translateX(-50%); opacity: 0;
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold-hi);
-  transition: opacity 0.5s var(--ease), text-shadow 0.3s;
+  display: flex; gap: 28px; align-items: center; white-space: nowrap; transition: opacity 0.5s var(--ease);
 }
-.vt3-note.reading .vt3-note-close { opacity: 1; }
-.vt3-note-close:hover { text-shadow: 0 0 10px rgba(216, 181, 111, 0.7); }
+.vt3-note.reading .vt3-note-bar { opacity: 1; }
+.vt3-note-close, .vt3-note-turn {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold-hi);
+  transition: text-shadow 0.3s, box-shadow 0.3s;
+}
+.vt3-note-turn { padding: 10px 16px; border-radius: 99px; box-shadow: inset 0 0 0 1px rgba(216, 181, 111, 0.6); }
+.vt3-note-turn:hover { box-shadow: inset 0 0 0 1px #f1d8a0, 0 0 18px rgba(216, 181, 111, 0.35); }
+.vt3-note-close:hover, .vt3-note-turn:hover { text-shadow: 0 0 10px rgba(216, 181, 111, 0.7); }
 
 /* tiny labels that hang over the die and the card: what you can do with them */
 .vt3-label {

@@ -68,7 +68,7 @@
         </footer>
         <div class="vt3-note" role="dialog" aria-hidden="true" aria-label="${T("Una nota para usted", "A note for you")}">
           <p class="vt3-sr">${T("Para", "For")} ${esc(name)}. ${esc(note)} — Carlos</p>
-          <button type="button" class="vt3-note-close">${T("Guardar en el sobre", "Back in the envelope")} ✕</button>
+          <div class="vt3-note-bar"><button type="button" class="vt3-note-turn" hidden>${T("Dar la vuelta ↻", "Turn it over ↻")}</button><button type="button" class="vt3-note-close">${T("Guardar en el sobre", "Back in the envelope")} ✕</button></div>
         </div>
         <div hidden>${order.map((i) => `<button data-next="${i}"></button>`).join("")}</div>
       </section>`;
@@ -263,46 +263,76 @@
     return c;
   }
   // the card inside: black lacquer, gilt border, the note set like an invitation
+  // the card: black lacquer, a gilt frame, the letter set in type large enough to read.
+  // A long letter runs on to the back of the card (the front ends with "continues overleaf"),
+  // so the type never has to shrink to nothing. Returns one canvas per side used.
   function noteCardCanvas(w, h, name, note) {
-    const c = mk(w, h), x = c.getContext("2d");
-    const g = x.createRadialGradient(w / 2, 0, 0, w / 2, h * 0.2, w * 0.8);
-    g.addColorStop(0, "#1c1913"); g.addColorStop(0.55, "#0c0c0d"); g.addColorStop(1, "#070708");
-    x.fillStyle = g; x.fillRect(0, 0, w, h);
-    x.strokeStyle = "rgba(216,181,111,0.05)"; x.lineWidth = 1.5;
-    for (let k = -h; k < w; k += 22) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + h, h); x.stroke(); }
-    x.strokeStyle = "rgba(216,181,111,0.9)"; x.lineWidth = 5; x.strokeRect(40, 40, w - 80, h - 80);
-    x.strokeStyle = "rgba(216,181,111,0.35)"; x.lineWidth = 2; x.strokeRect(62, 62, w - 124, h - 124);
-    const M = w * 0.09;
-    x.textBaseline = "alphabetic";
-    x.fillStyle = "#d8b56f"; x.font = `500 ${Math.round(w * 0.019)}px ${MONO}`;
-    if ("letterSpacing" in x) x.letterSpacing = `${Math.round(w * 0.006)}px`;
-    x.fillText(`${T("PARA", "FOR")} ${name.toUpperCase()}`, M, h * 0.2);
-    if ("letterSpacing" in x) x.letterSpacing = "0px";
-    // the note, wrapped, its paragraphs kept, the type as large as the card allows
-    const top = h * 0.27, bottom = h * 0.78, maxW = w - M * 2;
+    const M = w * 0.09, maxW = w - M * 2;
+    const measure = mk(8, 8).getContext("2d");
     const paras = String(note).split(/\n+/).map((p) => p.trim()).filter(Boolean);
-    let fs2 = Math.round(w * 0.036), lines, lh, gap;
-    for (; fs2 > w * 0.016; fs2 -= 2) {
-      x.font = `400 ${fs2}px ${SANS}`; lh = fs2 * 1.42; gap = fs2 * 0.6; lines = [];
+    // lay the letter out at a given size: lines, each marked if a paragraph ends there
+    const lay = (fs2) => {
+      measure.font = `400 ${fs2}px ${SANS}`;
+      const lines = [];
       paras.forEach((p, k) => {
         let line = "";
-        p.split(/\s+/).forEach((wd) => { const t = line ? line + " " + wd : wd; if (x.measureText(t).width > maxW && line) { lines.push([line, 0]); line = wd; } else line = t; });
+        p.split(/\s+/).forEach((wd) => { const t = line ? line + " " + wd : wd; if (measure.measureText(t).width > maxW && line) { lines.push([line, 0]); line = wd; } else line = t; });
         if (line) lines.push([line, k < paras.length - 1 ? 1 : 0]);
       });
-      const height = lines.length * lh + lines.filter((l) => l[1]).length * gap;
-      if (height <= bottom - top) break;
-    }
-    x.fillStyle = "#ecebe7"; x.font = `400 ${fs2}px ${SANS}`;
-    const total = lines.length * lh + lines.filter((l) => l[1]).length * gap;
-    let y = top + (bottom - top - total) / 2 + fs2;
-    lines.forEach(([l, br]) => { x.fillText(l, M, y); y += lh + (br ? gap : 0); });
-    x.fillStyle = "#f1d8a0"; x.font = `500 ${Math.round(w * 0.022)}px ${MONO}`;
-    if ("letterSpacing" in x) x.letterSpacing = `${Math.round(w * 0.004)}px`;
-    x.fillText("— Carlos", M, h * 0.86);
-    x.textAlign = "right"; x.fillStyle = "rgba(216,181,111,0.6)"; x.font = `500 ${Math.round(w * 0.015)}px ${MONO}`;
-    x.fillText("WOBLO.IO", w - M, h * 0.86);
-    if ("letterSpacing" in x) x.letterSpacing = "0px";
-    return c;
+      return lines;
+    };
+    // fill pages from the top: the front has the address, the back has more room
+    const AREA = [[h * 0.27, h * 0.79], [h * 0.17, h * 0.79]];
+    const paginate = (lines, fs2) => {
+      const lh = fs2 * 1.42, gap = fs2 * 0.6, pages = [[]];
+      let y = 0;
+      lines.forEach((l) => {
+        const room = AREA[Math.min(pages.length - 1, 1)][1] - AREA[Math.min(pages.length - 1, 1)][0];
+        if (y + lh > room && pages[pages.length - 1].length) { pages.push([]); y = 0; }
+        pages[pages.length - 1].push(l); y += lh + (l[1] ? gap : 0);
+      });
+      return pages;
+    };
+    // the largest type that fits on one side, else on two
+    let fs2 = Math.round(w * 0.036), pages;
+    for (; fs2 >= Math.round(w * 0.02); fs2 -= 2) { pages = paginate(lay(fs2), fs2); if (pages.length === 1) break; }
+    if (pages.length > 1) for (fs2 = Math.round(w * 0.031); fs2 >= Math.round(w * 0.017); fs2 -= 2) { pages = paginate(lay(fs2), fs2); if (pages.length <= 2) break; }
+    pages = pages.slice(0, 2);
+    const lh = fs2 * 1.42, gap = fs2 * 0.6;
+
+    return pages.map((lines, side) => {
+      const c = mk(w, h), x = c.getContext("2d");
+      const g = x.createRadialGradient(w / 2, 0, 0, w / 2, h * 0.2, w * 0.8);
+      g.addColorStop(0, "#1c1913"); g.addColorStop(0.55, "#0c0c0d"); g.addColorStop(1, "#070708");
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      x.strokeStyle = "rgba(216,181,111,0.05)"; x.lineWidth = 1.5;
+      for (let k = -h; k < w; k += 22) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + h, h); x.stroke(); }
+      x.strokeStyle = "rgba(216,181,111,0.9)"; x.lineWidth = 5; x.strokeRect(40, 40, w - 80, h - 80);
+      x.strokeStyle = "rgba(216,181,111,0.35)"; x.lineWidth = 2; x.strokeRect(62, 62, w - 124, h - 124);
+      x.textBaseline = "alphabetic";
+      const mono = (t, px, py, size, color, align = "left", sp = 0.006) => {
+        x.fillStyle = color; x.font = `500 ${Math.round(w * size)}px ${MONO}`; x.textAlign = align;
+        if ("letterSpacing" in x) x.letterSpacing = `${Math.round(w * sp)}px`;
+        x.fillText(t, px, py);
+        if ("letterSpacing" in x) x.letterSpacing = "0px";
+        x.textAlign = "left";
+      };
+      if (side === 0) mono(`${T("PARA", "FOR")} ${name.toUpperCase()}`, M, h * 0.2, 0.019, "#d8b56f");
+      else mono(T("II · CONTINÚA", "II · CONTINUED"), M, h * 0.12, 0.015, "rgba(216,181,111,0.7)");
+      // the letter
+      const [top, bottom] = AREA[side];
+      x.fillStyle = "#ecebe7"; x.font = `400 ${fs2}px ${SANS}`;
+      const total = lines.reduce((t, l) => t + lh + (l[1] ? gap : 0), 0) - (lines.length && lines[lines.length - 1][1] ? gap : 0);
+      // one side: centred in its space; two sides: from the top, like a page
+      let y = (pages.length === 1 ? top + (bottom - top - total) / 2 : top) + fs2;
+      lines.forEach(([l, br]) => { x.fillText(l, M, y); y += lh + (br ? gap : 0); });
+      const last = side === pages.length - 1;
+      if (last) {
+        mono("— Carlos", M, h * 0.86, 0.022, "#f1d8a0", "left", 0.004);
+        mono("WOBLO.IO", w - M, h * 0.86, 0.015, "rgba(216,181,111,0.6)", "right", 0.004);
+      } else mono(T("SIGUE DETRÁS ↻", "CONTINUES OVERLEAF ↻"), w - M, h * 0.86, 0.016, "#f1d8a0", "right", 0.005);
+      return c;
+    });
   }
   // the liner: black paper with a fine gold lattice, seen when the flap opens
   function linerCanvas(w, h) {
@@ -1037,7 +1067,8 @@
     renderer.localClippingEnabled = true;
     const mouth = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0); // placed every frame at the envelope's top edge
     const clip = {}; // (no clipping: the pocket covers the card, the mouth is open)
-    const noteTex = canvasTex(noteCardCanvas(2048, 1340, ctx.name, ctx.note));
+    const notePages = noteCardCanvas(2048, 1340, ctx.name, ctx.note);
+    const noteTex = canvasTex(notePages[0]);
     // satin black: no glare under the lamp. While it is read, its own light (below) and a faint
     // glow in the ink keep it legible however it faces the lamp
     const noteFace = new THREE.MeshStandardMaterial({ ...clip, map: noteTex, emissiveMap: noteTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.78, envMapIntensity: 0.05 });
@@ -1048,7 +1079,14 @@
     const gilt = new THREE.MeshStandardMaterial({ ...clip, color: 0xb08d4e, metalness: 0.9, roughness: 0.35 });
     const lacquer = new THREE.MeshStandardMaterial({ ...clip, color: 0x0a0a0b, roughness: 0.4 });
     const CARD_W = ENV_W - 0.06, CARD_D = ENV_D - 0.06;
-    const noteCard = new THREE.Mesh(new THREE.BoxGeometry(CARD_W, 0.004, CARD_D), [gilt, gilt, noteFace, lacquer, gilt, gilt]);
+    // the back: the rest of the letter, if it runs on (drawn mirrored so it reads right once the card is turned)
+    const noteBack = notePages[1] ? (() => {
+      const flip = mk(notePages[1].width, notePages[1].height), fx = flip.getContext("2d");
+      fx.translate(flip.width, 0); fx.scale(-1, 1); fx.drawImage(notePages[1], 0, 0);
+      const t = canvasTex(flip);
+      return new THREE.MeshStandardMaterial({ ...clip, map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.78, envMapIntensity: 0.05 });
+    })() : null;
+    const noteCard = new THREE.Mesh(new THREE.BoxGeometry(CARD_W, 0.004, CARD_D), [gilt, gilt, noteFace, noteBack || lacquer, gilt, gilt]);
     noteCard.castShadow = true;
     scene.add(noteCard);
     contacts.push([bet.position.x, bet.position.z, 0.26, 0.4], [card.position.x, card.position.z, 0.42, 0.35]);
@@ -1845,7 +1883,7 @@
        hinge, the card slides out of the top and rises to face you. Closing is the
        same story played backwards. Five numbers drive it all (0 → 1). */
     const motionK = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0.35 : 1;
-    const NOTE = { cam: 0, raise: 0, crack: 0, flap: 0, slide: 0, lift: 0, open: false, busy: false, tweens: [] };
+    const NOTE = { cam: 0, raise: 0, crack: 0, flap: 0, slide: 0, lift: 0, turn: 0, open: false, busy: false, tweens: [] };
     const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
     const easeOut = (t) => 1 - Math.pow(1 - t, 3);
     const tweenTo = (key, to, dur, ease = easeIO) => new Promise((res) => {
@@ -1896,6 +1934,7 @@
       NOTE.busy = true;
       noteEl.classList.remove("on", "reading"); noteEl.setAttribute("aria-hidden", "true");
       const wait = (ms) => new Promise((r) => setTimeout(r, ms * motionK));
+      if (NOTE.turn > 0) { await tweenTo("turn", 0, 0.7); const tb = noteEl.querySelector(".vt3-note-turn"); if (tb) tb.textContent = T("Dar la vuelta ↻", "Turn it over ↻"); }
       await tweenTo("lift", 0, 1.4);                      // back above the envelope's mouth
       rustle(0.8);
       await tweenTo("slide", 0, 1.3);                     // slides back in
@@ -1910,6 +1949,19 @@
       NOTE.open = false; NOTE.busy = false;
     }
     noteEl.addEventListener("click", (e) => { if (e.target === noteEl || e.target.closest(".vt3-note-close")) closeNote(); });
+    const turnQ = new THREE.Quaternion(), turnAxis = new THREE.Vector3(0, 0, 1);
+    const turnBtn = noteEl.querySelector(".vt3-note-turn");
+    if (turnBtn) {
+      turnBtn.hidden = !noteBack;
+      turnBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!NOTE.open || NOTE.busy) return;
+        const back = NOTE.turn < 0.5;
+        rustle(0.5);
+        turnBtn.textContent = back ? T("Volver a la cara ↺", "Back to the front ↺") : T("Dar la vuelta ↻", "Turn it over ↻");
+        await tweenTo("turn", back ? 1 : 0, 0.9);
+      });
+    }
     const noteKey = (e) => { if (e.key === "Escape" && NOTE.open) closeNote(); };
     addEventListener("keydown", noteKey);
 
@@ -1989,6 +2041,13 @@
       noteLight.target.position.copy(noteCard.position);
       noteLight.target.updateMatrixWorld();
       noteFace.emissiveIntensity = 0.14 * NOTE.lift;
+      if (noteBack) noteBack.emissiveIntensity = 0.14 * NOTE.lift;
+      // turned over to read the back: half a turn about the card's own axis, with a little lift as it goes
+      if (NOTE.turn > 0) {
+        turnQ.setFromAxisAngle(turnAxis, Math.PI * easeIO(NOTE.turn));
+        noteCard.quaternion.multiply(turnQ);
+        noteCard.position.y += Math.sin(Math.PI * NOTE.turn) * 0.05;
+      }
     }
 
     const R = portrait ? 8.4 : small ? 6.6 : 7.4;
