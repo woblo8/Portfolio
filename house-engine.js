@@ -41,5 +41,49 @@
   const minBet = (chips) => Math.max(1, Math.min(chips, Math.ceil(chips / 10)));
   // where you sit back down after a game ends at round `last`: five rounds earlier (1 means no checkpoint)
   const checkpoint = (last) => Math.max(1, Math.floor(last) - 5);
-  return { START, round, msFor, cupsFor, payFor, minBet, checkpoint };
+  /* the shop: helps bought with chips from the table, one of each per round, for the next hand.
+     Each one opens at a round; the price is a share of your chips, with a floor.
+       double  · 3  · a hit pays twice, a miss costs twice
+       hint    · 5  · when you choose, the house lifts one empty glass
+       gold    · 8  · the golden die: a hit pays ×3
+       slow    · 10 · the croupier shuffles at half speed
+       insure  · 12 · a miss costs only half the bet
+       pact    · 15 · the pact with the devil: a hit pays ×5, a miss takes every chip on the table
+       glass   · 20 · crystal glasses: you see the die all the way (the dearest of all)
+     And the safe: chips put there are yours for good. The score of a game is the safe,
+     plus the table if you cash out; if you go broke you keep only the safe. */
+  const SHOP = {
+    double: { at: 3, pct: 0.25, min: 60 },
+    hint: { at: 5, pct: 0.35, min: 150 },
+    gold: { at: 8, pct: 0.45, min: 300 },
+    slow: { at: 10, pct: 0.4, min: 400 },
+    insure: { at: 12, pct: 0.35, min: 500 },
+    pact: { at: 15, pct: 0.3, min: 666 },
+    glass: { at: 20, pct: 0.85, min: 2500 },
+  };
+  const price = (item, chips) => Math.max(SHOP[item].min, Math.ceil(chips * SHOP[item].pct));
+  const canBuy = (item, s) => !!SHOP[item] && !s.over && s.r >= SHOP[item].at && !(s.buy || {})[item] && s.chips - price(item, s.chips) >= 1;
+  function buy(s, item) { const p = price(item, s.chips); s.chips -= p; s.buy = Object.assign({}, s.buy, { [item]: 1 }); return p; }
+  const canSave = (s, amount) => !s.over && Number.isInteger(amount) && amount >= 1 && amount <= s.chips - 1;
+  function save(s, amount) { s.chips -= amount; s.safe = (s.safe || 0) + amount; }
+  // one hand: what the table pays or takes, with the helps bought for it
+  const gainFor = (b, bet, pay) => bet * pay * (b.gold ? 3 : 1) * (b.double ? 2 : 1) * (b.pact ? 5 : 1);
+  function lossFor(b, bet, chips) {
+    if (b.pact) return chips;
+    let l = bet * (b.double ? 2 : 1);
+    if (b.insure) l = Math.ceil(l / 2);
+    return Math.min(chips, l);
+  }
+  function settle(s, R, cup, bet) {
+    const b = s.buy || {}, ok = cup === R.d;
+    const delta = ok ? gainFor(b, bet, R.pay) : -lossFor(b, bet, s.chips);
+    s.chips += delta;
+    if (ok) s.won += 1;
+    s.r += 1; s.buy = {};
+    if (s.chips <= 0) { s.chips = 0; s.over = true; }
+    s.best = Math.max(s.best, s.chips + (s.safe || 0));
+    return { ok, delta };
+  }
+  const score = (s) => (s.safe || 0) + (s.cashed ? s.chips : 0);
+  return { START, round, msFor, cupsFor, payFor, minBet, checkpoint, SHOP, price, canBuy, buy, canSave, save, gainFor, lossFor, settle, score };
 });

@@ -583,3 +583,146 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .house.is-hell .house-machine, .house.is-hell .house-top h2, .house.is-hell .shell-die.on, .house-hell::before, .house-hell i, .rk-heat i { animation: none !important; }
 }
+
+/* ============================================================
+   THE SHOP AND THE SAFE
+   ============================================================ */
+/* the safe in the score row, with the record small under it */
+.house-score > div.is-safe { position: relative; }
+.house-score > div.is-safe b { color: #f1d8a0; text-shadow: 0 0 10px rgba(241, 216, 160, 0.45); }
+.house-score > div.is-safe em { display: block; margin-top: 3px; font-style: normal; font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--smoke); white-space: nowrap; }
+.house-score > div.is-safe.flash { box-shadow: inset 0 0 0 1px #f1d8a0, 0 0 22px rgba(241, 216, 160, 0.4); }
+
+/* the helps: a strip of small cards, locked ones waiting for their round */
+.house-shop {
+  width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: 132px; gap: 8px; overflow-x: auto; padding: 2px 2px 8px;
+  scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+.hs-item {
+  position: relative; scroll-snap-align: start; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; row-gap: 6px; align-items: start;
+  padding: 10px 10px 9px; border-radius: 10px; text-align: left; color: var(--bone);
+  background: linear-gradient(160deg, #141417, #0b0b0d); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  transition: box-shadow 0.3s, transform 0.3s var(--ease), opacity 0.3s;
+}
+.hs-item i { grid-row: span 1; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; font-style: normal; font-size: 11px; font-family: var(--mono); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
+.hs-item span { min-width: 0; }
+.hs-item b { display: block; font-size: 11.5px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+.hs-item small { display: block; margin-top: 3px; font-size: 9.5px; line-height: 1.3; color: var(--smoke); }
+.hs-item em { grid-column: 1 / -1; justify-self: start; padding: 3px 8px; border-radius: 99px; font-style: normal; font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; color: #0c0c0e; background: #ecebe7; font-variant-numeric: tabular-nums; }
+.hs-item:not(:disabled):hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px #fff, 0 0 18px rgba(255, 255, 255, 0.14); }
+.hs-item.is-locked { opacity: 0.38; }
+.hs-item.is-locked em { background: none; color: var(--smoke); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
+.hs-item.is-poor em { background: none; color: #ff8a96; box-shadow: inset 0 0 0 1px rgba(255, 90, 100, 0.5); }
+.hs-item.is-poor { opacity: 0.7; }
+.hs-item.is-got { box-shadow: inset 0 0 0 1px #f1d8a0, 0 0 20px rgba(241, 216, 160, 0.22); }
+.hs-item.is-got em { background: #f1d8a0; }
+.hs-item.is-got i { color: #0c0c0e; background: #f1d8a0; box-shadow: 0 0 10px rgba(241, 216, 160, 0.7); }
+/* each help has its own colour */
+.hs-item.is-gold i { color: #f1d8a0; box-shadow: inset 0 0 0 1px #d8b56f; }
+.hs-item.is-pact i { color: #ff4d55; box-shadow: inset 0 0 0 1px #ff4d55; }
+.hs-item.is-pact:not(.is-locked) { background: linear-gradient(160deg, #1f0709, #0b0b0d); }
+.hs-item.is-glass i { color: #bfe8ff; box-shadow: inset 0 0 0 1px #bfe8ff, 0 0 10px rgba(191, 232, 255, 0.4); }
+.hs-item.is-glass:not(.is-locked) { background: linear-gradient(160deg, #0d1a22, #0b0b0d); }
+.hs-item.is-insure i { color: #9fd6b0; box-shadow: inset 0 0 0 1px #6fb487; }
+
+/* the safe controls */
+.house-vault { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(241, 216, 160, 0.25); }
+.house-vault > span { display: flex; align-items: baseline; gap: 8px; margin-right: auto; font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #f1d8a0; }
+.house-vault > span i { font-style: normal; }
+.house-vault > span em { font-style: normal; letter-spacing: 0.06em; text-transform: none; color: var(--smoke); }
+.house-vault button { padding: 7px 11px; border-radius: 99px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #f1d8a0; box-shadow: inset 0 0 0 1px rgba(241, 216, 160, 0.5); transition: background 0.3s, color 0.3s; }
+.house-vault button:not(:disabled):hover { background: #f1d8a0; color: #0c0c0e; }
+.house-vault button:disabled { opacity: 0.35; }
+@media (max-width: 480px) { .house-vault > span em { display: none; } }
+
+/* ---------- the helps on the table ---------- */
+/* crystal glasses: you see the die through them */
+.house.is-crystal .shell-glass::before {
+  background: linear-gradient(90deg, transparent 18%, rgba(255, 255, 255, 0.35) 24%, transparent 32%), linear-gradient(90deg, rgba(191, 232, 255, 0.08), rgba(191, 232, 255, 0.18) 40%, rgba(191, 232, 255, 0.06) 70%, rgba(191, 232, 255, 0.14));
+}
+.house.is-crystal .shell-glass::after { background: rgba(191, 232, 255, 0.06); box-shadow: inset 0 0 0 1.5px #bfe8ff, 0 0 14px rgba(191, 232, 255, 0.6); }
+.house.is-crystal .shell-glass { filter: drop-shadow(0 0 1px #bfe8ff) drop-shadow(0 0 12px rgba(191, 232, 255, 0.35)); }
+.house.is-crystal .shell-die { z-index: 3; }
+/* the golden die */
+.house.is-golden .shell-die { background: radial-gradient(circle at 30% 25%, #fff6d8, #f0c45a 45%, #a8761a); box-shadow: inset 0 0 0 1.5px #fff6d8, 0 0 18px rgba(255, 210, 110, 0.95), 0 0 46px rgba(255, 210, 110, 0.5); }
+.house.is-golden .shell-die i:nth-child(odd) { background: #fff; box-shadow: 0 0 4px #fff, 0 0 10px #ffd36b; }
+/* the tip-off: an empty glass stays up, out of play */
+.shell-cup.is-out { opacity: 0.35; pointer-events: none; }
+.shell-cup.is-out .shell-glass { animation: none !important; }
+
+/* ============================================================
+   HOW TO PLAY: its own panel, seven plates drawn in lines
+   ============================================================ */
+.house-guide-open {
+  width: 100%; margin-top: 16px; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px; text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); transition: box-shadow 0.3s, background 0.3s;
+}
+.house-guide-open i { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; font-style: normal; font-family: var(--mono); font-size: 11px; color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
+.house-guide-open span { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase; color: #fff; }
+.house-guide-open em { margin-left: auto; font-style: normal; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--smoke); }
+.house-guide-open b { font-weight: 400; color: var(--smoke); transition: transform 0.3s var(--ease), color 0.3s; }
+.house-guide-open:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.02); }
+.house-guide-open:hover b { transform: translateX(4px); color: #fff; }
+.house-guide-open.is-new { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55), 0 0 22px rgba(255, 255, 255, 0.12); animation: guideCall 2.4s ease-in-out infinite; }
+@keyframes guideCall { 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 0 0 rgba(255, 255, 255, 0); } }
+
+.house-machine.is-guide { overflow: hidden; }
+.house-guide {
+  position: absolute; inset: 0; z-index: 6; display: grid; grid-template-rows: auto 1fr auto; padding: 22px 22px 18px; border-radius: inherit;
+  background: radial-gradient(120% 70% at 50% 0%, #141416 0%, #09090a 65%); color: var(--bone);
+  opacity: 0; transform: translateY(14px); transition: opacity 0.35s var(--ease), transform 0.45s var(--ease);
+}
+.house-guide.on { opacity: 1; transform: none; }
+.house-guide header { display: flex; justify-content: space-between; align-items: center; }
+.hg-x { font-family: var(--mono); font-size: 12px; color: var(--smoke); padding: 6px; transition: color 0.3s; }
+.hg-x:hover { color: #fff; }
+.hg-track { position: relative; min-height: 0; }
+.hg-plate {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 26px;
+  opacity: 0; transform: translateX(24px); pointer-events: none; transition: opacity 0.5s var(--ease), transform 0.6s var(--ease);
+}
+.hg-plate.on { opacity: 1; transform: none; pointer-events: auto; }
+.hg-plate svg { width: 100%; max-height: 44vh; overflow: visible; }
+.hg-plate svg * { fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.hg-plate svg { filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.25)); }
+.hg-plate .g-dash { stroke: rgba(255, 255, 255, 0.3); stroke-dasharray: 2 4; }
+.hg-plate .g-die { fill: #0c0c0e; stroke: #fff; }
+.hg-plate .g-pip { fill: #fff; stroke: none; }
+.hg-plate .g-arrow { stroke: rgba(255, 255, 255, 0.55); }
+.hg-plate .g-ok { stroke: #9fd6b0; stroke-width: 2; }
+.hg-plate .g-glow { stroke: #f1d8a0; }
+.hg-plate .g-red { stroke: #ff4d55; }
+.hg-plate text.g-t { fill: var(--smoke); stroke: none; font-family: var(--mono); font-size: 7.5px; letter-spacing: 0.12em; text-anchor: middle; text-transform: uppercase; }
+.hg-plate text.g-big { fill: #fff; font-size: 11px; }
+.hg-plate text.g-icon { fill: #fff; font-size: 8px; letter-spacing: 0; }
+.hg-plate text.g-red-t { fill: #ff4d55; }
+.hg-plate text.g-gold-t { fill: #f1d8a0; }
+/* a little life in the drawings */
+.hg-plate.on .g-move { stroke-dasharray: 6 5; animation: gFlow 1.2s linear infinite; }
+@keyframes gFlow { to { stroke-dashoffset: -22; } }
+.hg-plate.on .g-lift { animation: gLift 2.4s ease-in-out infinite; }
+@keyframes gLift { 0%, 100% { transform: translateY(14px); } 45%, 70% { transform: translateY(0); } }
+.hg-plate.on .g-ok { stroke-dasharray: 30; stroke-dashoffset: 30; animation: gDraw 2.4s ease-in-out infinite; }
+@keyframes gDraw { 0%, 40% { stroke-dashoffset: 30; } 60%, 100% { stroke-dashoffset: 0; } }
+.hg-plate.on .g-up { animation: gPeek 2.4s ease-in-out infinite; }
+@keyframes gPeek { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+.hg-text { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; row-gap: 8px; max-width: 420px; }
+.hg-text b { grid-row: span 2; font-family: var(--mono); font-size: 10px; font-weight: 400; letter-spacing: 0.12em; color: var(--smoke); padding-top: 6px; }
+.hg-text h3 { font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.04em; line-height: 0.95; text-transform: uppercase; color: #fff; }
+.hg-text p { font-size: 14px; line-height: 1.5; color: var(--mist); }
+
+.house-guide footer { display: flex; align-items: center; gap: 14px; }
+.hg-prev { width: 38px; height: 38px; border-radius: 50%; color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); transition: opacity 0.3s, box-shadow 0.3s; }
+.hg-prev:disabled { opacity: 0.25; }
+.hg-prev:not(:disabled):hover { box-shadow: inset 0 0 0 1px #fff; }
+.hg-dots { flex: 1; display: flex; gap: 6px; justify-content: center; }
+.hg-dots i { width: 18px; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, 0.2); cursor: pointer; transition: background 0.4s, width 0.4s var(--ease); }
+.hg-dots i.on { width: 30px; background: #fff; box-shadow: var(--neon-glow); }
+.hg-next { padding: 11px 18px; border-radius: 99px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #0c0c0e; background: #ecebe7; transition: box-shadow 0.3s; }
+.hg-next:hover { box-shadow: 0 0 22px rgba(255, 255, 255, 0.35); }
+/* the guide keeps its own colours whatever mode the table is in */
+.house.is-hell .house-guide, .house.is-god .house-guide { background: radial-gradient(120% 70% at 50% 0%, #141416 0%, #09090a 65%); }
+@media (prefers-reduced-motion: reduce) { .hg-plate * { animation: none !important; } .house-guide-open.is-new { animation: none; } }
+.hg-plate .g-solid { fill: #0b0b0d; }

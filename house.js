@@ -17,7 +17,7 @@
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
   };
-  const BEST_KEY = "woblo:shell2-best", NAME_KEY = "woblo:house-name", PLAYER_KEY = "woblo:house-player";
+  const BEST_KEY = "woblo:shell3-best", NAME_KEY = "woblo:house-name", PLAYER_KEY = "woblo:house-player";
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   // who you are, without an account: a random id kept by this browser
   const PLAYER = (() => {
@@ -69,7 +69,7 @@
       <div class="house-score">
         <div class="is-bank"><span class="bank-chip" aria-hidden="true"></span><div><small>${T("Tus fichas", "Your chips")}</small><b data-k="chips">${E.START}</b></div><span class="house-delta" data-k="delta"></span></div>
         <div><small>${T("Ronda", "Round")}</small><b data-k="round">1</b></div>
-        <div><small>${T("Récord", "Best")}</small><b data-k="best">${E.START}</b></div>
+        <div class="is-safe"><small>${T("Caja fuerte", "Safe")}</small><b data-k="safe">0</b><em>${T("Récord", "Best")} <span data-k="best">0</span></em></div>
       </div>
       <div class="house-rank">
         <span class="rk-sigil" data-k="sigil" aria-hidden="true">♠</span>
@@ -92,6 +92,12 @@
         <p class="house-say" aria-live="polite"></p>
         <!-- the bet: quick chips, or any amount; "all" turns the table red -->
         <div class="house-bet" hidden>
+          <div class="house-shop" data-k="shop" role="group" aria-label="${T("Ayudas", "Helps")}"></div>
+          <div class="house-vault">
+            <span><i aria-hidden="true">▣</i>${T("Caja fuerte", "Safe")}<em>${T("lo guardado ya no se pierde", "what you save can't be lost")}</em></span>
+            <button type="button" data-save="0.25">${T("Guardar", "Save")} 25%</button>
+            <button type="button" data-save="0.5">50%</button>
+          </div>
           <div class="hb-chips" role="group" aria-label="${T("Apuesta", "Bet")}">
             <button type="button" data-bet="10"><span>10</span></button>
             <button type="button" data-bet="25"><span>25</span></button>
@@ -118,16 +124,7 @@
           </div>
           <small id="houseSignNote"></small>
         </form>
-        <details class="house-rules">
-          <summary><span>${T("Cómo se juega", "How to play")}</span><em>${T("20 segundos", "20 seconds")}</em></summary>
-          <ol class="hr-steps">
-            <li><b>01</b><div><strong>${T("Apuesta", "Bet")}</strong><p>${T("Empiezas con 100 fichas. Elige 10, 25, 50, todo, o la cantidad que quieras.", "You start with 100 chips. Pick 10, 25, 50, all of it, or any amount.")}</p></div></li>
-            <li><b>02</b><div><strong>${T("Mira y sigue", "Watch and follow")}</strong><p>${T("El dado aparece bajo un vaso. La casa los baraja, cada ronda más rápido.", "The die shows under a glass. The house shuffles them, faster every round.")}</p></div></li>
-            <li><b>03</b><div><strong>${T("Elige", "Pick")}</strong><p>${T("Aciertas y cobras; fallas y la casa se queda tu apuesta. Sigues mientras te queden fichas.", "Right and you get paid; wrong and the house keeps your bet. You play on while you have chips.")}</p></div></li>
-            <li><b>04</b><div><strong>${T("Más vasos", "More glasses")}</strong><p>${T("Cada 10 rondas entra un vaso más, y la mesa paga más: 3 vasos ×1, 4 ×2, 5 ×3.", "Every 10 rounds one more glass comes in, and the table pays more: 3 glasses ×1, 4 ×2, 5 ×3.")}</p></div></li>
-          </ol>
-          <p class="hr-goal"><span>${T("Tu marca", "Your score")}</span>${T("El máximo de fichas que llegues a tener. Retírate cuando quieras para apuntarla.", "The most chips you ever hold. Cash out whenever you like to sign it.")}</p>
-        </details>
+        <button type="button" class="house-guide-open"><i aria-hidden="true">?</i><span>${T("Cómo se juega", "How to play")}</span><em>${T("7 láminas · 30 s", "7 plates · 30 s")}</em><b aria-hidden="true">→</b></button>
       </section>
       <section class="house-board" hidden>
         <div class="house-me" data-k="me" hidden></div>
@@ -139,6 +136,80 @@
         <p class="house-board-note" data-k="boardNote"></p>
       </section>
     </div>`;
+  /* ---------- how to play: seven plates, drawn in lines ---------- */
+  const glassAt = (x, y, w = 26, h = 34, cls = "") => `<path class="${cls}" d="M${x - w * 0.36} ${y} H${x + w * 0.36} L${x + w / 2} ${y + h} H${x - w / 2} Z"/><ellipse class="${cls}" cx="${x}" cy="${y + h}" rx="${w / 2 + 1}" ry="3"/>`;
+  const dieAt = (x, y, sz = 12, cls = "g-die") => `<rect class="${cls}" x="${x - sz / 2}" y="${y - sz / 2}" width="${sz}" height="${sz}" rx="2.5"/><circle class="g-pip" cx="${x - sz / 4}" cy="${y - sz / 4}" r="1.2"/><circle class="g-pip" cx="${x}" cy="${y}" r="1.2"/><circle class="g-pip" cx="${x + sz / 4}" cy="${y + sz / 4}" r="1.2"/>`;
+  // a stack of chips seen from the side, n high
+  const stackAt = (x, y, n) => Array.from({ length: n }, (_, i) => { const c = y - i * 7; return `<path class="g-solid" d="M${x - 18} ${c} V${c + 4} A18 6 0 0 0 ${x + 18} ${c + 4} V${c}"/><ellipse class="g-solid" cx="${x}" cy="${c}" rx="18" ry="6"/><ellipse class="g-dash" cx="${x}" cy="${c}" rx="11" ry="3.5"/>`; }).join("");
+  const chipAt = (x, y, r = 14) => `<circle cx="${x}" cy="${y}" r="${r}"/><circle class="g-dash" cx="${x}" cy="${y}" r="${r - 3.5}"/>`;
+  const PLATES = [
+    { k: T("Apuesta", "Bet"), t: T("Empiezas con 100 fichas. Juega 10, 25, 50, todo, o la cifra que quieras.", "You start with 100 chips. Play 10, 25, 50, all of it, or any number."),
+      svg: `${stackAt(84, 76, 4)}<text x="84" y="100" class="g-t">100</text><path class="g-arrow g-move" d="M110 64 H140"/><path class="g-arrow" d="M134 58 L140 64 L134 70"/>${stackAt(166, 76, 1)}<text x="164" y="96" class="g-t">${T("apuesta", "bet")}</text>` },
+    { k: T("Mira y sigue", "Watch and follow"), t: T("El dado se ve un instante bajo un vaso. Luego la casa baraja, cada ronda más rápido.", "The die shows for a moment under a glass. Then the house shuffles, faster every round."),
+      svg: `${glassAt(70, 40)}${glassAt(120, 26, 26, 34, "g-up")}${glassAt(170, 40)}${dieAt(120, 68)}<path class="g-arrow g-move" d="M74 92 C96 108 144 108 166 92"/><path class="g-arrow g-move" d="M160 88 L166 92 L159 96"/>` },
+    { k: T("Elige", "Pick"), t: T("Aciertas y cobras. Fallas y la casa se queda tu apuesta. Sigues mientras te queden fichas.", "Hit and you get paid. Miss and the house keeps your bet. You play on while you have chips."),
+      svg: `${glassAt(70, 40)}${glassAt(170, 40)}<g class="g-lift">${glassAt(120, 16)}</g>${dieAt(120, 68)}<path class="g-ok" d="M146 70 L152 76 L164 62"/>` },
+    { k: T("Más vasos, más premio", "More glasses, bigger pay"), t: T("Cada 10 rondas entra un vaso más y la mesa paga más.", "Every 10 rounds one more glass comes in and the table pays more."),
+      svg: [[3, 30, "×1", "1"], [4, 62, "×2", "10"], [5, 94, "×3", "20"]].map(([n, y, p, r]) => Array.from({ length: n }, (_, i) => glassAt(70 + i * 18, y - 10, 13, 17)).join("") + `<text x="196" y="${y + 6}" class="g-t g-big">${p}</text><text x="40" y="${y + 6}" class="g-t">R${r}</text>`).join("") },
+    { k: T("La caja fuerte", "The safe"), t: T("Lo que guardas ya no se pierde. Tu marca: la caja fuerte, más la mesa si te retiras a tiempo.", "What you save can't be lost. Your score: the safe, plus the table if you cash out in time."),
+      svg: `<rect x="128" y="26" width="64" height="64" rx="6"/><circle cx="160" cy="58" r="14"/><path d="M160 46 V52 M160 64 V70 M148 58 H154 M166 58 H172"/><rect x="134" y="32" width="52" height="52" rx="3" class="g-dash"/>${chipAt(64, 58, 12)}<path class="g-arrow g-move" d="M82 58 H118"/><path class="g-arrow g-move" d="M112 52 L118 58 L112 64"/><text x="64" y="96" class="g-t">${T("mesa", "table")}</text><text x="160" y="108" class="g-t">${T("tuyo", "yours")}</text>` },
+    { k: T("Ayudas", "Helps"), t: T("Canjea fichas de la mesa por ayudas. Cada pocas rondas se desbloquea una nueva, cada vez más cara.", "Trade table chips for helps. Every few rounds a new one unlocks, each dearer than the last."),
+      svg: `<path d="M20 70 H220" class="g-dash"/>` + Object.keys(E.SHOP).map((id, i) => { const x = 28 + i * 30.5, y = 70 - 8 - i * 5; return `<path d="M${x} 70 V${y}" class="g-dash"/><circle cx="${x}" cy="${y - 9}" r="9" class="${id === "glass" ? "g-glow" : id === "pact" ? "g-red" : ""}"/><text x="${x}" y="${y - 6}" class="g-t g-icon">${({ double: "×2", hint: "☝", gold: "◆", slow: "◷", insure: "☂", pact: "⛧", glass: "◇" })[id]}</text><text x="${x}" y="86" class="g-t">${E.SHOP[id].at}</text>`; }).join("") + `<text x="120" y="104" class="g-t">${T("ronda", "round")}</text>` },
+    { k: T("Rangos", "Ranks"), t: T("Cuanto más aguantas, más cambia la mesa: de turista a diablo, a dios… y más allá.", "The longer you last, the more the table changes: from tourist to devil, to god… and beyond."),
+      svg: [[1, "♠"], [5, "♣"], [10, "♦"], [15, "♥"], [20, "☀"], [30, "✺"]].map(([r, g], i) => { const x = 30 + i * 36, y = 92 - i * 13; return `<path d="M${x - 16} ${y} H${x + 16} V${y + 14}" class="${i === 3 ? "g-red" : i >= 4 ? "g-glow" : ""}"/><text x="${x}" y="${y - 6}" class="g-t g-icon ${i === 3 ? "g-red-t" : i >= 4 ? "g-gold-t" : ""}">${g}</text><text x="${x}" y="${y + 11}" class="g-t">${r}</text>`; }).join("") },
+  ];
+  const guide = document.createElement("section");
+  guide.className = "house-guide";
+  guide.hidden = true;
+  guide.setAttribute("aria-label", T("Cómo se juega", "How to play"));
+  guide.innerHTML = `
+    <header><span class="house-k">${T("Cómo se juega", "How to play")}</span><button type="button" class="hg-x" aria-label="${T("Cerrar", "Close")}">✕</button></header>
+    <div class="hg-track">${PLATES.map((p, i) => `
+      <article class="hg-plate" data-i="${i}">
+        <svg viewBox="0 0 240 120" aria-hidden="true">${p.svg}</svg>
+        <div class="hg-text"><b>${String(i + 1).padStart(2, "0")}</b><h3>${p.k}</h3><p>${p.t}</p></div>
+      </article>`).join("")}</div>
+    <footer>
+      <button type="button" class="hg-prev" aria-label="${T("Anterior", "Previous")}">←</button>
+      <div class="hg-dots">${PLATES.map((_, i) => `<i data-go="${i}"></i>`).join("")}</div>
+      <button type="button" class="hg-next">${T("Siguiente", "Next")} →</button>
+    </footer>`;
+  root.querySelector(".house-machine").appendChild(guide);
+  let plate = 0;
+  function showPlate(i) {
+    plate = Math.max(0, Math.min(PLATES.length - 1, i));
+    guide.style.setProperty("--p", plate);
+    guide.querySelectorAll(".hg-plate").forEach((el, j) => el.classList.toggle("on", j === plate));
+    guide.querySelectorAll(".hg-dots i").forEach((el, j) => el.classList.toggle("on", j === plate));
+    guide.querySelector(".hg-prev").disabled = plate === 0;
+    guide.querySelector(".hg-next").textContent = plate === PLATES.length - 1 ? T("A jugar", "Let's play") + " →" : T("Siguiente", "Next") + " →";
+  }
+  function openGuide() {
+    const m = root.querySelector(".house-machine"); m.scrollTop = 0; m.classList.add("is-guide");
+    guide.hidden = false; requestAnimationFrame(() => guide.classList.add("on"));
+    showPlate(0); store.set("woblo:house-guide", "1"); root.querySelector(".house-guide-open").classList.remove("is-new");
+    guide.querySelector(".hg-next").focus({ preventScroll: true });
+  }
+  function closeGuide() {
+    guide.classList.remove("on"); root.querySelector(".house-machine").classList.remove("is-guide");
+    setTimeout(() => { guide.hidden = true; }, 350);
+  }
+  guide.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (e.target.closest(".hg-x")) return closeGuide();
+    if (e.target.closest(".hg-prev")) return showPlate(plate - 1);
+    if (e.target.closest(".hg-next")) return plate === PLATES.length - 1 ? closeGuide() : showPlate(plate + 1);
+    const d = e.target.closest("[data-go]"); if (d) showPlate(+d.dataset.go);
+  });
+  guide.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") { e.preventDefault(); showPlate(plate + 1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); showPlate(plate - 1); }
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeGuide(); }
+  });
+  // swipe on a phone
+  { let x0 = null; guide.addEventListener("pointerdown", (e) => { x0 = e.clientX; }); guide.addEventListener("pointerup", (e) => { if (x0 == null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 40) showPlate(plate + (dx < 0 ? 1 : -1)); }); }
+  root.addEventListener("click", (e) => { if (e.target.closest(".house-guide-open")) openGuide(); });
+
   document.body.append(btn, root);
 
   const $ = (q) => root.querySelector(q);
@@ -147,7 +218,7 @@
   const betBox = $(".house-bet"), betIn = $("#betIn");
   let cups = [];
   const sign = $(".house-sign"), nameIn = $("#houseName"), signNote = $("#houseSignNote");
-  if (!store.get(BEST_KEY)) $(".house-rules").open = true;
+  if (!store.get("woblo:house-guide")) $(".house-guide-open").classList.add("is-new");
 
   /* ---------- state ---------- */
   // phase: idle → bet → show → shuffle → pick → reveal → (bet … | over)
@@ -155,8 +226,9 @@
     mode: null, id: null, round: null, phase: "idle", signed: false, meTab: "",
     chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false,
     streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set(),
+    safe: 0, buy: {}, shown: {}, cashed: false,
     lastR: 0, cp: 1, cpId: null, // the checkpoint: where a finished game lets you sit back down
-    record: Math.max(E.START, +(store.get(BEST_KEY) || 0)), // your best ever, in this browser
+    record: +(store.get(BEST_KEY) || 0), // your best score ever, in this browser
   };
   let slotOf = [0, 1, 2]; // slotOf[cup] = where that glass stands now
 
@@ -330,12 +402,73 @@
     right: (w) => fill(byTier(TALK.right), { w }),
     wrong: (l) => fill(byTier(TALK.wrong), { l }),
     broke: () => byTier(TALK.broke),
-    cashed: (b) => T(`Se retira con estilo. Su mejor marca: ${fmt(b)} fichas.`, `You leave in style. Your best: ${fmt(b)} chips.`),
+    cashed: (b) => T(`Se retira con estilo: ${fmt(b)} fichas entre la mesa y la caja fuerte.`, `You leave in style: ${fmt(b)} chips between the table and the safe.`),
     offline: () => T("Sin conexión con la casa: jugamos aquí, sin ranking.", "The house is offline: we play here, unranked."),
   };
   function speak(text) { say.textContent = text; say.classList.remove("on"); void say.offsetWidth; say.classList.add("on"); }
 
-  const canSign = () => G.mode === "remote" && !G.signed && G.phase === "over" && G.won >= 1 && G.best > E.START;
+  const scoreNow = () => E.score({ safe: G.safe, chips: G.chips, cashed: G.cashed });
+  const canSign = () => G.mode === "remote" && !G.signed && G.phase === "over" && G.won >= 1 && scoreNow() > E.START;
+
+  /* ---------- the shop: helps bought with table chips, unlocked as the rounds go by ---------- */
+  const ITEMS = {
+    double: { icon: "×2", n: () => T("Doble o nada", "Double or nothing"), t: () => T("Aciertas ×2, fallas ×2", "Hit ×2, miss ×2") },
+    hint: { icon: "☝", n: () => T("Chivatazo", "Tip-off"), t: () => T("Levanta un vaso vacío", "Lifts an empty glass") },
+    gold: { icon: "◆", n: () => T("Dado de oro", "Golden die"), t: () => T("El acierto paga ×3", "A hit pays ×3") },
+    slow: { icon: "◷", n: () => T("Cámara lenta", "Slow motion"), t: () => T("Barajan a media velocidad", "Shuffled at half speed") },
+    insure: { icon: "☂", n: () => T("Seguro", "Insurance"), t: () => T("Si fallas, pierdes la mitad", "Miss and lose only half") },
+    pact: { icon: "⛧", n: () => T("Pacto con el diablo", "Pact with the devil"), t: () => T("×5, o pierdes toda la mesa", "×5, or lose the whole table") },
+    glass: { icon: "◇", n: () => T("Vasos de cristal", "Crystal glasses"), t: () => T("Ves el dado todo el rato", "You see the die all along") },
+  };
+  const BOUGHT = {
+    double: () => T("Doble o nada. Que tiemble la banca.", "Double or nothing. Let the bank tremble."),
+    hint: () => T("Chivatazo comprado. Cuando elija, la casa le quitará un vaso vacío.", "Tip-off bought. When you choose, the house will remove an empty glass."),
+    gold: () => T("Dado de oro sobre la mesa. Si acierta, paga triple.", "Golden die on the table. Hit it and it pays triple."),
+    slow: () => T("Cámara lenta. El crupier bostezará barajando.", "Slow motion. The croupier will yawn as he shuffles."),
+    insure: () => T("Asegurado. Si falla, la casa le devuelve la mitad.", "Insured. Miss and the house gives back half."),
+    pact: () => T("Pacto firmado. Quíntuple… o nada. Ni una ficha en la mesa.", "Pact signed. Five times… or nothing. Not one chip left on the table."),
+    glass: () => T("Vasos de cristal. Lo más caro de la casa: no lo pierda de vista.", "Crystal glasses. The dearest thing in the house: don't lose sight of it."),
+  };
+  const unlocking = (r) => Object.keys(E.SHOP).filter((id) => E.SHOP[id].at === r);
+  function paintShop() {
+    const r = G.round ? G.round.r : 1, me = { r, chips: G.chips, buy: G.buy, over: false };
+    k("shop").innerHTML = Object.keys(E.SHOP).map((id) => {
+      const it = ITEMS[id], at = E.SHOP[id].at, locked = r < at, got = !!G.buy[id], p = E.price(id, G.chips);
+      const ok = E.canBuy(id, me);
+      const cls = ["hs-item", "is-" + id, locked ? "is-locked" : "", got ? "is-got" : "", !locked && !got && !ok ? "is-poor" : ""].join(" ");
+      const tail = locked ? T(`Ronda ${at}`, `Round ${at}`) : got ? T("Activo", "On") : fmt(p);
+      return `<button type="button" class="${cls}" data-buy="${id}" ${ok ? "" : "disabled"} title="${it.n()} · ${it.t()}">
+        <i>${locked ? "🔒︎" : it.icon}</i><span><b>${it.n()}</b><small>${locked ? T("Se desbloquea en la ronda", "Unlocks at round") + " " + at : it.t()}</small></span><em>${tail}</em></button>`;
+    }).join("");
+    root.querySelectorAll("[data-save]").forEach((b) => { b.disabled = Math.floor(G.chips * +b.dataset.save) < 1 || G.chips < 2; });
+  }
+  async function buyItem(id) {
+    if (G.phase !== "bet" || !E.canBuy(id, { r: G.round.r, chips: G.chips, buy: G.buy, over: false })) return;
+    const before = G.chips;
+    try {
+      if (G.mode === "remote") { const j = await post({ op: "buy", id: G.id, item: id }); G.id = j.id; G.chips = j.chips; G.buy = j.buy || {}; }
+      else { const st = { chips: G.chips, buy: G.buy }; E.buy(st, id); G.chips = st.chips; G.buy = st.buy; }
+    } catch (e) { speak(T("La casa no le vende eso ahora.", "The house won't sell you that now.")); return; }
+    countTo(before, G.chips); delta(G.chips - before);
+    const sn = snd(); if (sn) { sn.chip(0.9); setTimeout(() => sn.chip(0.6), 90); }
+    speak(BOUGHT[id]());
+    render();
+  }
+  async function saveChips(pct) {
+    if (G.phase !== "bet") return;
+    const amount = Math.min(G.chips - 1, Math.floor(G.chips * pct));
+    if (amount < 1) return;
+    const before = G.chips;
+    try {
+      if (G.mode === "remote") { const j = await post({ op: "save", id: G.id, amount }); G.id = j.id; G.chips = j.chips; G.safe = j.safe; }
+      else { G.chips -= amount; G.safe += amount; }
+    } catch (e) { speak(T("La caja fuerte no se abre ahora mismo.", "The safe won't open right now.")); return; }
+    countTo(before, G.chips);
+    const sn = snd(); if (sn) sn.thud(0.6);
+    const box = k("safe").parentElement; box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash"); setTimeout(() => box.classList.remove("flash"), 900);
+    speak(T(`${fmt(amount)} fichas a la caja fuerte. Esas ya son suyas.`, `${fmt(amount)} chips into the safe. Those are yours now.`));
+    render();
+  }
   const allIn = () => G.bet >= G.chips && G.chips > 0;
   const clampBet = (v) => Math.max(E.minBet(G.chips), Math.min(G.chips, Math.floor(v) || 0));
   function setBet(v) { G.bet = clampBet(v); render(); }
@@ -344,7 +477,11 @@
     const R = G.round;
     k("chips").textContent = fmt(G.chips);
     k("round").textContent = R ? R.r : 1;
-    k("best").textContent = fmt(Math.max(G.best, G.record));
+    k("best").textContent = fmt(G.record);
+    k("safe").textContent = fmt(G.safe);
+    const fx = Object.assign({}, G.shown, G.buy); // what this round bought, until its reveal is over
+    root.classList.toggle("is-crystal", !!fx.glass);
+    root.classList.toggle("is-golden", !!fx.gold);
     const betting = G.phase === "bet";
     betBox.hidden = !betting;
     if (betting) {
@@ -356,11 +493,14 @@
         b.classList.toggle("is-on", b.dataset.bet === "all" ? allIn() : v === G.bet && !allIn());
       });
       const n = R ? R.n : 3, pay = R ? R.pay : 1;
-      k("betInfo").textContent = T(`${n} vasos · la mesa paga ×${pay} · ganarías ${fmt(G.bet * pay)}`, `${n} glasses · the table pays ×${pay} · you'd win ${fmt(G.bet * pay)}`);
+      const win = E.gainFor(G.buy, G.bet, pay), lose = E.lossFor(G.buy, G.bet, G.chips);
+      k("betInfo").textContent = T(`${n} vasos · ganarías ${fmt(win)} · arriesgas ${fmt(lose)}`, `${n} glasses · you'd win ${fmt(win)} · you risk ${fmt(lose)}`);
+      paintShop();
     }
     // the stake on the felt while the round plays
     const playing = ["show", "shuffle", "pick", "reveal"].includes(G.phase);
-    k("pot").textContent = playing ? T(`Apuesta ${fmt(G.bet)}`, `Bet ${fmt(G.bet)}`) : "";
+    const tags = Object.keys(G.buy).filter((id) => G.buy[id]).map((id) => ITEMS[id].icon).join(" ");
+    k("pot").textContent = playing ? T(`Apuesta ${fmt(G.bet)}`, `Bet ${fmt(G.bet)}`) + (tags ? " · " + tags : "") : "";
     root.classList.toggle("is-allin", (betting || playing) && allIn());
     const A = {
       idle: [["start", T("Sentarse con 100 fichas", "Sit down with 100 chips"), true]],
@@ -397,6 +537,13 @@
     const next = slotOf.map((s) => p[s]);
     const travelling = cups.map((c, i) => [c, i]).filter(([, i]) => next[i] !== slotOf[i]);
     const s = snd(); if (s) s.glass(0.35);
+    // crystal glasses: the die travels with its glass
+    const dCup = G.round ? G.round.d : -1;
+    if (G.buy.glass && next[dCup] !== slotOf[dCup]) {
+      const x0 = xOf(slotOf[dCup]), x1 = xOf(next[dCup]);
+      die.animate([{ transform: `translateX(${x0}px)` }, { transform: `translateX(${x1}px)` }], { duration: ms, easing: "cubic-bezier(0.45, 0, 0.25, 1)" })
+        .finished.catch(() => {}).then(() => { die.style.transform = `translateX(${x1}px)`; });
+    }
     await Promise.all(travelling.map(([c, i], j) => {
       const x0 = xOf(slotOf[i]), x1 = xOf(next[i]), front = j % 2 === 0 ? x1 > x0 : x1 < x0;
       const lift = reduce ? 0 : (front ? 10 : -16), scale = reduce ? 1 : (front ? 1.07 : 0.93);
@@ -415,7 +562,7 @@
   /* ---------- a game ---------- */
   async function newGame(fromCp) {
     const cp = fromCp ? G.cp : 1, cpId = fromCp ? G.cpId : null, wasLocal = G.mode === "local";
-    Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false, streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set() });
+    Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false, safe: 0, buy: {}, shown: {}, cashed: false, streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set() });
     try {
       if (cp > 1 && (wasLocal || !cpId)) throw Object.assign(new Error("local"), { status: 503 });
       const j = await post(cp > 1 ? { op: "start", from: cpId } : { op: "start" });
@@ -433,7 +580,8 @@
     render();
     const r = G.round.r;
     [[5, "r5"], [10, "r10"], [15, "r15"], [20, "r20"], [30, "r30"]].forEach(([n, id]) => { if (r >= n) award(id); });
-    const extra = r % 4 === 0 ? skillLine() : r % 3 === 0 ? stackLine() : null;
+    const opens = unlocking(r);
+    const extra = opens.length ? T(`Nueva ayuda en la tienda: ${ITEMS[opens[0]].n()}.`, `New help in the shop: ${ITEMS[opens[0]].n()}.`) : r % 4 === 0 ? skillLine() : r % 3 === 0 ? stackLine() : null;
     speak(r > 1 && G.round.n > 3 && r % 10 === 0 ? T(`Ronda ${r}: entra un vaso más. La mesa paga ×${G.round.pay}.`, `Round ${r}: one more glass. The table pays ×${G.round.pay}.`) : extra || LINES.bet());
   }
 
@@ -449,15 +597,22 @@
     cups.forEach((c) => lift(c, false));
     { const s = snd(); if (s) s.thud(0.5); }
     await wait(420);
-    die.classList.remove("on");
+    if (!G.buy.glass) die.classList.remove("on");
     G.phase = "shuffle"; render(); speak(LINES.shuffle());
     await wait(260);
-    for (const p of R.moves) await move(p, R.ms);
-    G.phase = "pick"; render(); speak(LINES.ask());
+    for (const p of R.moves) await move(p, G.buy.slow ? R.ms * 2 : R.ms);
+    G.phase = "pick"; render();
+    // the tip-off: the house lifts one empty glass and leaves it up
+    if (G.buy.hint) {
+      const empty = cups.map((_, i) => i).filter((i) => i !== R.d);
+      const out = empty[Math.floor(Math.random() * empty.length)];
+      lift(cups[out], true); cups[out].disabled = true; cups[out].classList.add("is-out");
+      speak(T("Chivatazo: ese no es.", "Tip-off: not that one."));
+    } else speak(LINES.ask());
   }
 
   async function choose(cup) {
-    if (G.phase !== "pick") return;
+    if (G.phase !== "pick" || (cups[cup] && cups[cup].classList.contains("is-out"))) return;
     G.phase = "reveal"; render();
     const R = G.round, bet = G.bet, before = G.chips, wasAllIn = allIn();
     G.lastR = R.r;
@@ -465,8 +620,9 @@
     try {
       if (G.mode === "remote") { res = await post({ op: "pick", id: G.id, cup, bet }); G.id = res.id; }
       else {
-        const ok = cup === R.d, chips = Math.max(0, before + (ok ? bet * R.pay : -bet));
-        res = { ok, d: R.d, chips, best: Math.max(G.best, chips), won: G.won + (ok ? 1 : 0), round: chips > 0 ? E.round(R.r + 1, Math.random) : null };
+        const st = { r: R.r, chips: G.chips, safe: G.safe, best: G.best, won: G.won, buy: G.buy, over: false };
+        const { ok } = E.settle(st, R, cup, bet);
+        res = { ok, d: R.d, chips: st.chips, safe: st.safe, best: st.best, won: st.won, round: st.over ? null : E.round(R.r + 1, Math.random) };
       }
     } catch (e) {
       speak(T("Algo se ha caído de la mesa. Vuelve a intentarlo.", "Something fell off the table. Try again."));
@@ -474,7 +630,8 @@
     }
     dieUnder(res.d); die.classList.add("on");
     lift(cups[cup], true);
-    G.chips = res.chips; G.best = res.best; G.won = res.won;
+    G.chips = res.chips; G.best = res.best; G.won = res.won; G.safe = res.safe != null ? res.safe : G.safe;
+    G.shown = G.buy; G.buy = {};
     const s = snd();
     const diff = G.chips - before;
     countTo(before, G.chips);
@@ -513,21 +670,20 @@
     }
     [[200, "c200"], [500, "c500"], [1000, "c1000"], [5000, "c5000"], [25000, "c25000"], [100000, "c100000"]].forEach(([n, id]) => { if (G.chips >= n) award(id); });
     if (G.chips === 666) award("beast");
-    // a new personal best: the great rain, once a game
-    if (G.best > G.record) {
-      G.record = G.best; store.set(BEST_KEY, String(G.record)); flashBest();
-      if (!G.recordShown) { G.recordShown = true; await wait(500); rain(3, T("Nuevo récord", "New record"), T(`${fmt(G.best)} fichas`, `${fmt(G.best)} chips`)); }
-    }
+
     G.round = res.round;
     render();
     await wait(1300);
     cups.forEach((c) => lift(c, false));
     await wait(380);
     die.classList.remove("on");
+    cups.forEach((c) => { c.classList.remove("is-out"); });
+    G.shown = {}; root.classList.remove("is-crystal", "is-golden");
     if (!G.round) {
       G.phase = "over"; keepCheckpoint();
-      (window.WOBLO_TRACK && window.WOBLO_TRACK("game", `«La casa»: ${fmt(G.best)} fichas`));
-      speak(LINES.broke() + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
+      const sc = await finalScore();
+      (window.WOBLO_TRACK && window.WOBLO_TRACK("game", `«La casa»: ${fmt(sc)} fichas (ronda ${G.lastR})`));
+      speak(LINES.broke() + " " + (G.safe ? T(`Su caja fuerte le salva: ${fmt(G.safe)}.`, `Your safe saves you: ${fmt(G.safe)}.`) : T("La caja fuerte estaba vacía.", "The safe was empty.")) + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
       render();
       if (!sign.hidden) setTimeout(() => nameIn.focus({ preventScroll: true }), 200);
       return;
@@ -545,6 +701,15 @@
 
   // a finished game leaves a checkpoint five rounds before where it ended (only for this visit)
   function keepCheckpoint() { G.cp = E.checkpoint(G.lastR); G.cpId = G.id; }
+  // the end of a game: the score, and the great rain if it beats your best
+  async function finalScore() {
+    const sc = scoreNow();
+    if (sc > G.record && sc > 0) {
+      G.record = sc; store.set(BEST_KEY, String(sc)); flashBest(); render();
+      await wait(400); rain(3, T("Nuevo récord", "New record"), T(`${fmt(sc)} fichas`, `${fmt(sc)} chips`));
+    }
+    return sc;
+  }
   async function act(a) {
     if (a === "resume" && G.phase === "over" && G.cp > 1) {
       actions.innerHTML = "";
@@ -565,10 +730,11 @@
       return playRound();
     }
     if (a === "cashout" && G.phase === "bet") {
-      try { if (G.mode === "remote") { const j = await post({ op: "cashout", id: G.id }); G.id = j.id; } } catch (e) { /* the score is the best held; the server keeps it */ }
-      G.phase = "over"; keepCheckpoint();
-      (window.WOBLO_TRACK && window.WOBLO_TRACK("game", `«La casa»: se retira con ${fmt(G.best)} fichas`));
-      speak(LINES.cashed(G.best) + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
+      try { if (G.mode === "remote") { const j = await post({ op: "cashout", id: G.id }); G.id = j.id; } } catch (e) { /* the server keeps the game */ }
+      G.cashed = true; G.phase = "over"; keepCheckpoint(); render();
+      const sc = await finalScore();
+      (window.WOBLO_TRACK && window.WOBLO_TRACK("game", `«La casa»: se retira con ${fmt(sc)} fichas (ronda ${G.lastR})`));
+      speak(LINES.cashed(sc) + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
       render();
       if (!sign.hidden) setTimeout(() => nameIn.focus({ preventScroll: true }), 200);
     }
@@ -576,6 +742,10 @@
 
   // the bet controls
   root.addEventListener("click", (e) => {
+    const it = e.target.closest("[data-buy]");
+    if (it && !it.disabled) { buyItem(it.dataset.buy); return; }
+    const sv = e.target.closest("[data-save]");
+    if (sv && !sv.disabled) { saveChips(+sv.dataset.save); return; }
     const b = e.target.closest("[data-bet]");
     if (b && !b.disabled && G.phase === "bet") { setBet(b.dataset.bet === "all" ? G.chips : +b.dataset.bet); const s = snd(); if (s) s.chip(b.dataset.bet === "all" ? 1 : 0.5); return; }
     const st = e.target.closest("[data-step]");
@@ -707,7 +877,7 @@
       paintMe(j.me);
       const top = (j.all || [])[0];
       k("allBest").textContent = top ? T(`Récord: ${top.name} · ${fmt(top.score)}`, `Record: ${top.name} · ${fmt(top.score)}`) : "";
-      k("boardNote").textContent = T("El ranking no se reinicia nunca. Cuenta el máximo de fichas de cada partida; las rondas las reparte y las comprueba el servidor.", "The board never resets. It counts the most chips of each game; rounds are dealt and checked by the server.");
+      k("boardNote").textContent = T("El ranking no se reinicia nunca. Cuenta lo que te llevas de cada partida: la caja fuerte, más la mesa si te retiras. Las rondas, las ayudas y la caja fuerte las comprueba el servidor.", "The board never resets. It counts what you take from each game: the safe, plus the table if you cash out. Rounds, helps and the safe are checked by the server.");
     } catch (e) {
       list.innerHTML = `<li class="is-empty">${T("El ranking no responde ahora mismo.", "The ranking isn't answering right now.")}</li>`;
     }
@@ -771,7 +941,7 @@
   });
   addEventListener("keydown", (e) => {
     if (!root.classList.contains("on")) return;
-    if (e.key === "Escape") return close();
+    if (e.key === "Escape") { if (!guide.hidden) return closeGuide(); return close(); }
     // 1…n pick the glass standing in that place, left to right
     if (G.phase === "pick" && /^[1-6]$/.test(e.key) && e.target !== nameIn && e.target !== betIn) {
       const slot = +e.key - 1; const cup = slotOf.indexOf(slot); if (cup >= 0) choose(cup);

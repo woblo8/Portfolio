@@ -2,14 +2,16 @@
 // The server deals every round (how many glasses, which one hides the die, the moves, the speed),
 // checks every bet and every pick and keeps the chips, so a score on the board means that game
 // was really played. The game state travels to the browser sealed with an HMAC (the key never
-// leaves the server). The score is the most chips held at any point of the game.
+// leaves the server). The score is what you keep: the safe, plus the table if you cash out.
 // The board lives in Upstash Redis when it is configured (KV_REST_API_URL / _TOKEN or
 // UPSTASH_REDIS_REST_URL / _TOKEN) and otherwise in Vercel Blob (BLOB_READ_WRITE_TOKEN).
 //
 //   GET  /api/house?p=<player>            → { week, all, me }   top 10s, and where you stand
 //   POST /api/house { op: "start" }        → { id, round }
 //   POST /api/house { op: "pick", id, cup, bet } → { ok, d, chips, best, id, round? }
-//   POST /api/house { op: "cashout", id } → { id, best }   stop and keep the score
+//   POST /api/house { op: "buy", id, item } → { id, chips, paid, buy }   a help for the next hand
+//   POST /api/house { op: "save", id, amount } → { id, chips, safe }   chips into the safe, for good
+//   POST /api/house { op: "cashout", id } → { id, score }   stop and keep the table too
 //   POST /api/house { op: "submit", id, name, p } → { rank, score }   name: three letters A–Z
 const crypto = require("crypto");
 const E = require("../house-engine.js");
@@ -53,13 +55,13 @@ function redisStore() {
   const parse = (flat) => { const out = []; for (let i = 0; i < (flat || []).length; i += 2) { const [name, g, p] = String(flat[i]).split("·"); out.push({ name, g, p: p || "", score: Number(flat[i + 1]) }); } return out; };
   return {
     async read() {
-      const [w, a] = await Promise.all([R("ZREVRANGE", `shell2:week:${weekKey()}`, 0, 999, "WITHSCORES"), R("ZREVRANGE", "shell2:all", 0, 999, "WITHSCORES")]);
+      const [w, a] = await Promise.all([R("ZREVRANGE", `shell3:week:${weekKey()}`, 0, 999, "WITHSCORES"), R("ZREVRANGE", "shell3:all", 0, 999, "WITHSCORES")]);
       return { week: parse(w), all: parse(a) };
     },
-    async claim(g) { return (await R("SET", `shell2:sub:${g}`, "1", "NX", "EX", 60 * 60 * 24 * 30)) === "OK"; },
+    async claim(g) { return (await R("SET", `shell3:sub:${g}`, "1", "NX", "EX", 60 * 60 * 24 * 30)) === "OK"; },
     async add({ name, g, p, score }) {
-      const member = `${name}·${g}·${p}`, wk = `shell2:week:${weekKey()}`;
-      await Promise.all([R("ZADD", wk, score, member), R("ZADD", "shell2:all", score, member), R("EXPIRE", wk, 60 * 60 * 24 * 21)]);
+      const member = `${name}·${g}·${p}`, wk = `shell3:week:${weekKey()}`;
+      await Promise.all([R("ZADD", wk, score, member), R("ZADD", "shell3:all", score, member), R("EXPIRE", wk, 60 * 60 * 24 * 21)]);
     },
   };
 }
@@ -82,7 +84,7 @@ function blobStore() {
       } while (cursor);
       return out.sort((x, y) => y.score - x.score);
     };
-    const [week, all] = await Promise.all([folder(`shell2/w/${weekKey()}/`), folder("shell2/a/")]);
+    const [week, all] = await Promise.all([folder(`shell3/w/${weekKey()}/`), folder("shell3/a/")]);
     blobCache = { at: Date.now(), data: { week, all } };
     return blobCache.data;
   };
@@ -91,14 +93,14 @@ function blobStore() {
     read,
     async claim(g) {
       const { list, put } = await import("@vercel/blob");
-      if ((await list({ prefix: `shell2/g/${g}`, limit: 1 })).blobs.length) return false;
-      await put(`shell2/g/${g}.txt`, "1", opts);
+      if ((await list({ prefix: `shell3/g/${g}`, limit: 1 })).blobs.length) return false;
+      await put(`shell3/g/${g}.txt`, "1", opts);
       return true;
     },
     async add({ name, g, p, score }) {
       const { put } = await import("@vercel/blob");
       const file = `${String(Math.min(999999999, score)).padStart(9, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
-      await Promise.all([put(`shell2/w/${weekKey()}/${file}`, "1", opts), put(`shell2/a/${file}`, "1", opts)]);
+      await Promise.all([put(`shell3/w/${weekKey()}/${file}`, "1", opts), put(`shell3/a/${file}`, "1", opts)]);
       blobCache.at = 0;
     },
   };
@@ -134,7 +136,7 @@ module.exports = async (req, res) => {
         r = E.checkpoint(prev.r - 1);
         if (r < 2) { res.status(400).json({ error: "bad-checkpoint" }); return; }
       }
-      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, best: E.START, won: 0, over: false };
+      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, safe: 0, best: E.START, won: 0, over: false };
       res.status(200).json({ id: seal(s), round: pub(deal(s)), chips: s.chips, best: s.best });
       return;
     }
@@ -147,32 +149,44 @@ module.exports = async (req, res) => {
       const R = deal(s), cup = Number(body.cup), bet = Math.floor(Number(body.bet));
       if (!Number.isInteger(cup) || cup < 0 || cup >= R.n) { res.status(400).json({ error: "bad-cup" }); return; }
       if (!(bet >= E.minBet(s.chips) && bet <= s.chips)) { res.status(400).json({ error: "bad-bet" }); return; }
-      const ok = cup === R.d;
-      s.chips += ok ? bet * R.pay : -bet;
-      if (ok) s.won += 1;
-      s.best = Math.max(s.best, s.chips);
-      s.r += 1;
-      if (s.chips <= 0) { s.chips = 0; s.over = true; }
-      res.status(200).json({ ok, d: R.d, chips: s.chips, best: s.best, won: s.won, id: seal(s), round: s.over ? null : pub(deal(s)) });
+      const { ok } = E.settle(s, R, cup, bet);
+      res.status(200).json({ ok, d: R.d, chips: s.chips, safe: s.safe || 0, best: s.best, won: s.won, id: seal(s), round: s.over ? null : pub(deal(s)) });
+      return;
+    }
+    // the shop: one help per kind and round, paid from the table
+    if (body.op === "buy") {
+      const item = String(body.item || "");
+      if (!E.canBuy(item, s)) { res.status(400).json({ error: "cannot-buy" }); return; }
+      const paid = E.buy(s, item);
+      res.status(200).json({ id: seal(s), chips: s.chips, safe: s.safe || 0, paid, buy: s.buy });
+      return;
+    }
+    // the safe: chips that can no longer be lost
+    if (body.op === "save") {
+      const amount = Math.floor(Number(body.amount));
+      if (!E.canSave(s, amount)) { res.status(400).json({ error: "cannot-save" }); return; }
+      E.save(s, amount);
+      res.status(200).json({ id: seal(s), chips: s.chips, safe: s.safe });
       return;
     }
     if (body.op === "cashout") {
-      s.over = true;
-      res.status(200).json({ id: seal(s), chips: s.chips, best: s.best });
+      if (!s.over) { s.over = true; s.cashed = true; }
+      res.status(200).json({ id: seal(s), chips: s.chips, safe: s.safe || 0, score: E.score(s) });
       return;
     }
     if (body.op === "submit") {
       const name = String(body.name || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
       if (!/^[A-Z]{3}$/.test(name)) { res.status(400).json({ error: "bad-name" }); return; }
       if (BLOCKED.has(name)) { res.status(400).json({ error: "blocked-name" }); return; }
-      if (!(s.won >= 1) || !(s.best > E.START)) { res.status(400).json({ error: "too-short" }); return; }
+      const score = E.score(s);
+      if (!s.over || !(s.won >= 1) || !(score > E.START)) { res.status(400).json({ error: "too-short" }); return; }
       if (!(await store.claim(s.g))) { res.status(409).json({ error: "already" }); return; }
       const p = /^[a-f0-9]{12}$/.test(String(body.p || "")) ? body.p : "";
-      await store.add({ name, g: s.g, p, score: s.best });
+      await store.add({ name, g: s.g, p, score });
       // the place on the board that never resets
       const { all } = await store.read(true);
       const i = all.findIndex((r) => r.g === s.g);
-      res.status(200).json({ rank: i < 0 ? null : i + 1, score: s.best });
+      res.status(200).json({ rank: i < 0 ? null : i + 1, score });
       return;
     }
     res.status(400).json({ error: "bad-op" });
