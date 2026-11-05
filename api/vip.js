@@ -364,7 +364,8 @@ module.exports = async (req, res) => {
       const name = clean(body.name, 40), slug = slugOf(name);
       if (!slug) return res.status(400).json({ error: "bad-name" });
       // the letter is written in Spanish; the English one is translated here, once, for guests who read the site in English
-      const es = clean(body.note && body.note.es, 600);
+      // the letter keeps its line breaks (paragraphs); everything else that is not text goes
+      const es = String((body.note && body.note.es) || "").replace(/\r/g, "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1200);
       const en = es ? (await translate(es)) || es : "";
       const order = (Array.isArray(body.order) ? body.order : []).map(Number).filter((i) => Number.isInteger(i) && i >= 0 && i < 20).slice(0, 3);
       const g = { name, slug, note: es ? { es, en } : null, order: order.length ? order : null, at: Date.now() };

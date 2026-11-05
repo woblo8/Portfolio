@@ -278,14 +278,24 @@
     if ("letterSpacing" in x) x.letterSpacing = `${Math.round(w * 0.006)}px`;
     x.fillText(`${T("PARA", "FOR")} ${name.toUpperCase()}`, M, h * 0.2);
     if ("letterSpacing" in x) x.letterSpacing = "0px";
-    // the note, wrapped
-    const fs2 = Math.round(w * 0.036);
+    // the note, wrapped, its paragraphs kept, the type as large as the card allows
+    const top = h * 0.27, bottom = h * 0.78, maxW = w - M * 2;
+    const paras = String(note).split(/\n+/).map((p) => p.trim()).filter(Boolean);
+    let fs2 = Math.round(w * 0.036), lines, lh, gap;
+    for (; fs2 > w * 0.016; fs2 -= 2) {
+      x.font = `400 ${fs2}px ${SANS}`; lh = fs2 * 1.42; gap = fs2 * 0.6; lines = [];
+      paras.forEach((p, k) => {
+        let line = "";
+        p.split(/\s+/).forEach((wd) => { const t = line ? line + " " + wd : wd; if (x.measureText(t).width > maxW && line) { lines.push([line, 0]); line = wd; } else line = t; });
+        if (line) lines.push([line, k < paras.length - 1 ? 1 : 0]);
+      });
+      const height = lines.length * lh + lines.filter((l) => l[1]).length * gap;
+      if (height <= bottom - top) break;
+    }
     x.fillStyle = "#ecebe7"; x.font = `400 ${fs2}px ${SANS}`;
-    const words = note.split(" "), lines = []; let line = "";
-    words.forEach((wd) => { const t = line ? line + " " + wd : wd; if (x.measureText(t).width > w - M * 2) { lines.push(line); line = wd; } else line = t; });
-    if (line) lines.push(line);
-    const lh = fs2 * 1.42, y0 = h * 0.5 - ((lines.length - 1) * lh) / 2 + fs2 * 0.3;
-    lines.forEach((l, i) => x.fillText(l, M, y0 + i * lh));
+    const total = lines.length * lh + lines.filter((l) => l[1]).length * gap;
+    let y = top + (bottom - top - total) / 2 + fs2;
+    lines.forEach(([l, br]) => { x.fillText(l, M, y); y += lh + (br ? gap : 0); });
     x.fillStyle = "#f1d8a0"; x.font = `500 ${Math.round(w * 0.022)}px ${MONO}`;
     if ("letterSpacing" in x) x.letterSpacing = `${Math.round(w * 0.004)}px`;
     x.fillText("— Carlos", M, h * 0.86);
