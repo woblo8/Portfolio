@@ -124,6 +124,16 @@ async function telegram(text) {
   return r.ok;
 }
 
+// Spanish to English, through Google Translate's public endpoint (no key); null if it fails
+async function translate(text) {
+  try {
+    const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&dt=t&q=${encodeURIComponent(text)}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j[0] || []).map((p) => p[0]).join("").trim() || null;
+  } catch (e) { return null; }
+}
+
 // what the guest did, in a few words: n = note opened, r = rolls, p = project, c = call, m = mail
 function summary(did) {
   const d = did || {}, out = [];
@@ -252,9 +262,11 @@ module.exports = async (req, res) => {
     if (body.op === "save") {
       const name = clean(body.name, 40), slug = slugOf(name);
       if (!slug) return res.status(400).json({ error: "bad-name" });
-      const es = clean(body.note && body.note.es, 600), en = clean(body.note && body.note.en, 600);
+      // the letter is written in Spanish; the English one is translated here, once, for guests who read the site in English
+      const es = clean(body.note && body.note.es, 600);
+      const en = es ? (await translate(es)) || es : "";
       const order = (Array.isArray(body.order) ? body.order : []).map(Number).filter((i) => Number.isInteger(i) && i >= 0 && i < 20).slice(0, 3);
-      const g = { name, slug, note: es || en ? { es: es || en, en: en || es } : null, order: order.length ? order : null, at: Date.now() };
+      const g = { name, slug, note: es ? { es, en } : null, order: order.length ? order : null, at: Date.now() };
       await put(`vip/guests/${slug}.json`, JSON.stringify(g), putOpts);
       return res.status(200).json({ slug, link: `${SITE}/?vip=${encodeURIComponent(name)}` });
     }
