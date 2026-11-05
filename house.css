@@ -561,7 +561,7 @@ body.ui-in .house-open { opacity: 1; transform: none; }
   background: #fff; box-shadow: 0 0 4px #fff, 0 0 10px #fff, 0 0 16px #ffd36b;
 }
 .house.is-god .shell-die.on { animation: dieHoly 1.4s ease-in-out infinite alternate; }
-@keyframes dieHoly { to { transform: translateY(-4px); box-shadow: inset 0 0 0 1.5px #fff, 0 0 30px #ffe08a, 0 0 80px rgba(255, 210, 110, 0.8); } }
+@keyframes dieHoly { to { translate: 0 -4px; box-shadow: inset 0 0 0 1.5px #fff, 0 0 30px #ffe08a, 0 0 80px rgba(255, 210, 110, 0.8); } }
 
 /* ---------- round 30: omniscient. White light, and the colours of everything ---------- */
 .house.is-beyond .house-hell::before { animation: godSpin 7s linear infinite, prism 5s linear infinite; }
