@@ -41,8 +41,8 @@
           <h1>${T("Bienvenidos", "Welcome")}, <em>${esc(name)}.</em></h1>
         </header>
         <div class="vt3-tip" aria-live="polite"></div>
-        <span class="vt3-label" data-label="die"><b>${T("Lánzame", "Roll me")}</b></span>
-        <span class="vt3-label" data-label="card"><b>${T("Ábrela", "Open me")}</b></span>
+        <button type="button" class="vt3-label" data-label="die" tabindex="-1"><b>${T("Lánzame", "Roll me")}</b></button>
+        <button type="button" class="vt3-label" data-label="card" tabindex="-1"><b>${T("Ábrela", "Open me")}</b></button>
         <footer class="vt3-foot">
           <span class="vt3-hint">${T("Arrastra para rodear la mesa · Lanza el dado o elige una casilla", "Drag to walk around the table · Roll the die or pick a box")}</span>
           <div class="vt3-ctas">
@@ -1707,6 +1707,9 @@
     const labels = { die: vt.querySelector("[data-label=die]"), card: vt.querySelector("[data-label=card]") };
     const lp = new THREE.Vector3(), sealAt = new THREE.Vector3();
     let noteSeen = false, rolledOnce = false;
+    // the labels do what they say: the pill rolls the die, or opens the envelope
+    labels.die.addEventListener("click", () => { if (!labels.die.classList.contains("on")) return; rolledOnce = true; throwDie(); });
+    labels.card.addEventListener("click", () => { if (!labels.card.classList.contains("on")) return; noteSeen = true; openNote(); });
     const placeLabel = (el, obj, lift, show) => {
       lp.copy(obj.isVector3 ? obj : obj.position); lp.y += lift; lp.project(camera);
       const vis = show && lp.z < 1 && Math.abs(lp.x) < 0.95 && lp.y < 0.85 && lp.y > -0.95;

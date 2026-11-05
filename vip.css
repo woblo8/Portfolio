@@ -141,6 +141,12 @@ html.has-cursor .vt3-gl { cursor: none; }
 .vtr-actions button { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold-hi); padding: 6px 2px; }
 .vtr-actions button:hover { text-shadow: 0 0 10px rgba(216, 181, 111, 0.7); }
 @media (max-width: 600px) { .vt-receipt { left: 16px; right: 16px; bottom: 150px; display: grid; justify-items: center; } }
+.vt3-label { background: none; border: 0; padding: 0; color: var(--gold-hi); font: inherit; font-family: var(--mono); font-size: 9px; }
+/* only the pill takes the click, never the thread over the table */
+.vt3-label.on b { pointer-events: auto; cursor: pointer; }
+.vt3-label b { transition: box-shadow 0.3s, color 0.3s, background 0.3s; }
+.vt3-label.on b:hover { color: #fff; background: rgba(5, 5, 6, 0.85); box-shadow: 0 0 0 1px rgba(216, 181, 111, 0.8), 0 0 16px rgba(216, 181, 111, 0.35); }
+.vt3-label.on:hover { animation-play-state: paused; opacity: 1; }
 .vt3-label b {
   font-weight: 400; padding: 4px 9px 4px 11px; border-radius: 99px;
   background: rgba(5, 5, 6, 0.62); box-shadow: 0 0 0 1px rgba(216, 181, 111, 0.25);
