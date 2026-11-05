@@ -918,6 +918,10 @@
       return [side, top, top];
     };
     const kinds = [chipMats("#0d0d0e", "#d8b56f", ctx.name.toUpperCase()), chipMats("#e9e4d8", "#0d0d0e", "woblo"), chipMats("#0d0d0e", "#8c7444", "1000")];
+    // what can be picked up and looked at: each tagged object, and how to make one to hold
+    const INSPECT = { list: [], make: {} };
+    const pickable = (o, kind) => { o.userData.inspect = kind; INSPECT.list.push(o); };
+    kinds.forEach((mats, i) => { INSPECT.make["chip" + i] = () => new THREE.Mesh(chipGeo, mats); });
     const stack = (x, z, n, kind) => {
       const g = new THREE.Group(), lean = { x: 0, z: 0 };
       for (let k = 0; k < n; k++) {
@@ -927,6 +931,7 @@
         m.position.set(lean.x, 0.018 + k * 0.0372, lean.z);
         m.rotation.set((Math.random() - 0.5) * 0.03, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.03);
         m.castShadow = m.receiveShadow = true;
+        pickable(m, "chip" + kind);
         g.add(m);
       }
       g.position.set(x, 0, z);
@@ -949,6 +954,7 @@
       const flat = new THREE.Mesh(chipGeo, kinds[2]);
       flat.position.set(1.95, 0.019, -0.22); flat.rotation.y = 2.1; // clear of the die's landing area
       [lean1, flat].forEach((m) => { m.castShadow = m.receiveShadow = true; scene.add(m); });
+      pickable(lean1, "chip0"); pickable(flat, "chip2");
       contacts.push([1.95, -0.22, 0.24, 0.35], [-1.39, -0.88, 0.18, 0.3]);
     }
     // one chip lying on the first bet
@@ -956,6 +962,7 @@
     const b0 = toWorld(boxes[0].x + boxes[0].w * 0.82, boxes[0].y + boxes[0].h * 0.2);
     bet.position.set(b0.x, 0.019, b0.z); bet.rotation.y = 0.7;
     bet.castShadow = true;
+    pickable(bet, "chip0");
     scene.add(bet);
 
     // the note, in an envelope on the felt: a real object. Its flap turns on a hinge and
@@ -1143,6 +1150,7 @@
     cigar.rotation.set(0, 1.08 + Math.PI / 2, -0.12);
     cigar.translateX(-0.05);
     scene.add(cigar);
+    pickable(cigar, "cigar"); pickable(ash, "cigar"); INSPECT.make.cigar = () => cigar.clone(true); INSPECT.hide = { cigar };
     const emberWorld = new THREE.Vector3();
     cigar.userData.ember.getWorldPosition(emberWorld);
 
@@ -1239,6 +1247,7 @@
     tumbler.position.copy(glassPos);
     tumbler.scale.setScalar(1.4); // bigger: as wide as the wood between the brass bead and the edge allows
     scene.add(tumbler);
+    pickable(tumbler, "glass"); INSPECT.make.glass = () => tumbler.clone(true); INSPECT.hide.glass = tumbler;
     let iceShake = 0;
 
     // ambient occlusion baked into the felt: darker where it meets the rail,
@@ -1516,9 +1525,12 @@
           const off = isFolded ? NW / 4 : 0;
           m.position.set(nx + Math.cos(yaw) * off, y, nz + Math.sin(yaw) * off);
           m.castShadow = m.receiveShadow = true;
+          pickable(m, "bill");
           scene.add(m);
         });
       });
+      // one note, flat, both faces: the one you are handed
+      INSPECT.make.bill = () => { const g = new THREE.Group(); [matF, matB].forEach((mt) => g.add(new THREE.Mesh(flat, mt))); return g; };
     }
 
     /* ---------- the die: black lacquer, gold pips sunk into each face ---------- */
@@ -1821,6 +1833,8 @@
       ray.setFromCamera(ndc, camera);
       if (ray.intersectObject(die, false).length) return { die: true };
       if (ray.intersectObject(card, true).length) return { card: true };
+      const got = ray.intersectObjects(INSPECT.list, true)[0];
+      if (got) { let o = got.object; while (o && !o.userData.inspect) o = o.parent; if (o) return { inspect: o.userData.inspect, src: o }; }
       const hit = ray.intersectObject(felt, false)[0];
       if (!hit) return {};
       const px = (hit.point.x / (2 * A) + 0.5) * pw, py = (hit.point.z / (2 * B) + 0.5) * ph;
@@ -1860,14 +1874,15 @@
         view.x0 = e.clientX; view.y0 = e.clientY;
         return;
       }
-      if (roll.on || NOTE.cam > 0) return;
+      if (roll.on || NOTE.cam > 0 || INS.on) return;
       if (e.target !== canvas) { hoverBox = -1; if (chosen < 0) setTip(""); return; }
       const p = pick(e);
       hoverBox = p.box != null ? p.box : -1;
-      canvas.classList.toggle("is-link", hoverBox >= 0 || !!p.card || !!p.die);
+      canvas.classList.toggle("is-link", hoverBox >= 0 || !!p.card || !!p.die || !!p.inspect);
       if (hoverBox >= 0) { const b = boxes[hoverBox]; setTip(`${b.n} · ${b.title} — ${T("apostar", "place your bet")} →`); }
       else if (p.die) setTip(T("Lanza el dado", "Roll the die"));
       else if (p.card) setTip(T("Una nota para usted", "A note for you"));
+      else if (p.inspect) setTip(`${INSPECT_TEXT[p.inspect][0]} — ${T("mirar de cerca", "take a closer look")}`);
       else if (chosen >= 0) setTip(`${boxes[chosen].title} — ${T("apostar", "place your bet")} →`);
       else setTip("");
     };
@@ -1879,6 +1894,7 @@
       const p = pick(e);
       if (p.die) { rolledOnce = true; throwDie(); return; }
       if (p.card) { noteSeen = true; openNote(); return; }
+      if (p.inspect) { inspect(p.inspect, p.src); return; }
       if (p.box != null && p.box >= 0) {
         const btn = vt.querySelector(`[data-next="${boxes[p.box].i}"]`);
         if (btn) btn.click();
@@ -1887,12 +1903,99 @@
     canvas.addEventListener("pointerdown", down);
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
+    /* ---------- a closer look: one of the things on the table is brought to you ----------
+       It rises off the felt in an arc and stops in front of the lens, lit by a lamp that comes
+       with it, turning slowly; drag to turn it yourself. A click (or Esc) sends it back. */
+    const INSPECT_TEXT = {
+      glass: [T("El vaso del dueño", "The owner's glass"), T("Whisky de malta, dos hielos. Lleva aquí desde la primera mano y nadie se atreve a tocarlo.", "Single malt, two cubes of ice. It has been here since the first hand and nobody dares touch it.")],
+      cigar: [T("Un puro de la casa", "A house cigar"), T("Anilla dorada con la W. Se fuma despacio, como se diseña.", "A gold band with the W. Smoked slowly, the way things are designed.")],
+      bill: [T("Billete de la casa", "A house note"), T("WOBLO RESERVE. No es moneda de curso legal: en esta mesa solo se apuesta por las ideas.", "WOBLO RESERVE. Not legal tender: at this table, the only bets are on ideas.")],
+      chip0: [T("Ficha de la mesa", "Table chip"), T(`Negra y oro, con su nombre: ${ctx.name}. Hecha para esta mesa y para nadie más.`, `Black and gold, with your name: ${ctx.name}. Made for this table and nobody else's.`)],
+      chip1: [T("Ficha de marfil", "Ivory chip"), T("La ficha de la casa, con la marca woblo. La que el crupier reparte primero.", "The house chip, marked woblo. The first one the croupier deals.")],
+      chip2: [T("Ficha de 1000", "A 1000 chip"), T("La más alta de la mesa. Se reserva para las manos que importan.", "The highest at the table. Kept for the hands that matter.")],
+    };
+    const INS = { on: false, busy: false, obj: null, src: null, hidden: null, kind: "", spin: 0, vspin: 0.35, drag: null,
+      fromP: new THREE.Vector3(), fromQ: new THREE.Quaternion(), toP: new THREE.Vector3(), toQ: new THREE.Quaternion(), r: 0.3 };
+    const inspLight = new THREE.PointLight(0xfff1dc, 0, 6, 1.6);
+    scene.add(inspLight);
+    const inspEl = document.createElement("div");
+    inspEl.className = "vt3-inspect";
+    inspEl.innerHTML = `<div class="vt3-inspect-cap"><span class="k"></span><b></b><p></p><small>${T("Arrastra para girarlo · pulsa para devolverlo", "Drag to turn it · click to put it back")}</small></div>`;
+    vt.appendChild(inspEl);
+    const spinQ = new THREE.Quaternion(), yAxis = new THREE.Vector3(0, 1, 0), box = new THREE.Box3(), sph = new THREE.Sphere();
+    // how each kind is held: a chip shows its face, a note lies flat to you, the glass stands, the cigar crosses
+    const GRIP = {
+      chip: new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.35, 0, 0)),
+      bill: new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.18, 0, 0)),
+      glass: new THREE.Quaternion().setFromEuler(new THREE.Euler(0.38, 0, 0)),
+      cigar: new THREE.Quaternion().setFromEuler(new THREE.Euler(0.3, 0, 0.12)),
+    };
+    async function inspect(kind, src) {
+      if (INS.on || INS.busy || NOTE.cam > 0) return;
+      INS.busy = true; INS.on = true; INS.kind = kind; INS.src = src; INS.spin = 0;
+      (window.WOBLO_TRACK && window.WOBLO_TRACK("click", INSPECT_TEXT[kind][0]));
+      const obj = INSPECT.make[kind]();
+      obj.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+      src.updateWorldMatrix(true, false);
+      src.getWorldPosition(INS.fromP); src.getWorldQuaternion(INS.fromQ);
+      // a whole stack is not what you get: one chip, from where you clicked
+      box.setFromObject(obj); box.getBoundingSphere(sph); INS.r = Math.max(0.12, sph.radius);
+      obj.position.copy(INS.fromP); obj.quaternion.copy(INS.fromQ);
+      scene.add(obj); INS.obj = obj;
+      INS.hidden = kind === "glass" || kind === "cigar" ? INSPECT.hide[kind] : null;
+      if (INS.hidden) INS.hidden.visible = false;
+      vt.classList.add("is-note"); setTip("");
+      inspEl.querySelector(".k").textContent = kind.startsWith("chip") ? T("Ficha", "Chip") : kind === "bill" ? T("Billete", "Note") : kind === "glass" ? T("El vaso", "The glass") : T("El puro", "The cigar");
+      inspEl.querySelector("b").textContent = INSPECT_TEXT[kind][0];
+      inspEl.querySelector("p").textContent = INSPECT_TEXT[kind][1];
+      rustle(0.4);
+      await tweenTo("insp", 1, 1.15);
+      inspEl.classList.add("on");
+      INS.busy = false;
+    }
+    async function putBack() {
+      if (!INS.on || INS.busy) return;
+      INS.busy = true;
+      inspEl.classList.remove("on");
+      await tweenTo("insp", 0, 0.95);
+      scene.remove(INS.obj); INS.obj = null;
+      if (INS.hidden) INS.hidden.visible = true;
+      vt.classList.remove("is-note");
+      INS.on = false; INS.busy = false;
+    }
+    // where it is held: in front of the lens, near enough to fill the middle of the view
+    function stepInspect(dt) {
+      const k = NOTE.insp || 0;
+      inspLight.intensity = 1.3 * k;
+      if (!INS.obj) return;
+      // held close to the lens and scaled to a set size, so nothing on the table can come between
+      const R = 0.2, fov = THREE.MathUtils.degToRad(camera.fov), d = R / (Math.tan(fov / 2) * (innerWidth < 700 ? 0.62 : 0.5));
+      INS.toP.set(0, innerWidth < 700 ? 0.01 : -R * 0.1, -d).applyQuaternion(camera.quaternion).add(camera.position);
+      if (!INS.drag) INS.spin += INS.vspin * dt;
+      spinQ.setFromAxisAngle(yAxis, INS.spin);
+      INS.toQ.copy(camera.quaternion).multiply(GRIP[INS.kind.startsWith("chip") ? "chip" : INS.kind]).multiply(spinQ);
+      const e = easeIO(k), lift = Math.sin(Math.PI * e) * 0.35;
+      INS.obj.position.lerpVectors(INS.fromP, INS.toP, e); INS.obj.position.y += lift;
+      INS.obj.quaternion.slerpQuaternions(INS.fromQ, INS.toQ, e);
+      INS.obj.scale.setScalar(1 + (0.2 / INS.r - 1) * e);
+      inspLight.position.copy(camera.position).add(new THREE.Vector3(-0.4, 0.5, 0.1).applyQuaternion(camera.quaternion));
+    }
+    // turning it by hand; a click without a drag puts it back
+    inspEl.addEventListener("pointerdown", (e) => { if (!INS.on || INS.busy) return; INS.drag = { x: e.clientX, moved: 0 }; inspEl.setPointerCapture(e.pointerId); });
+    inspEl.addEventListener("pointermove", (e) => {
+      if (!INS.drag) return;
+      const dx = e.clientX - INS.drag.x; INS.drag.x = e.clientX; INS.drag.moved += Math.abs(dx);
+      INS.spin += dx * 0.012; INS.vspin = Math.sign(dx || 1) * 0.35;
+    });
+    inspEl.addEventListener("pointerup", () => { const d = INS.drag; INS.drag = null; if (d && d.moved < 6) putBack(); });
+    addEventListener("keydown", (e) => { if (e.key === "Escape" && INS.on) putBack(); });
+
     /* ---------- the envelope opens, in the scene itself ----------
        The camera comes down to the envelope, the seal breaks, the flap turns on its
        hinge, the card slides out of the top and rises to face you. Closing is the
        same story played backwards. Five numbers drive it all (0 → 1). */
     const motionK = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0.35 : 1;
-    const NOTE = { cam: 0, raise: 0, crack: 0, flap: 0, slide: 0, lift: 0, turn: 0, open: false, busy: false, tweens: [] };
+    const NOTE = { cam: 0, raise: 0, crack: 0, flap: 0, slide: 0, lift: 0, turn: 0, insp: 0, open: false, busy: false, tweens: [] };
     const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
     const easeOut = (t) => 1 - Math.pow(1 - t, 3);
     const tweenTo = (key, to, dur, ease = easeIO) => new Promise((res) => {
@@ -2089,7 +2192,7 @@
         if (slow.n > 75) { composer = null; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.25)); resize(); if (window.PERF) window.PERF.goLite(); }
       }
       // the slow walk round the table pauses while the note is out
-      if (!view.drag && NOTE.cam === 0) { view.vth *= Math.pow(0.04, dt); view.th += view.vth + dt * 0.045; }
+      if (!view.drag && NOTE.cam === 0 && !INS.on) { view.vth *= Math.pow(0.04, dt); view.th += view.vth + dt * 0.045; }
       const th = view.th + rx * 0.08 * (1 - NOTE.cam);
       const h = view.h - ry * 0.12 * (1 - NOTE.cam);
       orbitPos.set(Math.cos(th) * R, h, Math.sin(th) * R * 0.86);
@@ -2097,6 +2200,7 @@
       camera.position.copy(orbitPos);
       camera.lookAt(target);
       stepNote(Math.min(0.25, raw / 1000)); // real time: the note takes as long on a slow device
+      stepInspect(Math.min(0.05, raw / 1000));
       stepDie(dt);
       {
         const hgt = Math.max(0, die.position.y - DS / 2);

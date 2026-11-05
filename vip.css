@@ -217,3 +217,17 @@ html.has-cursor .vt3-gl { cursor: none; }
 .wk-edge { position: absolute; left: 0; bottom: 0; width: 80px; height: 96px; overflow: visible; fill: none; stroke: rgba(216, 181, 111, 0.85); stroke-width: 1.2; filter: drop-shadow(0 0 6px rgba(216, 181, 111, 0.35)); }
 .wk-edge .wk-base { stroke: rgba(216, 181, 111, 0.45); }
 @media (prefers-reduced-motion: reduce) { .wk-wave, .wk-ice, .wk-bub, .wk-pour { animation: none; } .wk-pour { transform: scaleY(1); } }
+
+/* ---------- a closer look at something on the table ---------- */
+.vt3-inspect { position: absolute; inset: 0; z-index: 3; visibility: hidden; pointer-events: none; cursor: grab; touch-action: none; }
+.vt3.is-note .vt3-inspect { visibility: visible; pointer-events: auto; }
+.vt3-inspect:active { cursor: grabbing; }
+.vt3-inspect-cap {
+  position: absolute; left: 50%; bottom: clamp(22px, 6vh, 56px); width: min(440px, calc(100% - 32px)); transform: translate(-50%, 10px);
+  text-align: center; opacity: 0; transition: opacity 0.6s var(--ease), transform 0.8s var(--ease); pointer-events: none;
+}
+.vt3-inspect.on .vt3-inspect-cap { opacity: 1; transform: translate(-50%, 0); }
+.vt3-inspect-cap .k { display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold-hi); }
+.vt3-inspect-cap b { display: block; margin-top: 8px; font-weight: 600; font-size: 26px; letter-spacing: -0.03em; color: #fff; text-shadow: 0 0 22px rgba(255, 255, 255, 0.18); }
+.vt3-inspect-cap p { margin-top: 8px; font-size: 14px; line-height: 1.55; color: #c4c3bf; }
+.vt3-inspect-cap small { display: block; margin-top: 12px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: #8c8c92; }
