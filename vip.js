@@ -29,7 +29,7 @@
   })();
   if (linkName) {
     fetch(`/api/vip?guest=${encodeURIComponent(linkName)}`).then((r) => (r.ok ? r.json() : {})).then((g) => {
-      if (g && (g.note || g.order)) GUESTS[slugOf(linkName)] = { note: g.note || undefined, order: g.order || undefined };
+      if (g && (g.note || g.order || g.greet)) GUESTS[slugOf(linkName)] = { note: g.note || undefined, order: g.order || undefined, greet: g.greet || "p" };
     }).catch(() => {});
   }
   // Carlos, previewing his own tables, does not get told about himself
@@ -54,7 +54,7 @@
         <div class="vt3-grain" aria-hidden="true"></div>
         <header class="vt3-head">
           <span class="vt-k">${T("Mesa privada", "Private table")} · ${T("reservada", "reserved")}</span>
-          <h1>${T("Bienvenidos", "Welcome")}, <em>${esc(name)}.</em></h1>
+          <h1>${T(g.greet === "m" ? "Bienvenido" : g.greet === "f" ? "Bienvenida" : "Bienvenidos", "Welcome")}, <em>${esc(name)}.</em></h1>
         </header>
         <div class="vt3-tip" aria-live="polite"></div>
         <button type="button" class="vt3-label" data-label="die" tabindex="-1"><b>${T("Lánzame", "Roll me")}</b></button>

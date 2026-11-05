@@ -418,6 +418,11 @@
       <div class="book">
         <form id="guestForm" autocomplete="off">
           <label class="field"><span>Para quién</span><input id="name" required maxlength="40" placeholder="Acme" /></label>
+          <label class="field"><span>Saludo</span><select id="greet">
+            <option value="p">Bienvenidos · una empresa, un equipo, varias personas</option>
+            <option value="m">Bienvenido · una persona (él)</option>
+            <option value="f">Bienvenida · una persona (ella)</option>
+          </select></label>
           <label class="field"><span>La carta</span><textarea id="noteEs" maxlength="1200" placeholder="Déjala en blanco y usaré la carta de siempre."></textarea><small class="hint-en">Escríbela en español. Si tu invitado tiene la web en inglés, la leerá traducida.</small></label>
           <div class="field"><span>Proyectos sobre el tapete, en orden</span><div class="slots" id="slots"></div></div>
           <div class="row"><button class="btn" type="submit" id="save">Reservar la mesa</button><button class="btn ghost" type="button" id="reset">Empezar de nuevo</button></div>
@@ -552,7 +557,7 @@
       if (new Set(o).size < o.length) { toast("Tres proyectos distintos"); return; }
       $("save").disabled = true; $("save").textContent = "Reservando…";
       try {
-        const j = await api("POST", { op: "save", name: $("name").value, note: { es: $("noteEs").value }, order: o });
+        const j = await api("POST", { op: "save", name: $("name").value, greet: $("greet").value, note: { es: $("noteEs").value }, order: o });
         $("link").textContent = j.link; $("open").href = j.link; $("out").classList.add("on");
         const r = await api("GET", null, "?admin=guests"); guests = r.guests || []; paintGuests();
         toast("Mesa reservada");
@@ -584,7 +589,7 @@
       const g = guests[+(b.dataset.copy ?? b.dataset.edit ?? b.dataset.del)];
       if (b.dataset.copy != null) { await navigator.clipboard.writeText(linkOf(g.name)); toast("Enlace copiado"); }
       if (b.dataset.edit != null) {
-        $("name").value = g.name; $("noteEs").value = (g.note && g.note.es) || "";
+        $("name").value = g.name; $("greet").value = g.greet || "p"; $("noteEs").value = (g.note && g.note.es) || "";
         (g.order || []).forEach((v, k) => { const s = document.querySelector(`[data-slot="${k}"]`); if (s) s.value = v; });
         paintPreview(); $("save").textContent = "Guardar cambios";
         document.querySelector(".book").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });

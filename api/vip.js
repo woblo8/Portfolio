@@ -249,7 +249,7 @@ module.exports = async (req, res) => {
       if (q.has("guest")) {
         if (!hasBlob) return res.status(200).json({});
         const g = await readGuest(slugOf(q.get("guest")));
-        return res.status(200).json(g ? { note: g.note, order: g.order } : {});
+        return res.status(200).json(g ? { note: g.note, order: g.order, greet: g.greet || "p" } : {});
       }
       if (!isAdmin(req)) return res.status(401).json({ error: "no-key", configured: !!process.env.VIP_ADMIN_KEY });
       const { list } = await blob();
@@ -399,7 +399,8 @@ module.exports = async (req, res) => {
       const enIn = String((body.note && body.note.en) || "").replace(/\r/g, "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1400);
       const en = es ? enIn || (await translate(es)) || es : "";
       const order = (Array.isArray(body.order) ? body.order : []).map(Number).filter((i) => Number.isInteger(i) && i >= 0 && i < 20).slice(0, 3);
-      const g = { name, slug, note: es ? { es, en } : null, order: order.length ? order : null, at: Date.now() };
+      const greet = ["p", "m", "f"].includes(body.greet) ? body.greet : "p"; // Bienvenidos / Bienvenido / Bienvenida
+      const g = { name, slug, greet, note: es ? { es, en } : null, order: order.length ? order : null, at: Date.now() };
       await put(`vip/guests/${slug}.json`, JSON.stringify(g), putOpts);
       return res.status(200).json({ slug, link: `${SITE}/?vip=${encodeURIComponent(name)}` });
     }
