@@ -148,8 +148,9 @@ module.exports = async (req, res) => {
       if (!(await store.claim(s.g))) { res.status(409).json({ error: "already" }); return; }
       const p = /^[a-f0-9]{12}$/.test(String(body.p || "")) ? body.p : "";
       await store.add({ name, g: s.g, p, score: s.score });
-      const { week } = await store.read(true);
-      const i = week.findIndex((r) => r.g === s.g);
+      // the place on the board that never resets
+      const { all } = await store.read(true);
+      const i = all.findIndex((r) => r.g === s.g);
       res.status(200).json({ rank: i < 0 ? null : i + 1, score: s.score });
       return;
     }

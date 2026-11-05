@@ -79,7 +79,7 @@
         <p class="house-say" aria-live="polite"></p>
         <div class="house-actions"></div>
         <section class="house-mini" hidden>
-          <header><span class="house-k">${T("Ranking · esta semana", "Ranking · this week")}</span><button type="button" class="house-more">${T("Ver todo", "See all")} →</button></header>
+          <header><span class="house-k">${T("Ranking · de siempre", "Ranking · all time")}</span><button type="button" class="house-more">${T("Ver todo", "See all")} →</button></header>
           <ol data-k="mini"></ol>
         </section>
         <form class="house-sign" hidden>
@@ -103,7 +103,7 @@
       <section class="house-board" hidden>
         <div class="house-me" data-k="me" hidden></div>
         <div class="house-board-head">
-          <span class="house-k">${T("Esta semana · rondas", "This week · rounds")}</span>
+          <span class="house-k">${T("De siempre · rondas", "All time · rounds")}</span>
           <span class="house-k" data-k="allBest"></span>
         </div>
         <ol data-k="week"></ol>
@@ -292,7 +292,7 @@
       G.signed = true; store.set(NAME_KEY, name);
       (window.WOBLO_TRACK && window.WOBLO_TRACK("rank", `firma como ${name} · puesto ${j.rank || "?"}`));
       signNote.textContent = "";
-      speak(j.rank ? T(`${name}: ${j.score} ${j.score === 1 ? "ronda" : "rondas"}. Puesto ${j.rank} de la semana.`, `${name}: ${j.score} ${j.score === 1 ? "round" : "rounds"}. Number ${j.rank} this week.`) : T("Apuntado.", "Signed."));
+      speak(j.rank ? T(`${name}: ${j.score} ${j.score === 1 ? "ronda" : "rondas"}. Puesto ${j.rank} del ranking.`, `${name}: ${j.score} ${j.score === 1 ? "round" : "rounds"}. Number ${j.rank} on the board.`) : T("Apuntado.", "Signed."));
       render();
       openBoard(true);
     } catch (err) {
@@ -308,7 +308,7 @@
   }
   // the short version on the table: three rows, and yours if you are further down
   function paintMini(j) {
-    const box = $(".house-mini"), list = k("mini"), rows = (j && j.week) || [], me = j && j.me && j.me.week;
+    const box = $(".house-mini"), list = k("mini"), rows = (j && j.all) || [], me = j && j.me && j.me.all;
     box.hidden = false;
     const row = (x, rank, isMe) => `<li class="${isMe ? "is-me" : ""}"><span>${String(rank).padStart(2, "0")}</span><b>${x.name}</b>${isMe ? `<i>${T("tú", "you")}</i>` : ""}<em>${x.score}</em></li>`;
     let html = rows.slice(0, 3).map((x, i) => row(x, i + 1, me && i + 1 === me.rank)).join("");
@@ -322,7 +322,7 @@
     list.innerHTML = `<li class="is-empty">…</li>`;
     try {
       const j = await fetchBoard(fresh);
-      const rows = j.week || [], me = (j.me && j.me.week) || null;
+      const rows = j.all || [], me = (j.me && j.me.all) || null;
       const row = (x, rank, cls) => `<li class="${cls}"><span>${String(rank).padStart(2, "0")}</span><b>${x.name}</b>${cls.includes("is-me") ? `<i>${T("tú", "you")}</i>` : ""}<em>${x.score}</em></li>`;
       let html = rows.map((x, i) => row(x, i + 1, x.me && me && i + 1 === me.rank ? "is-me" : x.me ? "is-mine" : "")).join("");
       // outside the top ten, your row still shows, under a gap
@@ -330,24 +330,24 @@
       list.innerHTML = html || `<li class="is-empty">${T("Nadie todavía. La mesa es tuya.", "Nobody yet. The table is yours.")}</li>`;
       paintMe(j.me);
       const top = (j.all || [])[0];
-      k("allBest").textContent = top ? T(`Récord absoluto: ${top.name} · ${top.score}`, `All-time: ${top.name} · ${top.score}`) : "";
-      k("boardNote").textContent = T("Se reinicia cada lunes. Las rondas las reparte y las comprueba el servidor.", "Resets every Monday. Rounds are dealt and checked by the server.");
+      k("allBest").textContent = top ? T(`Récord: ${top.name} · ${top.score}`, `Record: ${top.name} · ${top.score}`) : "";
+      k("boardNote").textContent = T("El ranking no se reinicia nunca. Las rondas las reparte y las comprueba el servidor.", "The board never resets. Rounds are dealt and checked by the server.");
     } catch (e) {
       list.innerHTML = `<li class="is-empty">${T("El ranking no responde ahora mismo.", "The ranking isn't answering right now.")}</li>`;
     }
   }
   // your initials, your best and your place: on the board, and on the tab that opens it
   function paintMe(me) {
-    const el = k("me"), w = me && me.week, a = me && me.all, name = (w || a || {}).name || store.get(NAME_KEY);
+    const el = k("me"), a = me && me.all, name = (a || {}).name || store.get(NAME_KEY);
     el.hidden = false;
-    if (!w && !a) {
+    if (!a) {
       el.innerHTML = `<span class="house-k">${T("Tú", "You")}</span><b>${name || "———"}</b><small>${T("Aún sin marca. Acierta una ronda y apúntate.", "No score yet. Win a round and sign.")}</small>`;
       G.meTab = "";
     } else {
       el.innerHTML = `<span class="house-k">${T("Tú", "You")}</span><b>${name}</b>
-        <div><small>${T("Esta semana", "This week")}</small><em>${w ? `#${w.rank} · ${w.score}` : "—"}</em></div>
-        <div><small>${T("Histórico", "All time")}</small><em>${a ? `#${a.rank} · ${a.score}` : "—"}</em></div>`;
-      G.meTab = w ? `${name} #${w.rank}` : name;
+        <div><small>${T("Puesto", "Place")}</small><em>#${a.rank}</em></div>
+        <div><small>${T("Tu récord", "Your best")}</small><em>${a.score} ${a.score === 1 ? T("ronda", "round") : T("rondas", "rounds")}</em></div>`;
+      G.meTab = `${name} #${a.rank}`;
     }
     tabLabel();
   }
