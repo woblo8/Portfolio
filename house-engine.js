@@ -27,9 +27,9 @@
     const n = cupsAt(r, add), moves = [];
     const idx = () => Math.floor(rnd() * n);
     // every glass on the table makes it harder twice over: more glasses move on each pass
-    // (4 glasses → 3 move, 5 → 4, 6 → 5, 7 → all 7), and there are two more passes per glass
+    // (4 glasses → 3 move, 5 → 4, 6 → 5, 7 → all 7), and one more pass per glass
     const moving = n >= 7 ? n : n - 1;
-    for (let i = 0, m = Math.min(40, movesFor(r) + (n - 3) * 2); i < m; i++) {
+    for (let i = 0, m = Math.min(34, movesFor(r) + (n - 3)); i < m; i++) {
       const p = Array.from({ length: n }, (_, k) => k);
       if (n >= 4) {
         // `moving` glasses picked at random, none of them stays put: either they swap in pairs

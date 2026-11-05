@@ -630,29 +630,39 @@
   addEventListener("resize", () => { place(); if (G.round) placeDice(G.round, G.dice); });
 
   // one move of the croupier: the glasses that change slot travel in an arc, one in front, one behind
+  // one move of the croupier. To keep a crowded table readable:
+  //  · glasses going right always pass in front (lower, bigger), glasses going left behind (higher, smaller)
+  //  · the longer the trip, the wider the arc, so the paths don't overlap
+  //  · the more glasses move at once, the longer the move takes, with a breath between passes
   async function move(p, ms) {
     const next = slotOf.map((s) => p[s]);
     const travelling = cups.map((c, i) => [c, i]).filter(([, i]) => next[i] !== slotOf[i]);
+    const crowd = travelling.length;
+    const dur = Math.round(ms * Math.min(1.8, 1 + 0.16 * Math.max(0, crowd - 2)));
     const s = snd(); if (s) s.glass(0.35);
     // crystal glasses: every die travels with its glass
     if (G.buy.glass && G.round) diceOn(G.round, G.dice).forEach(([el, cup]) => {
       if (next[cup] === slotOf[cup]) return;
       const x0 = xOf(slotOf[cup]), x1 = xOf(next[cup]);
-      el.animate([{ transform: `translateX(${x0}px)` }, { transform: `translateX(${x1}px)` }], { duration: ms, easing: "cubic-bezier(0.45, 0, 0.25, 1)" })
+      el.animate([{ transform: `translateX(${x0}px)` }, { transform: `translateX(${x1}px)` }], { duration: dur, easing: "cubic-bezier(0.45, 0, 0.25, 1)" })
         .finished.catch(() => {}).then(() => { el.style.transform = `translateX(${x1}px)`; });
     });
-    await Promise.all(travelling.map(([c, i], j) => {
-      const x0 = xOf(slotOf[i]), x1 = xOf(next[i]), front = j % 2 === 0 ? x1 > x0 : x1 < x0;
-      const lift = reduce ? 0 : (front ? 10 : -16), scale = reduce ? 1 : (front ? 1.07 : 0.93);
+    const step = gap();
+    await Promise.all(travelling.map(([c, i]) => {
+      const x0 = xOf(slotOf[i]), x1 = xOf(next[i]), front = x1 > x0;
+      const reach = Math.abs(x1 - x0) / step; // how many glasses it travels
+      const lift = reduce ? 0 : (front ? 1 : -1) * (6 + reach * 7);
+      const scale = reduce ? 1 : (front ? 1.03 + reach * 0.02 : 0.97 - reach * 0.02);
       c.style.zIndex = front ? 3 : 1;
       const a = c.animate([
         { transform: `translateX(${x0}px)` },
         { transform: `translate(${(x0 + x1) / 2}px, ${lift}px) scale(${scale})`, offset: 0.5 },
         { transform: `translateX(${x1}px)` },
-      ], { duration: ms, easing: "cubic-bezier(0.45, 0, 0.25, 1)" });
+      ], { duration: dur, easing: "cubic-bezier(0.45, 0, 0.25, 1)" });
       return a.finished.catch(() => {}).then(() => { c.style.transform = `translateX(${x1}px)`; });
     }));
     slotOf = next;
+    if (crowd >= 4 && !reduce) await wait(Math.min(140, 40 + crowd * 14));
   }
   const lift = (c, on) => c.classList.toggle("up", on);
 
