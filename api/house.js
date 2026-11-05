@@ -77,7 +77,7 @@ function blobStore() {
       do {
         const page = await list({ prefix, cursor, limit: 1000 });
         for (const b of page.blobs) {
-          const m = b.pathname.slice(prefix.length).match(/^(\d{9,16})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
+          const m = b.pathname.slice(prefix.length).match(/^(\d{9,41})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
           if (m) out.push({ score: Number(m[1]), name: m[2], g: m[3], p: m[4] || "" });
         }
         cursor = page.hasMore ? page.cursor : undefined;
@@ -99,7 +99,7 @@ function blobStore() {
     },
     async add({ name, g, p, score }) {
       const { put } = await import("@vercel/blob");
-      const file = `${String(Math.min(9007199254740991, Math.round(score))).padStart(16, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
+      const file = `${BigInt(Math.round(Math.min(score, 1e40))).toString().padStart(16, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
       await Promise.all([put(`shell3/w/${weekKey()}/${file}`, "1", opts), put(`shell3/a/${file}`, "1", opts)]);
       blobCache.at = 0;
     },

@@ -29,7 +29,8 @@
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const pick = (l) => l[Math.floor(Math.random() * l.length)];
   // from a thousand million up, the big words: 1 Billion, 2,5 Trillion…
-  const BIG = [[1e15, "Quadrillion"], [1e12, "Trillion"], [1e9, "Billion"]];
+  const BIG = [[1e100, "Googol"], [1e33, "Decillion"], [1e30, "Nonillion"], [1e27, "Octillion"], [1e24, "Septillion"], [1e21, "Sextillion"],
+    [1e18, "Quintillion"], [1e15, "Quadrillion"], [1e12, "Trillion"], [1e9, "Billion"]];
   const fmt = (n) => {
     const v = Math.round(n), big = BIG.find(([at]) => Math.abs(v) >= at);
     if (!big) return v.toLocaleString(T("es-ES", "en-GB"));
