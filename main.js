@@ -2173,6 +2173,7 @@
 
   // the loader counts from the first frame; the die is only drawn once its shaders are ready
   let glReady = false;
-  compileAsync(renderer, scene, camera).then(() => { glReady = true; });
+  // after the first paint: the loader is on screen before the GPU gets any work
+  requestAnimationFrame(() => setTimeout(() => compileAsync(renderer, scene, camera).then(() => { glReady = true; }), 0));
   requestAnimationFrame(tick);
 })();
