@@ -91,8 +91,7 @@
        insure  · 12 · a miss costs only half the stake
        pact    · 15 · the pact with the devil: a hit pays ×5, a miss takes every chip on the table
        glass   · 20 · crystal glasses: you see the dice all the way (the dearest of all)
-     And the safe: chips put there are yours for good. The score of a game is the safe,
-     plus the table if you cash out; if you go broke you keep only the safe. */
+     The score of a game is the table when you cash out; if you go broke it is 0. */
   const SHOP = {
     hint: { at: 5, pct: 0.35, min: 150 },
     lucky: { at: 8, pct: 0.45, min: 300 },
@@ -104,7 +103,8 @@
   const price = (item, chips) => Math.max(SHOP[item].min, Math.ceil(chips * SHOP[item].pct));
   const canBuy = (item, s) => !!SHOP[item] && !s.over && s.r >= SHOP[item].at && !(s.buy || {})[item] && s.chips - price(item, s.chips) >= 1;
   function buy(s, item) { const p = price(item, s.chips); s.chips -= p; s.buy = Object.assign({}, s.buy, { [item]: 1 }); return p; }
-  const canSave = (s, amount) => !s.over && Number.isInteger(amount) && amount >= 1 && amount <= s.chips - 1;
+  // the safe is gone: nothing can be put away any more (kept so old clients get a clear no)
+  const canSave = () => false;
   function save(s, amount) { s.chips -= amount; s.safe = (s.safe || 0) + amount; }
 
   // one hand: picks is a list of glasses (two for the pair), mode the dice of the round
@@ -129,6 +129,6 @@
     s.best = Math.max(s.best, s.chips + (s.safe || 0));
     return { ok, delta, dm, stake };
   }
-  const score = (s) => (s.safe || 0) + (s.cashed ? s.chips : 0);
+  const score = (s) => (s.cashed ? s.chips : 0);
   return { START, round, msFor, cupsFor, cupsAt, MAX_CUPS, payFor, minBet, stakeFor, checkpoint, GLASS_MULT, DICE, COLORS, diceOk, canAddGlass, addGlass, WHEEL, wheelDue, spin, SHOP, price, canBuy, buy, canSave, save, judge, gainFor, lossFor, settle, score };
 });

@@ -76,7 +76,7 @@
       <div class="house-score">
         <div class="is-bank"><span class="bank-chip" aria-hidden="true"></span><div><small>${T("Tus fichas", "Your chips")}</small><b data-k="chips">${E.START}</b></div><span class="house-delta" data-k="delta"></span></div>
         <div><small>${T("Ronda", "Round")}</small><b data-k="round">1</b></div>
-        <div class="is-safe"><small>${T("Caja fuerte", "Safe")}</small><b data-k="safe">0</b><em>${T("Récord", "Best")} <span data-k="best">0</span></em></div>
+        <div><small>${T("Récord", "Best")}</small><b data-k="best">0</b></div>
       </div>
       <div class="house-rank">
         <span class="rk-sigil" data-k="sigil" aria-hidden="true">♠</span>
@@ -100,7 +100,7 @@
           <div class="house-mult" aria-label="${T("Multiplicador", "Multiplier")}"><small>${T("Multi", "Multi")}</small><b data-k="mult">×1</b></div>
         </div>
         <p class="house-say" aria-live="polite"></p>
-        <!-- before each round: which dice, a glass more, the shop, the safe -->
+        <!-- before each round: which dice, a glass more, the shop -->
         <div class="house-bet" hidden>
           <div class="hb-dice" data-k="dice" role="radiogroup" aria-label="${T("Dados", "Dice")}"></div>
           <button type="button" class="hb-glass" data-glass>
@@ -110,11 +110,6 @@
           </button>
           <small class="hb-info" id="betInfo" data-k="betInfo"></small>
           <div class="house-shop" data-k="shop" role="group" aria-label="${T("Ayudas", "Helps")}"></div>
-          <div class="house-vault">
-            <span><i aria-hidden="true">▣</i>${T("Caja fuerte", "Safe")}<em>${T("lo guardado ya no se pierde", "what you save can't be lost")}</em></span>
-            <button type="button" data-save="0.25">${T("Guardar", "Save")} 25%</button>
-            <button type="button" data-save="0.5">50%</button>
-          </div>
         </div>
         <div class="house-actions"></div>
         <section class="house-mini" hidden>
@@ -160,7 +155,7 @@
       svg: `${dieAt(40, 60, 16)}<text x="40" y="92" class="g-t">×1</text>${dieAt(88, 60, 16)}${dieAt(108, 60, 16, "g-die g-decoy")}<text x="98" y="92" class="g-t">×2</text>${dieAt(150, 60, 16)}${dieAt(170, 60, 16)}<text x="160" y="92" class="g-t">×3</text>${dieAt(204, 46, 12)}${dieAt(204, 62, 12, "g-die g-redd")}${dieAt(204, 78, 12, "g-die g-goldd")}<text x="204" y="100" class="g-t">×10</text>` },
     { k: T("El multiplicador", "The multiplier"), t: T("Todo lo que ganas pasa por él. Súbelo añadiendo vasos (×1,5 cada uno, para siempre) y con la ruleta, que sale cada 5 rondas y nunca resta.", "Everything you win goes through it. Raise it by adding glasses (×1.5 each, for good) and with the wheel, every 5 rounds, which never takes away."),
       svg: `${glassAt(40, 40, 22, 30)}${glassAt(66, 40, 22, 30)}<path class="g-arrow" d="M84 50 H96 M90 44 V56"/>${glassAt(114, 40, 22, 30, "g-glow")}<circle cx="186" cy="58" r="34"/>${Array.from({ length: 10 }, (_, i) => { const a = (i * 36 * Math.PI) / 180; return `<path d="M186 58 L${(186 + Math.cos(a) * 34).toFixed(1)} ${(58 + Math.sin(a) * 34).toFixed(1)}" class="g-dash"/>`; }).join("")}<circle cx="186" cy="58" r="6"/><path d="M186 18 L182 10 H190 Z" class="g-glow"/><text x="78" y="100" class="g-t g-big">×1,5</text><text x="186" y="106" class="g-t g-big">×1,2 – ×10</text>` },
-    { k: T("La caja fuerte", "The safe"), t: T("Lo que guardas ya no se pierde. Tu marca: la caja fuerte, más la mesa si te retiras a tiempo.", "What you save can't be lost. Your score: the safe, plus the table if you cash out in time."),
+    { k: T("Retírate a tiempo", "Cash out in time"), t: T("Tu marca son las fichas con las que te retiras. Si te quedas sin fichas, la partida vale 0.", "Your score is the chips you cash out with. Go broke and the game is worth 0."),
       svg: `<rect x="128" y="26" width="64" height="64" rx="6"/><circle cx="160" cy="58" r="14"/><path d="M160 46 V52 M160 64 V70 M148 58 H154 M166 58 H172"/><rect x="134" y="32" width="52" height="52" rx="3" class="g-dash"/>${chipAt(64, 58, 12)}<path class="g-arrow g-move" d="M82 58 H118"/><path class="g-arrow g-move" d="M112 52 L118 58 L112 64"/><text x="64" y="96" class="g-t">${T("mesa", "table")}</text><text x="160" y="108" class="g-t">${T("tuyo", "yours")}</text>` },
     { k: T("Ayudas", "Helps"), t: T("Canjea fichas de la mesa por ayudas. Cada pocas rondas se desbloquea una nueva, cada vez más cara.", "Trade table chips for helps. Every few rounds a new one unlocks, each dearer than the last."),
       svg: `<path d="M20 70 H220" class="g-dash"/>` + Object.keys(E.SHOP).map((id, i) => { const x = 36 + i * 34, y = 70 - 8 - i * 5; return `<path d="M${x} 70 V${y}" class="g-dash"/><circle cx="${x}" cy="${y - 9}" r="9" class="${id === "glass" ? "g-glow" : id === "pact" ? "g-red" : ""}"/><text x="${x}" y="${y - 6}" class="g-t g-icon">${({ hint: "◉", lucky: "♣", slow: "⧗", insure: "☂", pact: "♅", glass: "◇" })[id]}</text><text x="${x}" y="86" class="g-t">${E.SHOP[id].at}</text>`; }).join("") + `<text x="120" y="104" class="g-t">${T("ronda", "round")}</text>` },
@@ -413,12 +408,12 @@
     right: (w) => fill(byTier(TALK.right), { w }),
     wrong: (l) => fill(byTier(TALK.wrong), { l }),
     broke: () => byTier(TALK.broke),
-    cashed: (b) => T(`Se retira con estilo: ${fmt(b)} fichas entre la mesa y la caja fuerte.`, `You leave in style: ${fmt(b)} chips between the table and the safe.`),
+    cashed: (b) => T(`Se retira con estilo: ${fmt(b)} fichas.`, `You leave in style: ${fmt(b)} chips.`),
     offline: () => T("Sin conexión con la casa: jugamos aquí, sin ranking.", "The house is offline: we play here, unranked."),
   };
   function speak(text) { say.textContent = text; say.classList.remove("on"); void say.offsetWidth; say.classList.add("on"); }
 
-  const scoreNow = () => E.score({ safe: G.safe, chips: G.chips, cashed: G.cashed });
+  const scoreNow = () => E.score({ chips: G.chips, cashed: G.cashed });
   const canSign = () => G.mode === "remote" && !G.signed && G.phase === "over" && G.won >= 1 && scoreNow() > E.START;
 
   /* ---------- the shop: helps bought with table chips, unlocked as the rounds go by ---------- */
@@ -432,27 +427,27 @@
     glass: '<path d="M14 6 H34 L38 40 C38 43 10 43 10 40 Z"/><path d="M18 12 L16 34 M30 10 L33 20" class="ic-shine"/><rect x="19" y="27" width="10" height="10" rx="2"/>',
   };
   const ITEMS = {
-    hint: { c: "#6ff2ff", n: () => T("Chivatazo", "Tip-off"), t: () => T("Levanta un vaso vacío", "Lifts an empty glass"),
+    hint: { c: "#6ff2ff", n: () => T("Tercer Ojo", "Third Eye"), t: () => T("Levanta un vaso vacío", "Lifts an empty glass"),
       long: () => T("Cuando llega el momento de elegir, la casa levanta uno de los vasos vacíos y lo deja fuera de juego. Una opción menos para equivocarse.", "When it's time to choose, the house lifts one of the empty glasses and leaves it out of play. One fewer way to be wrong.") },
-    lucky: { c: "#5dff9c", n: () => T("Amuleto", "Charm"), t: () => T("El acierto paga ×3", "A hit pays ×3"),
+    lucky: { c: "#5dff9c", n: () => T("Trébol Negro", "Black Clover"), t: () => T("El acierto paga ×3", "A hit pays ×3"),
       long: () => T("Un trébol sobre el tapete. Si aciertas esta ronda, el premio se multiplica por tres, encima de tu multiplicador.", "A clover on the felt. Hit this round and the prize is tripled, on top of your multiplier.") },
-    slow: { c: "#b98cff", n: () => T("Cámara lenta", "Slow motion"), t: () => T("Barajan a media velocidad", "Shuffled at half speed"),
+    slow: { c: "#b98cff", n: () => T("Tiempo Bala", "Bullet Time"), t: () => T("Barajan a media velocidad", "Shuffled at half speed"),
       long: () => T("El crupier baraja a la mitad de velocidad durante una ronda. Ideal cuando la mesa ya va demasiado rápida.", "The croupier shuffles at half speed for one round. Just right when the table is getting too fast.") },
-    insure: { c: "#58a8ff", n: () => T("Seguro", "Insurance"), t: () => T("Si fallas, pierdes la mitad", "Miss and lose only half"),
+    insure: { c: "#58a8ff", n: () => T("Plan B", "Plan B"), t: () => T("Si fallas, pierdes la mitad", "Miss and lose only half"),
       long: () => T("Si fallas esta ronda, la casa te devuelve la mitad de lo que te jugabas.", "If you miss this round, the house gives back half of your stake.") },
-    pact: { c: "#ff3b4a", n: () => T("Pacto con el diablo", "Pact with the devil"), t: () => T("×5, o pierdes toda la mesa", "×5, or lose the whole table"),
-      long: () => T("Firma y el acierto paga cinco veces más. Pero si fallas, el diablo se lleva todas las fichas de la mesa. La caja fuerte no la toca.", "Sign and a hit pays five times more. But miss, and the devil takes every chip on the table. He doesn't touch the safe.") },
-    glass: { c: "#e9f7ff", n: () => T("Vasos de cristal", "Crystal glasses"), t: () => T("Ves los dados todo el rato", "You see the dice all along"),
+    pact: { c: "#ff3b4a", n: () => T("Pacto Infernal", "Infernal Pact"), t: () => T("×5, o pierdes toda la mesa", "×5, or lose the whole table"),
+      long: () => T("Firma y el acierto paga cinco veces más. Pero si fallas, el diablo se lleva todas las fichas de la mesa. La partida se acaba ahí.", "Sign and a hit pays five times more. But miss, and the devil takes every chip on the table. He doesn't touch the safe.") },
+    glass: { c: "#e9f7ff", n: () => T("Visión de Cristal", "Crystal Vision"), t: () => T("Ves los dados todo el rato", "You see the dice all along"),
       long: () => T("Los vasos se vuelven de cristal durante una ronda: ves los dados moverse con ellos de principio a fin. Lo más caro de la casa.", "The glasses turn to crystal for one round: you watch the dice move with them from start to end. The dearest thing in the house.") },
   };
   const svgIcon = (id, size = 48) => `<svg viewBox="0 0 48 48" width="${size}" height="${size}" aria-hidden="true">${ICON[id]}</svg>`;
   const BOUGHT = {
-    hint: () => T("Chivatazo comprado. Cuando elija, la casa le quitará un vaso vacío.", "Tip-off bought. When you choose, the house will remove an empty glass."),
-    lucky: () => T("Amuleto sobre la mesa. Si acierta, paga triple.", "Charm on the table. Hit it and it pays triple."),
-    slow: () => T("Cámara lenta. El crupier bostezará barajando.", "Slow motion. The croupier will yawn as he shuffles."),
-    insure: () => T("Asegurado. Si falla, la casa le devuelve la mitad.", "Insured. Miss and the house gives back half."),
+    hint: () => T("Tercer Ojo abierto. Cuando elija, la casa le quitará un vaso vacío.", "Tip-off bought. When you choose, the house will remove an empty glass."),
+    lucky: () => T("Trébol Negro sobre el tapete. Si acierta, paga triple.", "Charm on the table. Hit it and it pays triple."),
+    slow: () => T("Tiempo Bala. El crupier bostezará barajando.", "Slow motion. The croupier will yawn as he shuffles."),
+    insure: () => T("Plan B activado. Si falla, la casa le devuelve la mitad.", "Insured. Miss and the house gives back half."),
     pact: () => T("Pacto firmado. Quíntuple… o nada. Ni una ficha en la mesa.", "Pact signed. Five times… or nothing. Not one chip left on the table."),
-    glass: () => T("Vasos de cristal. Lo más caro de la casa: no los pierda de vista.", "Crystal glasses. The dearest thing in the house: don't lose sight of them."),
+    glass: () => T("Visión de Cristal. Lo más caro de la casa: no los pierda de vista.", "Crystal glasses. The dearest thing in the house: don't lose sight of them."),
   };
   const unlocking = (r) => Object.keys(E.SHOP).filter((id) => E.SHOP[id].at === r);
   const shopState = (id) => {
@@ -468,11 +463,11 @@
       const tail = st.locked ? T(`R${st.at}`, `R${st.at}`) : st.got ? "✓" : fmt(st.p);
       return `<div class="${cls}" style="--c:${it.c}">
         <button type="button" class="hs-buy" data-buy="${id}" ${st.ok ? "" : "disabled"} aria-label="${it.n()} · ${it.t()} · ${tail}">${svgIcon(id, 30)}</button>
+        <b class="hs-name">${it.n()}</b>
         <em>${tail}</em>
-        <button type="button" class="hs-more" data-info="${id}" aria-label="${T("Ver", "See")} ${it.n()}">⤢</button>
+        <button type="button" class="hs-more" data-info="${id}" aria-label="${T("Info", "Info")}: ${it.n()}"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2"/><path d="M10 9 V14.2"/><circle cx="10" cy="6" r="0.9" class="dot"/></svg></button>
       </div>`;
     }).join("");
-    root.querySelectorAll("[data-save]").forEach((b) => { b.disabled = Math.floor(G.chips * +b.dataset.save) < 1 || G.chips < 2; });
   }
   // the card of a help: big, in its colour, like the plates of the guide
   const card = document.createElement("section");
@@ -516,21 +511,6 @@
     countTo(before, G.chips); delta(G.chips - before);
     const sn = snd(); if (sn) { sn.chip(0.9); setTimeout(() => sn.chip(0.6), 90); }
     speak(BOUGHT[id]());
-    render();
-  }
-  async function saveChips(pct) {
-    if (G.phase !== "bet") return;
-    const amount = Math.min(G.chips - 1, Math.floor(G.chips * pct));
-    if (amount < 1) return;
-    const before = G.chips;
-    try {
-      if (G.mode === "remote") { const j = await post({ op: "save", id: G.id, amount }); G.id = j.id; G.chips = j.chips; G.safe = j.safe; }
-      else { G.chips -= amount; G.safe += amount; }
-    } catch (e) { speak(T("La caja fuerte no se abre ahora mismo.", "The safe won't open right now.")); return; }
-    countTo(before, G.chips);
-    const sn = snd(); if (sn) sn.thud(0.6);
-    const box = k("safe").parentElement; box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash"); setTimeout(() => box.classList.remove("flash"), 900);
-    speak(T(`${fmt(amount)} fichas a la caja fuerte. Esas ya son suyas.`, `${fmt(amount)} chips into the safe. Those are yours now.`));
     render();
   }
   // the stake is no longer chosen: a quarter of the table; "all in" is only the last few chips
@@ -592,8 +572,7 @@
     k("chips").textContent = fmt(G.chips);
     k("round").textContent = R ? R.r : 1;
     k("best").textContent = fmt(G.record);
-    k("safe").textContent = fmt(G.safe);
-    ["chips", "safe", "best"].forEach((x) => k(x).classList.toggle("is-long", k(x).textContent.length > 9));
+    ["chips", "best"].forEach((x) => k(x).classList.toggle("is-long", k(x).textContent.length > 9));
     const fx = Object.assign({}, G.shown, G.buy); // what this round bought, until its reveal is over
     root.classList.toggle("is-crystal", !!fx.glass);
     root.classList.toggle("is-lucky", !!fx.lucky);
@@ -726,7 +705,7 @@
       const empty = cups.map((_, i) => i).filter((i) => !busy.includes(i));
       const out = empty[Math.floor(Math.random() * empty.length)];
       lift(cups[out], true); cups[out].disabled = true; cups[out].classList.add("is-out");
-      speak(T("Chivatazo: ese no es.", "Tip-off: not that one."));
+      speak(T("El Tercer Ojo lo ha visto: ese no es.", "The Third Eye saw it: not that one."));
     } else speak(G.dice === "pair" ? T("Dos vasos. Los dos con dado.", "Two glasses. Both with a die.") : G.dice === "colors" ? T("¿El blanco, el rojo… o el de oro?", "The white, the red… or the gold?") : G.dice === "decoy" ? T("El blanco. No el negro.", "The white one. Not the black.") : LINES.ask());
   }
 
@@ -812,7 +791,7 @@
       G.phase = "over"; keepCheckpoint();
       const sc = await finalScore();
       (window.WOBLO_TRACK && window.WOBLO_TRACK("game", `«La casa»: ${fmt(sc)} fichas (ronda ${G.lastR})`));
-      speak(LINES.broke() + " " + (G.safe ? T(`Su caja fuerte le salva: ${fmt(G.safe)}.`, `Your safe saves you: ${fmt(G.safe)}.`) : T("La caja fuerte estaba vacía.", "The safe was empty.")) + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
+      speak(LINES.broke() + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
       render();
       if (!sign.hidden) setTimeout(() => nameIn.focus({ preventScroll: true }), 200);
       return;
@@ -943,8 +922,6 @@
     if (inf) { openCard(inf.dataset.info); return; }
     const it = e.target.closest("[data-buy]");
     if (it && !it.disabled) { buyItem(it.dataset.buy); return; }
-    const sv = e.target.closest("[data-save]");
-    if (sv && !sv.disabled) { saveChips(+sv.dataset.save); return; }
     const dc = e.target.closest("[data-dice]");
     if (dc && !dc.disabled && G.phase === "bet") { G.dice = dc.dataset.dice; const sn = snd(); if (sn) sn.chip(0.5); render(); return; }
     if (e.target.closest("[data-glass]") && G.phase === "bet") { addGlass(); return; }
@@ -1072,7 +1049,7 @@
       paintMe(j.me);
       const top = (j.all || [])[0];
       k("allBest").textContent = top ? T(`Récord: ${top.name} · ${fmt(top.score)}`, `Record: ${top.name} · ${fmt(top.score)}`) : "";
-      k("boardNote").textContent = T("El ranking no se reinicia nunca. Cuenta lo que te llevas de cada partida: la caja fuerte, más la mesa si te retiras. Las rondas, las ayudas y la caja fuerte las comprueba el servidor.", "The board never resets. It counts what you take from each game: the safe, plus the table if you cash out. Rounds, helps and the safe are checked by the server.");
+      k("boardNote").textContent = T("El ranking no se reinicia nunca. Cuenta las fichas con las que te retiras de cada partida. Las rondas, los dados, la ruleta y las ayudas las comprueba el servidor.", "The board never resets. It counts the chips you cash out with in each game. Rounds, dice, the wheel and the helps are checked by the server.");
     } catch (e) {
       list.innerHTML = `<li class="is-empty">${T("El ranking no responde ahora mismo.", "The ranking isn't answering right now.")}</li>`;
     }

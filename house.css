@@ -877,3 +877,10 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house-score b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .house-score b.is-long { font-size: 15px !important; letter-spacing: -0.02em; }
 .house-score > div.is-bank b.is-long { font-size: 18px !important; }
+.hs-more { width: 22px; height: 22px; top: -6px; right: -2px; color: rgba(255, 255, 255, 0.75); }
+.hs-more svg { width: 14px; height: 14px; }
+.hs-more svg * { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.hs-more svg .dot { fill: currentColor; stroke: none; }
+.hs-n { width: 70px; gap: 4px; }
+.hs-name { display: block; max-width: 70px; text-align: center; font-size: 9.5px; font-weight: 600; line-height: 1.15; letter-spacing: -0.005em; color: var(--c); text-shadow: 0 0 8px color-mix(in srgb, var(--c) 45%, transparent); margin-top: 2px; }
+.hs-n.is-locked .hs-name { color: var(--smoke); text-shadow: none; }

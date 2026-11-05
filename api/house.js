@@ -2,7 +2,7 @@
 // The server deals every round (how many glasses, which one hides the die, the moves, the speed),
 // checks every bet and every pick and keeps the chips, so a score on the board means that game
 // was really played. The game state travels to the browser sealed with an HMAC (the key never
-// leaves the server). The score is what you keep: the safe, plus the table if you cash out.
+// leaves the server). The score is the table when you cash out; going broke scores 0.
 // The board lives in Upstash Redis when it is configured (KV_REST_API_URL / _TOKEN or
 // UPSTASH_REDIS_REST_URL / _TOKEN) and otherwise in Vercel Blob (BLOB_READ_WRITE_TOKEN).
 //
@@ -10,7 +10,6 @@
 //   POST /api/house { op: "start" }        → { id, round }
 //   POST /api/house { op: "pick", id, cup, bet } → { ok, d, chips, best, id, round? }
 //   POST /api/house { op: "buy", id, item } → { id, chips, paid, buy }   a help for the next hand
-//   POST /api/house { op: "save", id, amount } → { id, chips, safe }   chips into the safe, for good
 //   POST /api/house { op: "cashout", id } → { id, score }   stop and keep the table too
 //   POST /api/house { op: "submit", id, name, p } → { rank, score }   name: three letters A–Z
 const crypto = require("crypto");
@@ -176,7 +175,7 @@ module.exports = async (req, res) => {
       res.status(200).json({ id: seal(s), chips: s.chips, safe: s.safe || 0, paid, buy: s.buy });
       return;
     }
-    // the safe: chips that can no longer be lost
+    // the safe is gone: always refused
     if (body.op === "save") {
       const amount = Math.floor(Number(body.amount));
       if (!E.canSave(s, amount)) { res.status(400).json({ error: "cannot-save" }); return; }
