@@ -23,9 +23,13 @@
   // a guest written from the private page (/mesas): fetched as soon as the link is opened,
   // so it is there by the time the chip is clicked; until then (or without it) the default letter
   const slugOf = (n) => String(n || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  if (window.VIP && window.VIP.name) {
-    fetch(`/api/vip?guest=${encodeURIComponent(window.VIP.name)}`).then((r) => (r.ok ? r.json() : {})).then((g) => {
-      if (g && (g.note || g.order)) GUESTS[slugOf(window.VIP.name)] = { note: g.note || undefined, order: g.order || undefined };
+  // this file runs before main.js reads the link, so the guest's name is taken from the address here
+  const linkName = (() => {
+    try { return (new URLSearchParams(location.search).get("vip") || "").replace(/[^\p{L}\p{N} .&'’-]/gu, "").trim().slice(0, 40); } catch (e) { return ""; }
+  })();
+  if (linkName) {
+    fetch(`/api/vip?guest=${encodeURIComponent(linkName)}`).then((r) => (r.ok ? r.json() : {})).then((g) => {
+      if (g && (g.note || g.order)) GUESTS[slugOf(linkName)] = { note: g.note || undefined, order: g.order || undefined };
     }).catch(() => {});
   }
   // Carlos, previewing his own tables, does not get told about himself
