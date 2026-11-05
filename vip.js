@@ -321,8 +321,26 @@
     s.src = src; s.onload = () => { loaded.add(src); res(true); }; s.onerror = () => res(false);
     document.head.appendChild(s);
   });
-  // one after the other: each file needs the ones before it
-  const loadChain = async (urls) => { for (const u of urls) if (!(await addScript(u))) return false; return true; };
+  // all at once over the network, run in order (async = false keeps document order)
+  const chains = new Map();
+  const loadChain = (urls) => {
+    const key = urls.join("|");
+    if (!chains.has(key)) chains.set(key, Promise.all(urls.map((src) => new Promise((res) => {
+      if (loaded.has(src)) return res(true);
+      const el = document.createElement("script");
+      el.src = src; el.async = false;
+      el.onload = () => { loaded.add(src); res(true); }; el.onerror = () => res(false);
+      document.head.appendChild(el);
+    }))).then((r) => r.every(Boolean)));
+    return chains.get(key);
+  };
+  // warm up: the table's extra files load while you look at the chip, not after you click it
+  const warm = () => { if (!(window.PERF && window.PERF.lite)) loadChain(POST_URLS); loadScript(ENV_URL); };
+  if (window.THREE) {
+    const idle = window.requestIdleCallback || ((f) => setTimeout(f, 2500));
+    idle(warm, { timeout: 6000 });
+    addEventListener("pointerover", (e) => { if (e.target.closest && e.target.closest(".chip-vip")) warm(); }, { passive: true });
+  }
 
   /* ---------- the lounge: a whole room, out of focus, far behind ----------
      Painted once on a canvas as a 360° strip (seamless left to right):
@@ -455,12 +473,16 @@
     return out;
   }
 
-  const loadScript = (src) => new Promise((res) => {
-    if (THREE.RoomEnvironment) return res(true);
-    const s = document.createElement("script");
-    s.src = src; s.onload = () => res(true); s.onerror = () => res(false);
-    document.head.appendChild(s);
-  });
+  const scriptP = new Map(); // one request per file, however many times it is asked for
+  const loadScript = (src) => {
+    if (window.THREE && THREE.RoomEnvironment) return Promise.resolve(true);
+    if (!scriptP.has(src)) scriptP.set(src, new Promise((res) => {
+      const s = document.createElement("script");
+      s.src = src; s.onload = () => res(true); s.onerror = () => res(false);
+      document.head.appendChild(s);
+    }));
+    return scriptP.get(src);
+  };
 
   const portraitView = () => innerHeight > innerWidth * 1.15;
 
@@ -472,15 +494,29 @@
     const tip = vt.querySelector(".vt3-tip");
     const noteEl = vt.querySelector(".vt3-note");
     const small = innerWidth < 860;
-    const lite = !!(window.PERF && window.PERF.lite); // slow device: no lens effects, fewer particles
     let disposed = false;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+    // integrated and software GPUs (on Windows, through ANGLE) take ages to compile rich shaders
+    const gpu = (() => { try { const gl = renderer.getContext(), e = gl.getExtension("WEBGL_debug_renderer_info"); return e ? String(gl.getParameter(e.UNMASKED_RENDERER_WEBGL)) : ""; } catch (e) { return ""; } })();
+    const weakGPU = /Intel|HD Graphics|UHD Graphics|Iris|SwiftShader|llvmpipe|Basic Render|Mali|Adreno \(TM\) [1-6]/i.test(gpu) && !/\bArc\b/i.test(gpu);
+    const lite = !!(window.PERF && window.PERF.lite) || weakGPU || /[?&]lite\b/.test(location.search); // no lens effects, simpler materials, fewer particles
+    // a physical material where the device can afford it; a standard one, same look in broad strokes, where not
+    const PHYS_ONLY = ["clearcoat", "clearcoatRoughness", "clearcoatMap", "clearcoatNormalMap", "clearcoatNormalScale", "clearcoatRoughnessMap", "transmission", "transmissionMap",
+      "thickness", "thicknessMap", "attenuationColor", "attenuationDistance", "ior", "reflectivity", "specularIntensity", "specularColor", "sheen", "sheenColor", "sheenRoughness", "iridescence"];
+    const PHYS = (o) => {
+      if (!lite) return new THREE.MeshPhysicalMaterial(o);
+      const q = Object.assign({}, o);
+      if (q.transmission) { q.transparent = true; q.opacity = Math.min(q.opacity == null ? 1 : q.opacity, 0.32); q.depthWrite = false; }
+      if (q.clearcoat) q.roughness = Math.max(0.05, (q.roughness == null ? 1 : q.roughness) * 0.7);
+      PHYS_ONLY.forEach((k) => delete q[k]);
+      return new THREE.MeshStandardMaterial(q);
+    };
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, lite ? 1.25 : small ? 1.6 : 2));
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = lite ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     const aniso = renderer.capabilities.getMaxAnisotropy();
 
     const scene = new THREE.Scene();
@@ -515,7 +551,7 @@
     lamp.position.set(0, LAMP_Y - 0.2, 0);
     lamp.target.position.set(0, 0, 0);
     lamp.castShadow = true;
-    lamp.shadow.mapSize.set(lite ? 512 : small ? 1024 : 2048, lite ? 512 : small ? 1024 : 2048);
+    lamp.shadow.mapSize.set(lite ? 1024 : small ? 1024 : 2048, lite ? 1024 : small ? 1024 : 2048);
     lamp.shadow.bias = -0.0004;
     lamp.shadow.camera.near = 0.5;
     lamp.shadow.camera.far = 8;
@@ -528,7 +564,7 @@
     // the lamp itself: a black metal shade, warm inside, a hot disc of light below
     const lampGroup = new THREE.Group();
     {
-      const shadeOut = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0x0b0b0c).convertSRGBToLinear(), roughness: 0.35, metalness: 0.6, clearcoat: 0.6, envMapIntensity: 0.6, side: THREE.FrontSide });
+      const shadeOut = PHYS({ color: new THREE.Color(0x0b0b0c).convertSRGBToLinear(), roughness: 0.35, metalness: 0.6, clearcoat: 0.6, envMapIntensity: 0.6, side: THREE.FrontSide });
       const shadeIn = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd9a0).multiplyScalar(2.2), side: THREE.BackSide, fog: false });
       const g = new THREE.CylinderGeometry(0.28, 0.95, 0.5, 64, 1, true);
       const outer = new THREE.Mesh(g, shadeOut);
@@ -572,7 +608,7 @@
     // Rendered in half float so the highlights keep their energy; tone mapping
     // and sRGB are applied in the last pass, since render targets skip them.
     let composer = null, bloom = null, bokeh = null;
-    (lite ? Promise.resolve(false) : loadChain(POST_URLS)).then((ok) => {
+    const postReady = (lite ? Promise.resolve(false) : loadChain(POST_URLS)).then((ok) => {
       if (!ok || disposed || !THREE.EffectComposer || !THREE.UnrealBloomPass) return;
       const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
       composer = new THREE.EffectComposer(renderer, rt);
@@ -595,7 +631,7 @@
     });
 
     const pmrem = new THREE.PMREMGenerator(renderer);
-    loadScript(ENV_URL).then((ok) => {
+    const envReady = loadScript(ENV_URL).then((ok) => {
       if (!ok || !THREE.RoomEnvironment || disposed) return;
       scene.environment = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
     });
@@ -627,7 +663,7 @@
     // felt: tiles of 1.1 units, a fibre sharp at a few centimetres
     const FA = A + 0.12, FB = B + 0.12;
     const tileX = (2 * FA) / 1.1, tileY = (2 * FB) / 1.1;
-    const felt = new THREE.Mesh(normUV(new THREE.ShapeGeometry(ellipse(FA, FB), 160), FA, FB), new THREE.MeshPhysicalMaterial({
+    const felt = new THREE.Mesh(normUV(new THREE.ShapeGeometry(ellipse(FA, FB), 160), FA, FB), PHYS({
       map: tex("assets/table/felt.jpg", true, tileX, tileY),
       normalMap: tex("assets/table/felt_n.jpg", false, tileX, tileY),
       normalScale: new THREE.Vector2(0.9, 0.9),
@@ -674,7 +710,7 @@
       getPoint(t, out = new THREE.Vector3()) { const g = t * Math.PI * 2; return out.set(Math.cos(g) * this.a, this.y, Math.sin(g) * this.b); }
     }
     const rail = new THREE.Mesh(new THREE.TubeGeometry(new Oval(A + 0.2, B + 0.2, 0.06), 420, 0.19, 32, true),
-      new THREE.MeshPhysicalMaterial({
+      PHYS({
         // colours here are linear: an sRGB oxblood, converted, so it stays truly dark
         color: new THREE.Color(0x2a0d0a).convertSRGBToLinear(), roughness: 0.42, metalness: 0,
         normalMap: tex("assets/table/leather_n.jpg", false, 90, 2), normalScale: new THREE.Vector2(0.5, 0.5),
@@ -715,7 +751,7 @@
     scene.add(bead);
 
     // lacquered wood: the drink ledge and the body of the table
-    const woodMat = (dark) => new THREE.MeshPhysicalMaterial({
+    const woodMat = (dark) => PHYS({
       map: tex("assets/table/wood.jpg", true, 0.42, 0.42), normalMap: tex("assets/table/wood_n.jpg", false, 0.42, 0.42),
       normalScale: new THREE.Vector2(0.35, 0.35), color: dark ? 0x2a2a2a : 0xd0d0d0,
       roughness: 0.38, clearcoat: dark ? 0.3 : 0.8, clearcoatRoughness: 0.18, envMapIntensity: dark ? 0.08 : 0.22,
@@ -781,8 +817,8 @@
       return canvasTex(c, false);
     })();
     const chipMats = (base, insert, label) => {
-      const side = new THREE.MeshPhysicalMaterial({ map: canvasTex(chipSide(base, insert)), bumpMap: chipSideBump, bumpScale: 0.6, roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.3, envMapIntensity: 0.3 });
-      const top = new THREE.MeshPhysicalMaterial({ map: canvasTex(chipTop(base, insert, label)), bumpMap: chipTopBump, bumpScale: 0.8, roughness: 0.38, clearcoat: 0.55, clearcoatRoughness: 0.25, envMapIntensity: 0.3 });
+      const side = PHYS({ map: canvasTex(chipSide(base, insert)), bumpMap: chipSideBump, bumpScale: 0.6, roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.3, envMapIntensity: 0.3 });
+      const top = PHYS({ map: canvasTex(chipTop(base, insert, label)), bumpMap: chipTopBump, bumpScale: 0.8, roughness: 0.38, clearcoat: 0.55, clearcoatRoughness: 0.25, envMapIntensity: 0.3 });
       return [side, top, top];
     };
     const kinds = [chipMats("#0d0d0e", "#d8b56f", ctx.name.toUpperCase()), chipMats("#e9e4d8", "#0d0d0e", "woblo"), chipMats("#0d0d0e", "#8c7444", "1000")];
@@ -903,8 +939,8 @@
     [flapOut, flapIn].forEach((m) => { m.rotation.x = Math.PI / 2; m.position.y = SPINE; m.castShadow = true; m.receiveShadow = true; flapPivot.add(m); });
     // the wax seal at the tip, poured across the edge: one half on the flap, one on the body
     const waxTex = canvasTex(waxSeal(512));
-    const waxCap = new THREE.MeshPhysicalMaterial({ map: waxTex, bumpMap: waxTex, bumpScale: 0.45, transparent: true, alphaTest: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, envMapIntensity: 0.15, side: THREE.DoubleSide });
-    const waxSide = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0x6e0810).convertSRGBToLinear(), roughness: 0.4, clearcoat: 0.4, envMapIntensity: 0.12 });
+    const waxCap = PHYS({ map: waxTex, bumpMap: waxTex, bumpScale: 0.45, transparent: true, alphaTest: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, envMapIntensity: 0.15, side: THREE.DoubleSide });
+    const waxSide = PHYS({ color: new THREE.Color(0x6e0810).convertSRGBToLinear(), roughness: 0.4, clearcoat: 0.4, envMapIntensity: 0.12 });
     const sealHalf = (towardViewer) => {
       const g = new THREE.Group();
       // the top: the drawing of the wax (its edge irregular) on a half-disc
@@ -957,7 +993,7 @@
 
     const LEDGE_Y = 0.105;
     const onLedge = (g) => new THREE.Vector3(Math.cos(g) * (A + 0.54), LEDGE_Y, Math.sin(g) * (B + 0.54));
-    const glassMat = (extra) => new THREE.MeshPhysicalMaterial(Object.assign({
+    const glassMat = (extra) => PHYS(Object.assign({
       color: 0xffffff, metalness: 0, roughness: 0.04, transmission: 1, thickness: 0.06, ior: 1.5,
       envMapIntensity: 0.22, clearcoat: 0.4, clearcoatRoughness: 0.05, specularIntensity: 0.8,
     }, extra));
@@ -997,23 +1033,23 @@
     {
       // a transparent shell (not transmission): transmissive objects cannot see each other,
       // and the ice inside must be visible through the glass
-      const g = new THREE.Mesh(lathe([[0, 0], [0.13, 0], [0.135, 0.01], [0.14, 0.23], [0.132, 0.232], [0.125, 0.04], [0, 0.04]]), new THREE.MeshPhysicalMaterial({
+      const g = new THREE.Mesh(lathe([[0, 0], [0.13, 0], [0.135, 0.01], [0.14, 0.23], [0.132, 0.232], [0.125, 0.04], [0, 0.04]]), PHYS({
         color: 0xffffff, transparent: true, opacity: 0.1, roughness: 0.02, metalness: 0, depthWrite: false,
         clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6, specularIntensity: 1, ior: 1.5,
       }));
       // the lip and the heavy base catch the light as bright lines
-      const lip = new THREE.Mesh(new THREE.TorusGeometry(0.136, 0.0035, 8, 64), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, roughness: 0.02, clearcoat: 1, envMapIntensity: 2, depthWrite: false }));
+      const lip = new THREE.Mesh(new THREE.TorusGeometry(0.136, 0.0035, 8, 64), PHYS({ color: 0xffffff, transparent: true, opacity: 0.45, roughness: 0.02, clearcoat: 1, envMapIntensity: 2, depthWrite: false }));
       lip.rotation.x = Math.PI / 2; lip.position.y = 0.231; lip.renderOrder = 3;
       tumbler.add(lip);
       g.renderOrder = 3;
-      const whisky = new THREE.Mesh(new THREE.CylinderGeometry(0.123, 0.121, 0.085, 48), new THREE.MeshPhysicalMaterial({
+      const whisky = new THREE.Mesh(new THREE.CylinderGeometry(0.123, 0.121, 0.085, 48), PHYS({
         // opaque on purpose: glass only shows what is opaque behind it
         // deep amber in the body, lit from within where the lamp passes through it
         color: new THREE.Color(0x5a2208).convertSRGBToLinear(), emissive: new THREE.Color(0x8a3a0c).convertSRGBToLinear(), emissiveIntensity: 0.55,
         roughness: 0.1, clearcoat: 0.6, clearcoatRoughness: 0.05, envMapIntensity: 0.25,
       }));
       // the surface: brighter, glossy, a meniscus that catches the light
-      const surface = new THREE.Mesh(new THREE.CircleGeometry(0.122, 48), new THREE.MeshPhysicalMaterial({
+      const surface = new THREE.Mesh(new THREE.CircleGeometry(0.122, 48), PHYS({
         color: new THREE.Color(0x7a3a10).convertSRGBToLinear(), emissive: new THREE.Color(0x5a2406).convertSRGBToLinear(), emissiveIntensity: 0.35,
         roughness: 0.02, clearcoat: 1, clearcoatRoughness: 0.0, envMapIntensity: 1.2, specularIntensity: 1,
       }));
@@ -1049,7 +1085,7 @@
           for (let j = 0; j < 6; j++) { px += (Math.random() - 0.5) * 60; py += (Math.random() - 0.5) * 60; x.lineTo(px, py); } x.stroke(); }
         const t = canvasTex(c, false); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
       })();
-      const iceMat = new THREE.MeshPhysicalMaterial({
+      const iceMat = PHYS({
         color: 0xffffff, transmission: 1, thickness: 0.07, ior: 1.31, roughness: 0.07, metalness: 0,
         attenuationColor: new THREE.Color(0xdcecf6), attenuationDistance: 0.35,
         normalMap: iceNormal, normalScale: new THREE.Vector2(0.35, 0.35),
@@ -1107,8 +1143,8 @@
     }
 
     // reserved plaque, black acrylic, leaning back, readable from both sides
-    const plaqueMat = new THREE.MeshPhysicalMaterial({ map: canvasTex(plaqueFace(ctx.name)), roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.3 });
-    const black = new THREE.MeshPhysicalMaterial({ color: 0x020202, roughness: 0.6, clearcoat: 0, envMapIntensity: 0.02 });
+    const plaqueMat = PHYS({ map: canvasTex(plaqueFace(ctx.name)), roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.3 });
+    const black = PHYS({ color: 0x020202, roughness: 0.6, clearcoat: 0, envMapIntensity: 0.02 });
     const plaqueGeo = new THREE.BoxGeometry(0.62, 0.22, 0.05);
     // placed clear of the chips, the card and the betting boxes
     // a single plaque, standing on the far wooden ledge: readable from the front, covers nothing on the felt
@@ -1397,7 +1433,7 @@
     // BoxGeometry faces: +x, −x, +y, −y, +z, −z — opposite faces add up to seven
     const FACE_VAL = [3, 4, 1, 6, 2, 5];
     const FACE_N = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].map((a) => new THREE.Vector3(...a));
-    const die = new THREE.Mesh(dieGeo, FACE_VAL.map((n) => new THREE.MeshPhysicalMaterial({
+    const die = new THREE.Mesh(dieGeo, FACE_VAL.map((n) => PHYS({
       map: face(n), roughness: 0.22, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 0.6,
     })));
     die.castShadow = true;
@@ -1931,7 +1967,19 @@
       if (composer) composer.render(dt); else renderer.render(scene, camera);
       raf = requestAnimationFrame(frame);
     };
-    raf = requestAnimationFrame(frame);
+    // a veil while the table is set: wait for the room light and the lens (at most a few seconds),
+    // compile every shader in one go, then lift the veil on the first real frame
+    const veil = document.createElement("div");
+    veil.className = "vt3-load";
+    veil.innerHTML = `<span>${T("Preparando la mesa", "Setting the table")}</span><i></i>`;
+    vt.appendChild(veil);
+    const ready = Promise.race([Promise.all([envReady, postReady]), new Promise((r) => setTimeout(r, 4000))]);
+    ready.then(() => new Promise((r) => requestAnimationFrame(r))).then(() => {
+      if (disposed) return;
+      try { renderer.compile(scene, camera); } catch (e) { /* compiles on first frame instead */ }
+      last = performance.now(); slow.t = last;
+      raf = requestAnimationFrame((now) => { frame(now); requestAnimationFrame(() => veil.classList.add("off")); setTimeout(() => veil.remove(), 1200); });
+    });
     window.__vt = { scene, camera, view, renderer, throwDie, roll, openNote: () => openNote(), closeNote: () => closeNote(), note: NOTE, get composer() { return composer; } };
 
     return () => {
