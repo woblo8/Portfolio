@@ -488,13 +488,93 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house.is-hell .shell-die.on { animation: dieBurn 1.2s ease-in-out infinite alternate; }
 @keyframes dieBurn { to { box-shadow: inset 0 0 0 1.5px #ff6a70, 0 0 22px rgba(255, 30, 40, 1), 0 0 60px rgba(255, 20, 30, 0.6); } }
 
-/* ---------- round 20: the abyss, the cabinet beats like a heart ---------- */
-.house.is-abyss .house-machine { animation: hellPulse 2.4s ease-in-out infinite, heartbeat 1.1s ease-in-out infinite; }
-@keyframes heartbeat { 0%, 100% { transform: none; } 12% { transform: scale(1.006); } 24% { transform: none; } 36% { transform: scale(1.004); } }
-.house.is-abyss .house-hell::before { height: 160px; }
-/* round 30: beyond hell, everything goes white-hot */
-.house.is-beyond .house-top h2, .house.is-beyond .rk-name b { color: #fff; text-shadow: 0 0 8px #ff2a35, 0 0 30px #ff2a35, 0 0 60px #ff7a3d; }
-.house.is-beyond .shell-die i:nth-child(odd) { background: #fff; }
+/* ---------- round 20: GOD MODE. Gold, light from above, a halo, the rays turn ---------- */
+.house.on.is-god { background: radial-gradient(circle at 50% 42%, rgba(255, 214, 120, 0.2), rgba(5, 5, 6, 0.9) 62%); }
+.house.is-god .house-machine {
+  background: radial-gradient(120% 70% at 50% 0%, #3a2c10 0%, #171006 55%, #0a0703 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 222, 140, 0.75), 0 0 0 1px #000, 0 0 110px rgba(255, 205, 100, 0.35), 0 40px 100px rgba(0, 0, 0, 0.7);
+  animation: godGlow 3s ease-in-out infinite;
+}
+@keyframes godGlow { 50% { box-shadow: inset 0 0 0 1px #fff2c8, 0 0 0 1px #000, 0 0 170px rgba(255, 215, 120, 0.55), 0 40px 100px rgba(0, 0, 0, 0.7); } }
+.house.is-god .house-scan { background: repeating-linear-gradient(rgba(255, 230, 160, 0.04) 0 1px, transparent 1px 3px); opacity: 0.5; }
+.house.is-god .house-k { color: #e7cf94; }
+/* the halo over the title */
+.house.is-god .house-top > div:first-child { position: relative; }
+.house.is-god .house-top > div:first-child::before {
+  content: ""; position: absolute; left: 6px; top: -14px; width: 110px; height: 16px; border-radius: 50%;
+  border: 2px solid #fff1c4; box-shadow: 0 0 10px #ffd36b, 0 0 26px rgba(255, 211, 107, 0.7), inset 0 0 8px #ffd36b;
+  animation: halo 3.2s ease-in-out infinite;
+}
+@keyframes halo { 50% { transform: translateY(-3px) rotate(-2deg); box-shadow: 0 0 16px #ffd36b, 0 0 40px rgba(255, 211, 107, 0.9), inset 0 0 10px #ffd36b; } }
+.house.is-god .house-top h2 {
+  background: linear-gradient(100deg, #f7e2a8 20%, #ffd36b 38%, #ffffff 50%, #ffd36b 62%, #f7e2a8 80%); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none;
+  filter: drop-shadow(0 0 14px rgba(255, 211, 107, 0.6)); animation: godShine 2.6s linear infinite;
+}
+@keyframes godShine { to { background-position: -220% 0; } }
+.house.is-god .house-score > div { box-shadow: inset 0 0 0 1px rgba(255, 222, 140, 0.4); }
+.house.is-god .house-score > div.is-bank { box-shadow: inset 0 0 0 1px #ffe08a, 0 0 30px rgba(255, 210, 110, 0.35); }
+.house.is-god .house-score small, .house.is-god .house-rank small { color: #c9b07a; }
+.house.is-god .house-score b, .house.is-god .house-rank b { color: #fff4d6; }
+.house.is-god .house-score > div.is-bank b { color: #ffe08a; text-shadow: 0 0 8px #ffcf5a, 0 0 24px rgba(255, 207, 90, 0.8); }
+.house.is-god .bank-chip { background: repeating-conic-gradient(#ffe08a 0 14deg, #6b4d12 14deg 30deg); box-shadow: 0 0 20px rgba(255, 210, 110, 0.8); animation: godSpin 6s linear infinite; }
+.house.is-god .bank-chip::after { background: radial-gradient(circle at 35% 30%, #fff6d8, #c9962c); box-shadow: inset 0 0 0 1px #fff; }
+.house.is-god .house-rank { overflow: hidden; background: linear-gradient(90deg, rgba(255, 210, 110, 0.16), transparent 75%); box-shadow: inset 0 0 0 1px rgba(255, 222, 140, 0.7); }
+.house.is-god .house-rank::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(100deg, transparent 30%, rgba(255, 245, 210, 0.35) 50%, transparent 70%); background-size: 250% 100%; animation: godShine 2.2s linear infinite; }
+.house.is-god .rk-name b { color: #ffe08a; text-shadow: 0 0 12px rgba(255, 207, 90, 0.9); }
+.house.is-god .rk-sigil { color: #fff; background: radial-gradient(#ffe08a, #b8841e); box-shadow: 0 0 0 1px #fff1c4, 0 0 18px #ffd36b; text-shadow: 0 0 6px #fff; animation: godSpin 8s linear infinite; }
+.house.is-god .rk-heat i.on { background: #fff1c4; box-shadow: 0 0 8px #ffd36b; }
+/* the felt: light from above, rays that turn, sparks that rise */
+.house.is-god .house-felt { background: radial-gradient(ellipse at 50% 30%, #3a2b0d, #120c04 75%); box-shadow: inset 0 0 0 1px rgba(255, 222, 140, 0.45), inset 0 20px 40px rgba(0, 0, 0, 0.4); }
+.house.is-god .house-hell { opacity: 1; }
+.house.is-god .house-hell::before {
+  left: -60%; right: -60%; top: -120%; bottom: -120%; height: auto; filter: none;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 232, 170, 0.16) 0 7deg, transparent 7deg 20deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000, transparent); mask-image: radial-gradient(closest-side, #000, transparent);
+  animation: godSpin 22s linear infinite;
+}
+.house.is-god .house-hell::after {
+  content: ""; position: absolute; left: 50%; top: -10px; width: 70%; height: 120%; transform: translateX(-50%);
+  background: linear-gradient(rgba(255, 248, 220, 0.4), rgba(255, 230, 160, 0.08) 70%, transparent);
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%); filter: blur(10px); mix-blend-mode: screen;
+  animation: beam 3s ease-in-out infinite;
+}
+@keyframes beam { 50% { opacity: 0.6; } }
+.house.is-god .house-hell i { background: #fff6d8; box-shadow: 0 0 6px #ffd36b, 0 0 12px #ffd36b; animation-name: godSpark; animation-duration: 2.6s; }
+@keyframes godSpark { 0% { transform: translate(0, 0) scale(0.5); opacity: 0; } 15% { opacity: 1; } 50% { transform: translate(-10px, -120px) scale(1.4); opacity: 1; } 100% { transform: translate(8px, -250px) scale(0.3); opacity: 0; } }
+@keyframes godSpin { to { transform: rotate(360deg); } }
+.house.is-god .house-print text { fill: rgba(255, 225, 150, 0.35); }
+.house.is-god .shell-glass { filter: drop-shadow(0 0 1px #fff1c4) drop-shadow(0 0 16px rgba(255, 210, 110, 0.55)); }
+.house.is-god .house-say { color: #ffeec4; text-shadow: 0 0 12px rgba(255, 210, 110, 0.4); }
+.house.is-god .house-actions button.is-main { color: #1a1205; background: linear-gradient(180deg, #fff1c4, #e3ad3e); box-shadow: 0 0 30px rgba(255, 210, 110, 0.6); }
+.house.is-god .house-toast { background: linear-gradient(90deg, #fff6d8, #f1d08a); box-shadow: inset 0 0 0 1px #fff, 0 0 30px rgba(255, 220, 130, 0.6); }
+.house.is-god .house-toast b { color: #2a1c04; }
+.house.is-god .house-toast small { color: #6b5320; }
+.house.is-god .house-toast i { color: #8a5d0c; text-shadow: none; }
+.house.is-god .house-toast em { background: #2a1c04; color: #ffe08a; }
+/* the die: gold, with white pips that shine */
+.house.is-god .shell-die {
+  background: radial-gradient(circle at 30% 25%, #fff6d8, #f0c45a 45%, #a8761a);
+  box-shadow: inset 0 0 0 1.5px #fff6d8, 0 0 18px rgba(255, 210, 110, 0.95), 0 0 50px rgba(255, 210, 110, 0.55);
+}
+.house.is-god .shell-die i:nth-child(1), .house.is-god .shell-die i:nth-child(3), .house.is-god .shell-die i:nth-child(5), .house.is-god .shell-die i:nth-child(7), .house.is-god .shell-die i:nth-child(9) {
+  background: #fff; box-shadow: 0 0 4px #fff, 0 0 10px #fff, 0 0 16px #ffd36b;
+}
+.house.is-god .shell-die.on { animation: dieHoly 1.4s ease-in-out infinite alternate; }
+@keyframes dieHoly { to { transform: translateY(-4px); box-shadow: inset 0 0 0 1.5px #fff, 0 0 30px #ffe08a, 0 0 80px rgba(255, 210, 110, 0.8); } }
+
+/* ---------- round 30: omniscient. White light, and the colours of everything ---------- */
+.house.is-beyond .house-hell::before { animation: godSpin 7s linear infinite, prism 5s linear infinite; }
+@keyframes prism { to { filter: hue-rotate(360deg); } }
+.house.is-beyond .house-machine { animation: godGlow 3s ease-in-out infinite, prismBorder 6s linear infinite; }
+@keyframes prismBorder { to { filter: hue-rotate(360deg); } }
+.house.is-beyond .house-top h2 { animation-duration: 1.2s; }
+.house.is-beyond .shell-die { background: radial-gradient(circle at 30% 25%, #fff, #f6e6b8 60%, #d8b56f); }
+
+@media (prefers-reduced-motion: reduce) {
+  .house.is-god .house-machine, .house.is-god .house-top h2, .house.is-god .shell-die.on, .house.is-god .house-hell::before, .house.is-god .house-hell::after,
+  .house.is-god .house-rank::after, .house.is-god .bank-chip, .house.is-god .rk-sigil, .house.is-god .house-top > div:first-child::before { animation: none !important; }
+}
 
 @media (max-width: 480px) {
   .house-rank { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; }

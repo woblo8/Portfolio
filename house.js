@@ -161,14 +161,14 @@
 
   /* ---------- the ladder: every few rounds a new rank, and the table changes with it ----------
      0 Tourist · 1 Gambler (5) · 2 Shark (10, the table warms up) · 3 Devil (15, devil mode)
-     4 Lord of the abyss (20) · 5 Beyond hell (30) */
+     4 God (20, god mode: gold, light, a halo) · 5 Omniscient (30, the light goes white) */
   const TIERS = [
     { at: 1, n: () => T("Turista", "Tourist"), sigil: "♠" },
     { at: 5, n: () => T("Jugador", "Gambler"), sigil: "♣" },
     { at: 10, n: () => T("Tiburón", "Shark"), sigil: "♦" },
     { at: 15, n: () => T("Diablo", "Devil"), sigil: "♥" },
-    { at: 20, n: () => T("Señor del abismo", "Lord of the abyss"), sigil: "✶" },
-    { at: 30, n: () => T("Más allá del infierno", "Beyond hell"), sigil: "✹" },
+    { at: 20, n: () => T("Dios", "God"), sigil: "☀" },
+    { at: 30, n: () => T("Omnisciente", "Omniscient"), sigil: "✺" },
   ];
   const tierOf = (r) => TIERS.reduce((t, x, i) => (r >= x.at ? i : t), 0);
   // a line for this tier: each tier has its own list, the last one covers everything deeper
@@ -180,50 +180,50 @@
       [["Ya le ha cogido el gusto. ¿Cuánto?", "La casa le escucha.", "Se le ve cómodo. Apueste.", "Ronda a ronda, la mesa se acuerda de usted."], ["You've got a taste for it. How much?", "The house is listening.", "You look comfortable. Bet.", "Round by round, the table remembers you."]],
       [["¿Cuánto vale su ojo hoy?", "La mesa se calienta. Apueste.", "El encargado ya le mira desde la barra.", "Huele a quemado. Debe de ser usted."], ["What's your eye worth today?", "The table is warming up. Bet.", "The manager is watching you from the bar.", "Something's burning. Must be you."]],
       [["Apueste, si se atreve.", "El diablo espera su ofrenda.", "Las fichas arden. ¿Cuántas?", "Aquí abajo nadie apuesta poco.", "Firme aquí… quiero decir, apueste."], ["Bet, if you dare.", "The devil awaits your offering.", "The chips are burning. How many?", "Down here nobody bets small.", "Sign here… I mean, bet."]],
-      [["Usted manda. ¿Cuánto?", "Ponga precio a su leyenda.", "El abismo escucha. Apueste.", "La casa ya no reparte: obedece."], ["You're in charge. How much?", "Name the price of your legend.", "The abyss is listening. Bet.", "The house no longer deals: it obeys."]],
-      [["Más allá del infierno no hay casa. Solo usted.", "Nadie había llegado aquí. Apueste.", "El tiempo se ha parado en esta mesa."], ["Beyond hell there is no house. Only you.", "Nobody had come this far. Bet.", "Time has stopped at this table."]],
+      [["Hágase su apuesta.", "Los mortales apuestan. Usted decide.", "El cielo abre la banca. ¿Cuánto?", "Ni el diablo se atreve a mirarle. Apueste.", "Dios no juega a los dados… salvo hoy."], ["Let there be a bet.", "Mortals bet. You decide.", "Heaven opens the bank. How much?", "Not even the devil dares look at you. Bet.", "God doesn't play dice… except today."]],
+      [["Ya lo sabe todo. Apueste por costumbre.", "El universo espera su cifra.", "Más allá de Dios solo queda usted.", "Nadie había llegado aquí. Nadie."], ["You already know everything. Bet out of habit.", "The universe awaits your number.", "Beyond God there is only you.", "Nobody had come this far. Nobody."]],
     ],
     watch: [
       [["Mira bien. Está aquí.", "Aquí está. Por ahora.", "Fíjate. Solo lo verás un momento."], ["Look closely. It's here.", "Here it is. For now.", "Watch. You'll only see it for a moment."]],
       [["Aquí. No lo pierda.", "Un vistazo. No habrá otro."], ["Here. Don't lose it.", "One look. There won't be another."]],
       [["Míralo. La casa ya no se lo pone fácil.", "Último vistazo antes del baile."], ["Look. The house won't make it easy now.", "Last look before the dance."]],
       [["Ahí arde el dado. Mírelo bien.", "Mírelo. Puede que sea la última vez.", "El dado brilla como una brasa."], ["There the die burns. Look closely.", "Look. It may be the last time.", "The die glows like an ember."]],
-      [["El abismo se lo enseña una vez.", "Ni un parpadeo."], ["The abyss shows you once.", "Not one blink."]],
+      [["Que se haga la luz: ahí está.", "Lo ve antes de que aparezca.", "Un milagro: el dado, a la vista."], ["Let there be light: there it is.", "You see it before it appears.", "A miracle: the die, in plain sight."]],
     ],
     shuffle: [
       [["La casa baraja…", "Sigue el vaso…", "No parpadees…"], ["The house shuffles…", "Follow the glass…", "Don't blink…"]],
       [["Más rápido…", "Siga, siga…", "La mano es más rápida que el ojo…"], ["Faster…", "Keep up, keep up…", "The hand is quicker than the eye…"]],
       [["El crupier se arremanga…", "Esto ya va en serio…", "Ni el encargado lo sigue…"], ["The croupier rolls up his sleeves…", "Now it's serious…", "Not even the manager can follow…"]],
       [["El diablo baraja…", "Las manos del infierno no tiemblan…", "Arde la mesa…"], ["The devil shuffles…", "Hell's hands don't shake…", "The table is on fire…"]],
-      [["El abismo da vueltas…", "Todo gira…"], ["The abyss spins…", "Everything turns…"]],
+      [["La casa reza mientras baraja…", "Los ángeles mueven los vasos…", "Ni la luz va tan rápido…"], ["The house prays as it shuffles…", "Angels move the glasses…", "Not even light is this fast…"]],
     ],
     ask: [
       [["¿Dónde está el dado?", "¿Cuál es?", "Tú dirás."], ["Where is the die?", "Which one?", "Your call."]],
       [["¿Cuál? Sin prisa… o sí.", "Elija."], ["Which? No rush… or yes.", "Choose."]],
       [["Demuestre que es un tiburón.", "¿Cuál, tiburón?"], ["Prove you're a shark.", "Which one, shark?"]],
       [["Elija. Con cuidado.", "¿Dónde está su alma? Digo… el dado.", "El diablo espera."], ["Choose. Carefully.", "Where is your soul? I mean… the die.", "The devil waits."]],
-      [["Elija, señor del abismo.", "Su turno. Como siempre."], ["Choose, lord of the abyss.", "Your turn. As always."]],
+      [["Señale, y será.", "Su voluntad, por favor.", "¿Cuál bendice?"], ["Point, and so it shall be.", "Your will, please.", "Which one do you bless?"]],
     ],
     right: [
       [["Bien visto. +{w} fichas.", "Principiante con suerte. +{w}.", "Ahí estaba. Cobra {w}.", "La casa toma nota. +{w}."], ["Well spotted. +{w} chips.", "Beginner's luck. +{w}.", "There it was. Collect {w}.", "The house takes note. +{w}."]],
       [["Ya no es suerte. +{w}.", "Tiene ojo. La casa paga {w}.", "Así se juega. +{w}.", "El crupier frunce el ceño. +{w}."], ["That's not luck anymore. +{w}.", "You've got an eye. The house pays {w}.", "That's how it's played. +{w}.", "The croupier frowns. +{w}."]],
       [["Tiburón en la mesa. +{w}.", "La casa empieza a sudar: {w} para usted.", "Ni yo sé dónde lo puse. Usted sí. +{w}.", "Esto ya es personal. +{w}."], ["Shark at the table. +{w}.", "The house starts to sweat: {w} for you.", "Even I don't know where I put it. You do. +{w}.", "Now it's personal. +{w}."]],
       [["El diablo aplaude. +{w}.", "Ese ojo no es humano. +{w}.", "Arde la mesa: {w} para usted.", "Hasta el infierno paga sus deudas. +{w}."], ["The devil applauds. +{w}.", "That eye isn't human. +{w}.", "The table burns: {w} for you.", "Even hell pays its debts. +{w}."]],
-      [["Usted ya no juega: reina. +{w}.", "El abismo le devuelve la mirada. +{w}.", "La casa firma su rendición. {w} más.", "Ni Lucifer baraja tan rápido como usted mira. +{w}."], ["You don't play anymore: you reign. +{w}.", "The abyss stares back. +{w}.", "The house signs its surrender. {w} more.", "Not even Lucifer shuffles as fast as you look. +{w}."]],
+      [["Milagro. +{w}.", "Lo vio desde el cielo. +{w}.", "Aleluya: la casa paga {w}.", "Omnipotente. +{w} fichas.", "El cielo llueve fichas: {w}."], ["Miracle. +{w}.", "You saw it from heaven. +{w}.", "Hallelujah: the house pays {w}.", "Almighty. +{w} chips.", "Heaven rains chips: {w}."]],
     ],
     wrong: [
       [["Estaba aquí. La casa se queda {l}.", "Esta vez no. −{l} fichas.", "Tranquilo, a todos nos pasa. −{l}."], ["It was here. The house keeps {l}.", "Not this time. −{l} chips.", "Relax, it happens to everyone. −{l}."]],
       [["Casi. La casa se queda {l}.", "Era el de al lado. −{l}.", "Un parpadeo de más. −{l}."], ["Close. The house keeps {l}.", "It was the next one. −{l}.", "One blink too many. −{l}."]],
       [["El tiburón muerde el anzuelo. −{l}.", "La casa respira: {l} para nosotros.", "Hasta los mejores fallan. −{l}."], ["The shark bites the hook. −{l}.", "The house breathes: {l} for us.", "Even the best miss. −{l}."]],
       [["El diablo cobra su parte: {l}.", "Las llamas se tragan {l} fichas.", "Cerca, pero el infierno no perdona. −{l}."], ["The devil takes his cut: {l}.", "The flames swallow {l} chips.", "Close, but hell doesn't forgive. −{l}."]],
-      [["El abismo también cobra. −{l}.", "Un tropiezo de leyenda. −{l}.", "Hasta los dioses fallan. −{l}."], ["The abyss collects too. −{l}.", "A legendary stumble. −{l}.", "Even gods miss. −{l}."]],
+      [["Hasta Dios descansa el séptimo día. −{l}.", "Un misterio divino. −{l}.", "Los caminos del dado son inescrutables. −{l}."], ["Even God rests on the seventh day. −{l}.", "A divine mystery. −{l}.", "The die moves in mysterious ways. −{l}."]],
     ],
     broke: [
       [["Sin fichas. La casa siempre gana… casi siempre.", "Se acabó. La próxima, con más calma."], ["Out of chips. The house always wins… almost always.", "That's it. Next time, calmer."]],
       [["Sin fichas. Pero se le daba bien.", "Fin de la partida. La casa respira."], ["Out of chips. You were good at it.", "Game over. The house breathes again."]],
       [["Cae el tiburón. Qué partida.", "Sin fichas. La casa lo celebrará en voz baja."], ["The shark falls. What a game.", "Out of chips. The house will celebrate quietly."]],
       [["El infierno se queda sus fichas. Vuelva cuando quiera… siempre vuelven.", "El diablo cierra la mesa. Por esta noche."], ["Hell keeps your chips. Come back any time… they always do.", "The devil closes the table. For tonight."]],
-      [["Cae una leyenda. La casa lo recordará.", "El abismo se lo traga todo. Hasta a usted."], ["A legend falls. The house will remember.", "The abyss swallows everything. Even you."]],
+      [["Cae un dios. La casa le levantará un altar.", "Hasta los dioses vuelven a la tierra. Qué partida."], ["A god falls. The house will build you an altar.", "Even gods return to earth. What a game."]],
     ],
   };
   const fill = (str, o) => str.replace(/\{(\w)\}/g, (_, x) => o[x]);
@@ -250,8 +250,8 @@
     r5: [() => T("Jugador", "Gambler"), () => T("Llegó a la ronda 5", "Reached round 5")],
     r10: [() => T("Tiburón", "Shark"), () => T("Llegó a la ronda 10", "Reached round 10")],
     r15: [() => T("Diablo", "Devil"), () => T("Llegó a la ronda 15", "Reached round 15")],
-    r20: [() => T("Señor del abismo", "Lord of the abyss"), () => T("Llegó a la ronda 20", "Reached round 20")],
-    r30: [() => T("Más allá", "Beyond"), () => T("Llegó a la ronda 30", "Reached round 30")],
+    r20: [() => T("Dios", "God"), () => T("Llegó a la ronda 20", "Reached round 20")],
+    r30: [() => T("Omnisciente", "Omniscient"), () => T("Llegó a la ronda 30", "Reached round 30")],
   };
   const everGot = (() => { try { return new Set(JSON.parse(store.get(AWARD_KEY) || "[]")); } catch (e) { return new Set(); } })();
   const toastQ = [];
@@ -290,15 +290,15 @@
     k("acc").textContent = G.played ? Math.round((G.won / G.played) * 100) + "%" : "—";
     k("awards").textContent = `${everGot.size}/${Object.keys(AWARDS).length}`;
     root.classList.toggle("is-warm", G.tier === 2);
-    root.classList.toggle("is-hell", G.tier >= 3);
-    root.classList.toggle("is-abyss", G.tier >= 4);
+    root.classList.toggle("is-hell", G.tier === 3);
+    root.classList.toggle("is-god", G.tier >= 4);
     root.classList.toggle("is-beyond", G.tier >= 5);
-    const hell = G.tier >= 3;
-    $(".house-top .house-k").textContent = hell ? T("Mesa del diablo", "The devil's table") : G.tier === 2 ? T("La mesa arde", "The table burns") : T("Mesa de la casa", "The house table");
-    $(".house-top h2").textContent = hell ? T("¿Dónde está el alma?", "Where is the soul?") : T("¿Dónde está el dado?", "Where is the die?");
-    $(".is-bank small").textContent = hell ? T("Fichas malditas", "Cursed chips") : T("Tus fichas", "Your chips");
-    k("round").previousElementSibling.textContent = hell ? T("Círculo", "Circle") : T("Ronda", "Round");
-    $(".house-print textPath").textContent = hell ? T("EL DIABLO NUNCA PIERDE DE VISTA EL DADO", "THE DEVIL NEVER LOSES SIGHT OF THE DIE") : T("LA CASA NUNCA PIERDE DE VISTA EL DADO", "THE HOUSE NEVER LOSES SIGHT OF THE DIE");
+    const hell = G.tier === 3, god = G.tier >= 4;
+    $(".house-top .house-k").textContent = god ? T("Mesa divina", "The divine table") : hell ? T("Mesa del diablo", "The devil's table") : G.tier === 2 ? T("La mesa arde", "The table burns") : T("Mesa de la casa", "The house table");
+    $(".house-top h2").textContent = god ? T("Hágase el dado", "Let there be dice") : hell ? T("¿Dónde está el alma?", "Where is the soul?") : T("¿Dónde está el dado?", "Where is the die?");
+    $(".is-bank small").textContent = god ? T("Fichas sagradas", "Holy chips") : hell ? T("Fichas malditas", "Cursed chips") : T("Tus fichas", "Your chips");
+    k("round").previousElementSibling.textContent = god ? T("Cielo", "Heaven") : hell ? T("Círculo", "Circle") : T("Ronda", "Round");
+    $(".house-print textPath").textContent = god ? T("DIOS NO JUEGA A LOS DADOS · SALVO EN ESTA MESA", "GOD DOES NOT PLAY DICE · EXCEPT AT THIS TABLE") : hell ? T("EL DIABLO NUNCA PIERDE DE VISTA EL DADO", "THE DEVIL NEVER LOSES SIGHT OF THE DIE") : T("LA CASA NUNCA PIERDE DE VISTA EL DADO", "THE HOUSE NEVER LOSES SIGHT OF THE DIE");
   }
 
   // a word on your play, now and then: how good your eye is
@@ -322,7 +322,7 @@
   const LINES = {
     welcome: () => T("100 fichas, un dado, tres vasos. Haga su apuesta.", "100 chips, one die, three glasses. Place your bet."),
     bet: () => byTier(TALK.bet),
-    allin: () => G.tier >= 3 ? pick(T(["Todo al fuego. El diablo se frota las manos.", "Todo o nada en el infierno. Así me gusta.", "Se lo juega todo. Hasta el alma."], ["Everything into the fire. The devil rubs his hands.", "All or nothing in hell. That's the spirit.", "You're betting it all. Even your soul."])) : pick(T(["Todo o nada. Que Dios reparta suerte.", "Todo a una mano. Valiente.", "Todo sobre la mesa. La casa contiene la respiración."], ["All or nothing. Good luck to you.", "Everything on one hand. Brave.", "All on the table. The house holds its breath."])),
+    allin: () => G.tier >= 4 ? pick(T(["Todo o nada. Los ángeles contienen la respiración.", "Lo apuesta todo. Como haría un dios.", "Todo sobre la mesa: que se haga su voluntad."], ["All or nothing. The angels hold their breath.", "You bet it all. As a god would.", "All on the table: thy will be done."])) : G.tier === 3 ? pick(T(["Todo al fuego. El diablo se frota las manos.", "Todo o nada en el infierno. Así me gusta.", "Se lo juega todo. Hasta el alma."], ["Everything into the fire. The devil rubs his hands.", "All or nothing in hell. That's the spirit.", "You're betting it all. Even your soul."])) : pick(T(["Todo o nada. Que Dios reparta suerte.", "Todo a una mano. Valiente.", "Todo sobre la mesa. La casa contiene la respiración."], ["All or nothing. Good luck to you.", "Everything on one hand. Brave.", "All on the table. The house holds its breath."])),
     watch: () => byTier(TALK.watch),
     shuffle: () => byTier(TALK.shuffle),
     ask: () => byTier(TALK.ask),
@@ -478,10 +478,11 @@
       burst(diff >= 100 || G.streak >= 3); delta(diff);
       if (wasAllIn) G.allinWins++;
       const st = G.streak;
-      speak(wasAllIn && G.allinWins === 1 ? (G.tier >= 3 ? T(`Le ha vendido el alma al vaso correcto. +${fmt(diff)}.`, `You sold your soul to the right glass. +${fmt(diff)}.`) : T(`¡Todo o nada… y es todo! +${fmt(diff)}.`, `All or nothing… and it's all! +${fmt(diff)}.`))
+      speak(wasAllIn && G.allinWins === 1 ? (G.tier >= 4 ? T(`Un acto de fe… y el cielo paga. +${fmt(diff)}.`, `An act of faith… and heaven pays. +${fmt(diff)}.`) : G.tier === 3 ? T(`Le ha vendido el alma al vaso correcto. +${fmt(diff)}.`, `You sold your soul to the right glass. +${fmt(diff)}.`) : T(`¡Todo o nada… y es todo! +${fmt(diff)}.`, `All or nothing… and it's all! +${fmt(diff)}.`))
         : st === 3 ? T(`Tres seguidas. Está en llamas. +${fmt(diff)}.`, `Three in a row. You're on fire. +${fmt(diff)}.`)
         : st === 5 ? T(`Cinco seguidas. La casa llama al encargado. +${fmt(diff)}.`, `Five in a row. The house calls the manager. +${fmt(diff)}.`)
         : st === 8 ? T(`Ocho seguidas. Esto ya no es normal. +${fmt(diff)}.`, `Eight in a row. This isn't normal. +${fmt(diff)}.`)
+        : st >= 10 && st % 2 === 0 && G.tier >= 4 ? T(`${st} seguidas. Ya no es suerte: es fe. +${fmt(diff)}.`, `${st} in a row. Not luck anymore: faith. +${fmt(diff)}.`)
         : st >= 10 && st % 2 === 0 ? T(`${st} seguidas. ¿Ha hecho usted un pacto? +${fmt(diff)}.`, `${st} in a row. Did you make a pact? +${fmt(diff)}.`)
         : G.low < 20 && before < 100 && G.chips >= 100 ? T(`De las cenizas. Vuelve a las ${fmt(G.chips)}.`, `From the ashes. Back to ${fmt(G.chips)}.`)
         : LINES.right(fmt(diff)));
@@ -530,7 +531,7 @@
       1: T("La casa empieza a sudar", "The house starts to sweat"),
       2: T("Entra un vaso más · la mesa arde", "One more glass · the table burns"),
       4: T("Modo diablo", "Devil mode"),
-      5: r === 20 ? T("Señor del abismo", "Lord of the abyss") : r === 30 ? T("Más allá del infierno", "Beyond hell") : T("El infierno se rinde", "Hell gives in"),
+      5: r === 20 ? T("Modo dios", "God mode") : r === 30 ? T("Omnisciente", "Omniscient") : T("El cielo se rinde", "Heaven gives in"),
     }[lv]);
     toBet();
   }
