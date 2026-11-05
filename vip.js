@@ -938,27 +938,36 @@
     const flapIn = new THREE.Mesh(flapGeo, new THREE.MeshStandardMaterial({ map: canvasTex(linerCanvas(704, 464)), roughness: 0.55, envMapIntensity: 0.2, side: THREE.FrontSide }));
     [flapOut, flapIn].forEach((m) => { m.rotation.x = Math.PI / 2; m.position.y = SPINE; m.castShadow = true; m.receiveShadow = true; flapPivot.add(m); });
     // the wax seal at the tip, poured across the edge: one half on the flap, one on the body
-    const waxTex = canvasTex(waxSeal(512));
-    const waxCap = PHYS({ map: waxTex, bumpMap: waxTex, bumpScale: 0.45, transparent: true, alphaTest: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, envMapIntensity: 0.15, side: THREE.DoubleSide });
+    const waxTex = canvasTex(waxSeal(1024));
+    const waxCap = PHYS({ map: waxTex, bumpMap: waxTex, bumpScale: 0.18, transparent: true, alphaTest: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, envMapIntensity: 0.15, side: THREE.DoubleSide });
     const waxSide = PHYS({ color: new THREE.Color(0x6e0810).convertSRGBToLinear(), roughness: 0.4, clearcoat: 0.4, envMapIntensity: 0.12 });
-    const sealHalf = (towardViewer) => {
+    // both halves share one top: the wax was poured in one go, so closed it reads as one disc.
+    // drop: how far the half reaches down to the paper under it (the body sits lower than the flap)
+    const SEAL_TOP = 0.0072;
+    const sealHalf = (towardViewer, drop) => {
       const g = new THREE.Group();
       // the top: the drawing of the wax (its edge irregular) on a half-disc
       const cap = new THREE.Mesh(new THREE.CircleGeometry(SEAL_R * 1.25, 48, towardViewer ? Math.PI : 0, Math.PI), waxCap);
-      cap.rotation.x = -Math.PI / 2; cap.position.y = 0.0072;
-      // its thickness: a half-cylinder of red, a little smaller than the poured edge
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(SEAL_R * 0.94, SEAL_R * 0.98, 0.007, 40, 1, false, towardViewer ? -Math.PI / 2 : Math.PI / 2, Math.PI), waxSide);
-      body.position.y = 0.0035;
-      // the broken face, where the two halves part
-      const face = new THREE.Mesh(new THREE.PlaneGeometry(SEAL_R * 1.9, 0.007), waxSide);
-      face.position.y = 0.0035;
+      cap.rotation.x = -Math.PI / 2; cap.position.y = SEAL_TOP;
+      // its thickness: an open half-cylinder of red (no lid of its own to fight the drawing on top),
+      // stopping just under the top and reaching down to the paper
+      const h = SEAL_TOP - 0.0004 + drop;
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(SEAL_R * 0.94, SEAL_R * 0.98, h, 40, 1, true, towardViewer ? -Math.PI / 2 : Math.PI / 2, Math.PI), waxSide);
+      body.position.y = SEAL_TOP - 0.0004 - h / 2;
+      // the broken face, where the two halves part: only there once the seal cracks
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(SEAL_R * 1.86, h), new THREE.MeshStandardMaterial({ color: waxSide.color, roughness: 0.55, side: THREE.DoubleSide }));
+      face.position.y = body.position.y;
+      face.visible = false;
+      g.userData.face = face;
       g.add(cap, body, face);
       g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       return g;
     };
     const tipZ = -ENV_D / 2 + FLAP_L - 0.035;
-    const sealBody = sealHalf(true); sealBody.position.set(0, ENV_T + 0.0016, tipZ); env.add(sealBody);
-    const sealFlap = sealHalf(false); sealFlap.position.set(0, SPINE + 0.0004, FLAP_L - 0.035); flapPivot.add(sealFlap);
+    // the flap half sits on the flap; the body half at exactly the same height, reaching down past the flap to the pocket
+    const FLAP_SEAL_Y = SPINE + 0.0004, BODY_SEAL_Y = HINGE_Y + FLAP_SEAL_Y;
+    const sealBody = sealHalf(true, BODY_SEAL_Y - (ENV_T + 0.001)); sealBody.position.set(0, BODY_SEAL_Y, tipZ); env.add(sealBody);
+    const sealFlap = sealHalf(false, 0.0004); sealFlap.position.set(0, FLAP_SEAL_Y, tipZ - flapPivot.position.z); flapPivot.add(sealFlap); // the very same spot as the body half: no gap
     // the card inside, with the note on it: a real texture, readable when it comes to you
     // the mouth of the envelope: whatever of the card is still behind it is not drawn
     renderer.localClippingEnabled = true;
@@ -1876,7 +1885,8 @@
       env.position.set(0, HOLD.y * r + Math.sin(r * Math.PI) * 0.06, HOLD.z * r);
       env.rotation.x = HOLD.tilt * easeIO(r);
       // the seal parts a hair, then the flap carries its half up and over
-      sealFlap.position.y = SPINE + 0.0004 + NOTE.crack * 0.002;
+      sealFlap.position.y = FLAP_SEAL_Y + NOTE.crack * 0.002;
+      sealBody.userData.face.visible = sealFlap.userData.face.visible = NOTE.crack > 0.01 || NOTE.flap > 0.01;
       sealFlap.rotation.x = -NOTE.crack * 0.06;
       flapPivot.rotation.x = NOTE.flap * FLAP_OPEN;
       // the card: inside → up out of the mouth (in front of the folded-back flap) → to the lens
