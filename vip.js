@@ -272,7 +272,7 @@
     const paras = String(note).split(/\n+/).map((p) => p.trim()).filter(Boolean);
     // lay the letter out at a given size: lines, each marked if a paragraph ends there
     const lay = (fs2) => {
-      measure.font = `400 ${fs2}px ${SANS}`;
+      measure.font = `300 ${fs2}px ${SANS}`;
       const lines = [];
       paras.forEach((p, k) => {
         let line = "";
@@ -284,7 +284,7 @@
     // fill pages from the top: the front has the address, the back has more room
     const AREA = [[h * 0.27, h * 0.79], [h * 0.17, h * 0.79]];
     const paginate = (lines, fs2) => {
-      const lh = fs2 * 1.42, gap = fs2 * 0.6, pages = [[]];
+      const lh = fs2 * 1.5, gap = fs2 * 0.6, pages = [[]];
       let y = 0;
       lines.forEach((l) => {
         const room = AREA[Math.min(pages.length - 1, 1)][1] - AREA[Math.min(pages.length - 1, 1)][0];
@@ -298,7 +298,7 @@
     for (; fs2 >= Math.round(w * 0.02); fs2 -= 2) { pages = paginate(lay(fs2), fs2); if (pages.length === 1) break; }
     if (pages.length > 1) for (fs2 = Math.round(w * 0.031); fs2 >= Math.round(w * 0.017); fs2 -= 2) { pages = paginate(lay(fs2), fs2); if (pages.length <= 2) break; }
     pages = pages.slice(0, 2);
-    const lh = fs2 * 1.42, gap = fs2 * 0.6;
+    const lh = fs2 * 1.5, gap = fs2 * 0.6;
 
     return pages.map((lines, side) => {
       const c = mk(w, h), x = c.getContext("2d");
@@ -321,7 +321,9 @@
       else mono(T("II · CONTINÚA", "II · CONTINUED"), M, h * 0.12, 0.015, "rgba(216,181,111,0.7)");
       // the letter
       const [top, bottom] = AREA[side];
-      x.fillStyle = "#ecebe7"; x.font = `400 ${fs2}px ${SANS}`;
+      // light weight, a touch of tracking, a white that does not glare
+      x.fillStyle = "#e6e2d9"; x.font = `300 ${fs2}px ${SANS}`;
+      if ("letterSpacing" in x) x.letterSpacing = `${(fs2 * 0.01).toFixed(1)}px`;
       const total = lines.reduce((t, l) => t + lh + (l[1] ? gap : 0), 0) - (lines.length && lines[lines.length - 1][1] ? gap : 0);
       // one side: centred in its space; two sides: from the top, like a page
       let y = (pages.length === 1 ? top + (bottom - top - total) / 2 : top) + fs2;
@@ -1087,6 +1089,12 @@
       return new THREE.MeshStandardMaterial({ ...clip, map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.78, envMapIntensity: 0.05 });
     })() : null;
     const noteCard = new THREE.Mesh(new THREE.BoxGeometry(CARD_W, 0.004, CARD_D), [gilt, gilt, noteFace, noteBack || lacquer, gilt, gilt]);
+    if (document.fonts && document.fonts.load) document.fonts.load('300 64px "Inter Tight"').then(() => {
+      if (disposed) return;
+      const again = noteCardCanvas(2048, 1340, ctx.name, ctx.note);
+      noteTex.image.getContext("2d").drawImage(again[0], 0, 0); noteTex.needsUpdate = true;
+      if (noteBack && again[1]) { const t = noteBack.map, g = t.image.getContext("2d"); g.save(); g.translate(t.image.width, t.image.height); g.rotate(Math.PI); g.drawImage(again[1], 0, 0); g.restore(); t.needsUpdate = true; }
+    }).catch(() => {});
     noteCard.castShadow = true;
     scene.add(noteCard);
     contacts.push([bet.position.x, bet.position.z, 0.26, 0.4], [card.position.x, card.position.z, 0.42, 0.35]);
@@ -2040,8 +2048,9 @@
       noteLight.position.copy(camera.position).add(new THREE.Vector3(-0.35, 0.45, -0.1));
       noteLight.target.position.copy(noteCard.position);
       noteLight.target.updateMatrixWorld();
-      noteFace.emissiveIntensity = 0.14 * NOTE.lift;
-      if (noteBack) noteBack.emissiveIntensity = 0.14 * NOTE.lift;
+      noteFace.emissiveIntensity = 0.07 * NOTE.lift;
+      if (noteBack) noteBack.emissiveIntensity = 0.07 * NOTE.lift;
+      if (bloom) bloom.strength = 0.3 * (1 - 0.75 * NOTE.lift); // the bloom eases off so the letters stay sharp
       // turned over to read the back: half a turn about the card's own axis, with a little lift as it goes
       if (NOTE.turn > 0) {
         turnQ.setFromAxisAngle(turnAxis, Math.PI * easeIO(NOTE.turn));
