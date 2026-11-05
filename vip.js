@@ -540,7 +540,7 @@
     // what they touch: a project, the mail, the call
     vt.addEventListener("click", (e) => {
       const nx = e.target.closest("[data-next]");
-      if (nx) { const p = ctx.projects[+nx.dataset.next]; if (p) visit.did.p = p.title; }
+      if (nx) { const p = ctx.projects[+nx.dataset.next]; if (p) { visit.did.p = p.title; (window.WOBLO_TRACK && window.WOBLO_TRACK("open", p.title + " (desde la mesa)")); } }
       const cta = e.target.closest(".vt-cta");
       if (cta) { if (cta.classList.contains("is-ghost")) visit.did.c = 1; else visit.did.m = 1; }
     }, true);
@@ -1644,6 +1644,7 @@
     function throwDie() {
       if (roll.on) return;
       visit.did.r = (visit.did.r || 0) + 1;
+      (window.WOBLO_TRACK && window.WOBLO_TRACK("viproll", `#${visit.did.r}`));
       chosen = -1;
       roll.on = true; roll.t = 0;
       roll.p0.copy(die.position);
@@ -1853,6 +1854,7 @@
     };
     async function openNote() {
       visit.did.n = 1;
+      (window.WOBLO_TRACK && window.WOBLO_TRACK("note", "abre la carta"));
       if (NOTE.busy || NOTE.open) return;
       NOTE.busy = true; noteSeen = true;
       vt.classList.add("is-note"); setTip("");

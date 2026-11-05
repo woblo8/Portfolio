@@ -32,19 +32,6 @@
   $("#brandRole").textContent = SITE.role;
   $("#tagline").textContent = SITE.tagline;
 
-  // a visit: one notice to Carlos per tab (reloads do not count), never for his own browser
-  (() => {
-    try {
-      if (localStorage.getItem("woblo:admin") === "1" || sessionStorage.getItem("woblo:hit")) return;
-      if (navigator.webdriver) return;
-      const sid = [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, "0")).join("");
-      sessionStorage.setItem("woblo:hit", sid);
-      const q = new URLSearchParams(location.search);
-      const body = JSON.stringify({ op: "hit", sid, path: location.pathname, ref: document.referrer, lang: window.LANG || "", vip: q.get("vip") || "" });
-      setTimeout(() => fetch("/api/vip", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {}), 1500);
-    } catch (e) { /* private mode, no storage: no notice */ }
-  })();
-
   // private table: a link like woblo.io/?vip=Acme greets that company by name
   const VIP = (() => {
     const q = new URLSearchParams(location.search);

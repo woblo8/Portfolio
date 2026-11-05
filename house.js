@@ -245,6 +245,7 @@
     await wait(520);
     lift(cups[res.d], true);
     G.phase = "over";
+    (window.WOBLO_TRACK && window.WOBLO_TRACK("game", `«La casa»: ${G.score} ${G.score === 1 ? "ronda" : "rondas"}`));
     speak(LINES.wrong(G.score) + (canSign() ? " " + T("Apunta tus iniciales.", "Sign with your initials.") : ""));
     render();
     if (!sign.hidden) setTimeout(() => nameIn.focus({ preventScroll: true }), 200);
@@ -289,6 +290,7 @@
     try {
       const j = await post({ op: "submit", id: G.id, name, p: PLAYER });
       G.signed = true; store.set(NAME_KEY, name);
+      (window.WOBLO_TRACK && window.WOBLO_TRACK("rank", `firma como ${name} · puesto ${j.rank || "?"}`));
       signNote.textContent = "";
       speak(j.rank ? T(`${name}: ${j.score} ${j.score === 1 ? "ronda" : "rondas"}. Puesto ${j.rank} de la semana.`, `${name}: ${j.score} ${j.score === 1 ? "round" : "rounds"}. Number ${j.rank} this week.`) : T("Apuntado.", "Signed."));
       render();

@@ -81,6 +81,12 @@ function letter(card) {
       <div style="margin-top:10px;${label()};letter-spacing:4px">${e(card.bigLabel || "")}</div>
     </td></tr>` : ""}
     ${marks ? `<tr><td style="padding:26px 37px 0">${marks}</td></tr>` : ""}
+    ${(card.timeline || []).length ? `<tr><td style="padding:34px 40px 0">
+      <div style="${label()};letter-spacing:4px;margin-bottom:12px">Lo que hizo, minuto a minuto</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${card.timeline.map(([t, x], i) => `<tr>
+        <td width="64" style="padding:9px 0;${i ? "border-top:1px solid #17171a;" : ""}font-family:${MONO};font-size:11px;color:#8c8c92;vertical-align:top;white-space:nowrap">${e(t)}</td>
+        <td style="padding:8px 0;${i ? "border-top:1px solid #17171a;" : ""}font-family:${SANS};font-size:14.5px;line-height:1.45;color:#ecebe7">${e(x)}</td></tr>`).join("")}</table>
+    </td></tr>` : ""}
     ${rows ? `<tr><td style="padding:30px 40px 0"><div style="border-top:1px solid #ecebe7;opacity:0.9;font-size:0;line-height:0;box-shadow:0 0 10px rgba(255,255,255,0.35)">&nbsp;</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table></td></tr>` : ""}
     <tr><td style="padding:38px 40px 0">
@@ -134,6 +140,51 @@ async function translate(text) {
   } catch (e) { return null; }
 }
 
+// the browser and the system, in words, from the user agent
+function agent(ua) {
+  const v = (re) => { const m = ua.match(re); return m ? m[1].replace(/_/g, ".") : ""; };
+  const os = /iPhone|iPad|iPod/.test(ua) ? `iOS ${v(/OS (\d+[_.]\d+)/)}` : /Android/.test(ua) ? `Android ${v(/Android (\d+(?:\.\d+)?)/)}`
+    : /Mac OS X/.test(ua) ? `macOS ${v(/Mac OS X (\d+[_.]\d+)/)}` : /Windows NT 10/.test(ua) ? "Windows 10/11" : /Windows/.test(ua) ? "Windows" : /CrOS/.test(ua) ? "ChromeOS" : /Linux/.test(ua) ? "Linux" : "";
+  const br = /Edg\//.test(ua) ? `Edge ${v(/Edg\/(\d+)/)}` : /OPR\//.test(ua) ? `Opera ${v(/OPR\/(\d+)/)}` : /SamsungBrowser/.test(ua) ? "Samsung Internet"
+    : /CriOS|Chrome\//.test(ua) ? `Chrome ${v(/(?:CriOS|Chrome)\/(\d+)/)}` : /FxiOS|Firefox\//.test(ua) ? `Firefox ${v(/(?:FxiOS|Firefox)\/(\d+)/)}` : /Safari\//.test(ua) ? `Safari ${v(/Version\/(\d+(?:\.\d+)?)/)}` : "";
+  const device = /iPad|Tablet/i.test(ua) ? "Tablet" : /Mobi|Android|iPhone/i.test(ua) ? "Móvil" : "Ordenador";
+  const model = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : (ua.match(/Android [^;]+; ([^;)]+?)(?: Build|\))/) || [])[1] || "";
+  return { os: os.trim(), browser: br.trim(), device, model: model.trim() };
+}
+function geo(req) {
+  const h = (k) => { try { return decodeURIComponent(String(req.headers[k] || "")); } catch (e) { return String(req.headers[k] || ""); } };
+  const cc = h("x-vercel-ip-country");
+  const country = (() => { try { return new Intl.DisplayNames(["es"], { type: "region" }).of(cc) || cc; } catch (e) { return cc; } })();
+  return { city: h("x-vercel-ip-city"), region: h("x-vercel-ip-country-region"), country, cc, tz: h("x-vercel-ip-timezone") };
+}
+function refName(ref) {
+  try { if (!ref) return ""; const u = new URL(ref); return /woblo\.io$/.test(u.hostname) ? "" : u.hostname.replace(/^www\./, "") + (u.pathname.length > 1 ? u.pathname.slice(0, 40) : ""); } catch (e) { return ""; }
+}
+// the visitor's own details, from what the page sent
+function devRows(d, ua) {
+  d = d && typeof d === "object" ? d : {};
+  const a = agent(ua);
+  return [
+    ["Dispositivo", [a.device, a.model].filter(Boolean).join(" · ")],
+    ["Sistema", a.os], ["Navegador", a.browser],
+    ["Pantalla", d.sw ? `${d.sw}×${d.sh}${d.dpr && d.dpr !== 1 ? ` @${d.dpr}x` : ""} · ventana ${d.vw}×${d.vh}` : ""],
+    ["Idiomas", clean(d.langs, 40)], ["Hora suya", d.local ? `${clean(d.local, 8)}${d.tz ? " · " + clean(d.tz, 40) : ""}` : ""],
+    ["Conexión", clean(d.net, 6).toUpperCase()],
+    ["Equipo", [d.cores ? `${+d.cores} núcleos` : "", d.mem ? `${+d.mem} GB` : "", d.touch ? "táctil" : ""].filter(Boolean).join(" · ")],
+  ];
+}
+const ordinal = (n) => `${n}ª`;
+// a line of the timeline, in words
+const TL = {
+  arrive: (d) => `Entra en ${!d || d === "/" ? "la portada" : d}`, page: (d) => `Va a ${d}`, face: (d) => `Deja el dado en «${d}»`, roll: () => "Lanza el dado",
+  open: (d) => `Abre el proyecto ${d}`, close: (d) => `Sale de ${d}`, vip: () => "Abre su mesa privada", note: () => "Abre la carta del sobre",
+  viproll: () => "Lanza el dado de la mesa", mail: (d) => `Pulsa para escribirte (${d})`, call: () => "Pulsa «Reservar llamada» (Calendly)",
+  link: (d) => `Abre ${d}`, cv: () => "Abre tu CV", lang: (d) => `Cambia el idioma a ${d}`, house: () => "Abre «La casa»",
+  game: (d) => `Termina una partida de ${d}`, rank: (d) => `Se apunta al ranking: ${d}`, click: (d) => `Pulsa «${d}»`,
+  away: () => "Se va a otra pestaña", back: (d) => `Vuelve (${d})`,
+};
+const mm = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
 // what the guest did, in a few words: n = note opened, r = rolls, p = project, c = call, m = mail
 function summary(did) {
   const d = did || {}, out = [];
@@ -180,6 +231,15 @@ module.exports = async (req, res) => {
         }))).filter(Boolean).sort((a, b) => (b.at || 0) - (a.at || 0));
         return res.status(200).json({ guests, telegram: !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) });
       }
+      if (q.get("admin") === "sessions") {
+        const { blobs } = await list({ prefix: "visits/s/", limit: 1000 });
+        const latest = blobs.sort((x, y) => (y.pathname > x.pathname ? 1 : -1)).slice(0, +q.get("n") || 40);
+        const sessions = (await Promise.all(latest.map(async (b) => {
+          const r = await fetch(`${b.url}?v=${new Date(b.uploadedAt).getTime()}`);
+          return r.ok ? r.json() : null;
+        }))).filter(Boolean);
+        return res.status(200).json({ sessions, total: blobs.length });
+      }
       if (q.get("admin") === "visits") {
         const { blobs } = await list({ prefix: "vip/visits/", limit: 1000 });
         const visits = blobs.map((b) => {
@@ -218,8 +278,49 @@ module.exports = async (req, res) => {
       const card = vip
         ? { kicker: "Mesa privada · ahora", title: vip, em: "ha abierto su mesa.", lead: "El enlace que le enviaste acaba de abrirse. La mesa está servida." }
         : { kicker: "Aviso de la sala · ahora", title: "Alguien ha cruzado", em: "la puerta.", lead: place ? `Llega desde ${place}.` : "No ha dejado rastro de dónde viene." };
-      card.rows = [["Desde", place], ["Dispositivo", [device, browser].filter(Boolean).join(" · ")], ["Entró por", path !== "/" ? path : "La portada"], ["Viene de", ref || "Entrada directa"], ["Idioma", lang === "en" ? "Inglés" : lang === "es" ? "Español" : lang]];
-      await notify(vip ? `✦ ${vip} ha abierto su mesa privada` : `✦ Alguien ha cruzado la puerta${city ? " · " + city : ""}`, lines.join("\n"), card);
+      const g = geo(req), n = Math.max(1, Math.min(9999, +body.n || 1)), utm = body.utm || {};
+      if (n > 1 && !vip) Object.assign(card, { title: `Vuelve por ${ordinal(n)} vez`, em: "a la casa.", lead: place ? `Desde ${place}. Ya ha estado aquí antes.` : "Ya ha estado aquí antes." });
+      card.rows = [["Desde", [g.city, g.region && g.region !== g.city ? g.region : "", g.country].filter(Boolean).join(", ")], ["Visita", n > 1 ? `${ordinal(n)} vez` : "Primera vez"],
+        ["Entró por", path !== "/" ? path : "La portada"], ["Viene de", ref || "Entrada directa"],
+        ["Campaña", [utm.s, utm.m, utm.c].map((x) => clean(x, 30)).filter(Boolean).join(" · ")],
+        ["Idioma de la web", lang === "en" ? "Inglés" : lang === "es" ? "Español" : lang], ...devRows(body.dev, ua)];
+      await notify(vip ? `✦ ${vip} ha abierto su mesa privada` : `✦ ${n > 1 ? `Vuelve por ${ordinal(n)} vez` : "Alguien ha cruzado la puerta"}${city ? " · " + city : ""}`, lines.join("\n"), card);
+      return res.status(204).end();
+    }
+
+    if (body.op === "session") {
+      const sid = clean(body.sid, 24), vid = clean(body.vid, 12), ua = String(req.headers["user-agent"] || "");
+      if (!/^[a-z0-9]{8,24}$/.test(sid) || /bot|crawl|spider|headless|lighthouse|preview|vercel/i.test(ua)) return res.status(204).end();
+      const secs = Math.max(0, Math.min(86400, Math.round(+body.secs || 0)));
+      const ev = (Array.isArray(body.ev) ? body.ev : []).slice(-120).map((x) => [Math.max(0, Math.round(+x[0] || 0)), clean(x[1], 10), clean(x[2], 80)]).filter((x) => TL[x[1]]);
+      const g = geo(req), a = agent(ua), n = Math.max(1, Math.min(9999, +body.n || 1)), vip = clean(body.vip, 40);
+      const utm = body.utm || {}, ref = refName(clean(body.ref, 200));
+      const record = { sid, vid, n, at: +body.t0 || Date.now(), secs, vip, path: clean(body.path, 60), ref, lang: clean(body.lang, 5),
+        utm: { s: clean(utm.s, 30), m: clean(utm.m, 30), c: clean(utm.c, 40) }, geo: g, agent: a, dev: body.dev && typeof body.dev === "object" ? body.dev : {}, rolls: +body.rolls || 0, ev };
+      // keep the latest version of this visit (it is sent again each time the tab is hidden)
+      if (hasBlob) await blob().then(({ put }) => put(`visits/s/${record.at}__${sid}.json`, JSON.stringify(record), putOpts)).catch(() => null);
+      // the email: once per visit, and only if it lasted or something happened
+      const did = (k) => ev.filter((x) => x[1] === k);
+      if ((secs >= 12 || ev.length > 2) && once(`sess:${sid}`)) {
+        const place = [g.city, g.country].filter(Boolean).join(", ");
+        const opened = [...new Set(did("open").map((x) => x[2].replace(/ \(desde la mesa\)$/, "")))];
+        const marks = [opened.length && `${opened.length} ${opened.length === 1 ? "proyecto" : "proyectos"}`, record.rolls && `Dado × ${record.rolls}`,
+          did("note").length && "Abrió la carta", did("call").length && "Reservar llamada", did("mail").length && "Te escribió", did("cv").length && "Abrió tu CV",
+          did("link").some((x) => /linkedin/i.test(x[2])) && "LinkedIn", did("game").length && "Jugó a «La casa»"].filter(Boolean);
+        const lead = did("call").length ? "Pulsó «Reservar llamada». Es buen momento para escribirle."
+          : did("mail").length ? "Pulsó para escribirte: mira tu bandeja."
+          : did("cv").length ? "Se llevó tu CV."
+          : opened.length ? `Miró ${opened.join(", ")}.` : "Pasó por la casa sin abrir ningún proyecto.";
+        const card = {
+          kicker: `La visita · ${vip ? "mesa privada" : n > 1 ? `${ordinal(n)} vez` : "primera vez"}`,
+          title: vip || (place ? `Desde ${g.city || g.country}` : "Un visitante"), em: "se levanta de la mesa.", lead,
+          big: mm(secs), bigLabel: "en la web", marks,
+          rows: [["Desde", [g.city, g.region && g.region !== g.city ? g.region : "", g.country].filter(Boolean).join(", ")], ["Viene de", ref || "Entrada directa"],
+            ["Campaña", [record.utm.s, record.utm.m, record.utm.c].filter(Boolean).join(" · ")], ["Visita", n > 1 ? `${ordinal(n)} vez` : "Primera vez"], ...devRows(record.dev, ua)],
+          timeline: ev.map(([t, k, d]) => [mm(t), TL[k](d)]),
+        };
+        await notify(`✦ ${vip || (g.city ? "Visita desde " + g.city : "Una visita")} · ${mm(secs)}${marks.length ? " · " + marks.slice(0, 2).join(", ") : ""}`, card.timeline.map((r) => r.join("  ")).join("\n"), card);
+      }
       return res.status(204).end();
     }
 
