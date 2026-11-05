@@ -576,6 +576,8 @@
     const fx = Object.assign({}, G.shown, G.buy); // what this round bought, until its reveal is over
     root.classList.toggle("is-crystal", !!fx.glass);
     root.classList.toggle("is-lucky", !!fx.lucky);
+    // with the coloured dice the white one stays white, whatever the mode (in god mode it would look gold)
+    root.classList.toggle("is-colors", G.dice === "colors" || G.dice === "pair");
     const betting = G.phase === "bet";
     betBox.hidden = !betting;
     if (betting) {
@@ -747,7 +749,10 @@
       burst(diff >= 100 || G.streak >= 3); delta(diff);
       if (wasAllIn) G.allinWins++;
       const st = G.streak;
-      speak(wasAllIn && G.allinWins === 1 ? (G.tier >= 4 ? T(`Un acto de fe… y el cielo paga. +${fmt(diff)}.`, `An act of faith… and heaven pays. +${fmt(diff)}.`) : G.tier === 3 ? T(`Le ha vendido el alma al vaso correcto. +${fmt(diff)}.`, `You sold your soul to the right glass. +${fmt(diff)}.`) : T(`¡Todo o nada… y es todo! +${fmt(diff)}.`, `All or nothing… and it's all! +${fmt(diff)}.`))
+      if (mode === "colors" && res.dm >= 3) rain(res.dm === 10 ? 4 : 2, res.dm === 10 ? T("×10 · Dado de oro", "×10 · Golden die") : T("×3 · Dado rojo", "×3 · Red die"), "+" + fmt(diff));
+      speak(mode === "colors" && res.dm === 10 ? T(`¡El dorado! ×10. +${fmt(diff)}.`, `The gold one! ×10. +${fmt(diff)}.`)
+        : mode === "colors" && res.dm === 3 ? T(`El rojo: ×3. +${fmt(diff)}.`, `The red one: ×3. +${fmt(diff)}.`)
+        : wasAllIn && G.allinWins === 1 ? (G.tier >= 4 ? T(`Un acto de fe… y el cielo paga. +${fmt(diff)}.`, `An act of faith… and heaven pays. +${fmt(diff)}.`) : G.tier === 3 ? T(`Le ha vendido el alma al vaso correcto. +${fmt(diff)}.`, `You sold your soul to the right glass. +${fmt(diff)}.`) : T(`¡Todo o nada… y es todo! +${fmt(diff)}.`, `All or nothing… and it's all! +${fmt(diff)}.`))
         : st === 3 ? T(`Tres seguidas. Está en llamas. +${fmt(diff)}.`, `Three in a row. You're on fire. +${fmt(diff)}.`)
         : st === 5 ? T(`Cinco seguidas. La casa llama al encargado. +${fmt(diff)}.`, `Five in a row. The house calls the manager. +${fmt(diff)}.`)
         : st === 8 ? T(`Ocho seguidas. Esto ya no es normal. +${fmt(diff)}.`, `Eight in a row. This isn't normal. +${fmt(diff)}.`)
