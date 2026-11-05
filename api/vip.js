@@ -42,6 +42,8 @@ async function email(subject, text) {
     method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from: process.env.RESEND_FROM || "woblo.io <onboarding@resend.dev>", to: [to], subject, text }),
   });
+  if (!r.ok) console.error("resend", r.status, (await r.text()).slice(0, 300));
+  else console.log("resend ok", subject);
   return r.ok;
 }
 async function notify(subject, htmlText) {
