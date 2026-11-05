@@ -26,20 +26,23 @@
   function round(r, rnd, add) {
     const n = cupsAt(r, add), moves = [];
     const idx = () => Math.floor(rnd() * n);
-    for (let i = 0, m = movesFor(r); i < m; i++) {
+    // every glass on the table makes it harder twice over: more glasses move on each pass
+    // (4 glasses → 3 move, 5 → 4, 6 → 5, 7 → all 7), and there are two more passes per glass
+    const moving = n >= 7 ? n : n - 1;
+    for (let i = 0, m = Math.min(40, movesFor(r) + (n - 3) * 2); i < m; i++) {
       const p = Array.from({ length: n }, (_, k) => k);
       if (n >= 4) {
-        // four glasses or more: every glass moves on every move, so more glasses really is harder.
-        // Either they all swap in pairs at once (an odd one out joins a little circle of three),
-        // or they all go round one big circle (a cycle through every glass, none stays put).
+        // `moving` glasses picked at random, none of them stays put: either they swap in pairs
+        // at once (an odd one out makes a little circle of three), or they all go round one circle
         const order = p.slice();
         for (let k = n - 1; k > 0; k--) { const j = Math.floor(rnd() * (k + 1)); [order[k], order[j]] = [order[j], order[k]]; }
+        const g = order.slice(0, moving);
         if (rnd() < 0.65) {
           let k = 0;
-          if (n % 2) { const [a, b, c] = order; p[a] = b; p[b] = c; p[c] = a; k = 3; }
-          for (; k < n; k += 2) { const a = order[k], b = order[k + 1]; p[a] = b; p[b] = a; }
+          if (moving % 2) { const [a, b, c] = g; p[a] = b; p[b] = c; p[c] = a; k = 3; }
+          for (; k < moving; k += 2) { const a = g[k], b = g[k + 1]; p[a] = b; p[b] = a; }
         } else {
-          for (let k = 0; k < n; k++) p[order[k]] = order[(k + 1) % n];
+          for (let k = 0; k < moving; k++) p[g[k]] = g[(k + 1) % moving];
         }
       } else if (r >= 5 && rnd() < 0.25) {
         // three glasses at once, round a little circle
