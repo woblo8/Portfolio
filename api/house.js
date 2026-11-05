@@ -32,8 +32,8 @@ function unseal(tok) {
 }
 // the dealer's random numbers: a stream per game and round, so a round is always the same round
 function rng(seed) { let i = 0; return () => mac(`${seed}:${i++}`).readUInt32BE(0) / 4294967296; }
-const deal = (s) => E.round(s.r, rng(`${s.g}:${s.r}`));
-const pub = (R) => ({ r: R.r, n: R.n, d: R.d, moves: R.moves, ms: R.ms, pay: R.pay });
+const deal = (s) => E.round(s.r, rng(`${s.g}:${s.r}`), s.add);
+const pub = (R) => ({ r: R.r, n: R.n, d: R.d, x: R.x, moves: R.moves, ms: R.ms, pay: R.pay });
 
 // ---------- the board ----------
 function weekKey(d = new Date()) {
@@ -77,7 +77,7 @@ function blobStore() {
       do {
         const page = await list({ prefix, cursor, limit: 1000 });
         for (const b of page.blobs) {
-          const m = b.pathname.slice(prefix.length).match(/^(\d{9})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
+          const m = b.pathname.slice(prefix.length).match(/^(\d{9,12})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
           if (m) out.push({ score: Number(m[1]), name: m[2], g: m[3], p: m[4] || "" });
         }
         cursor = page.hasMore ? page.cursor : undefined;
@@ -99,7 +99,7 @@ function blobStore() {
     },
     async add({ name, g, p, score }) {
       const { put } = await import("@vercel/blob");
-      const file = `${String(Math.min(999999999, score)).padStart(9, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
+      const file = `${String(Math.min(999999999999, score)).padStart(12, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
       await Promise.all([put(`shell3/w/${weekKey()}/${file}`, "1", opts), put(`shell3/a/${file}`, "1", opts)]);
       blobCache.at = 0;
     },
@@ -136,7 +136,7 @@ module.exports = async (req, res) => {
         r = E.checkpoint(prev.r - 1);
         if (r < 2) { res.status(400).json({ error: "bad-checkpoint" }); return; }
       }
-      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, safe: 0, best: E.START, won: 0, over: false };
+      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, safe: 0, best: E.START, won: 0, over: false, mult: 1, add: 0 };
       res.status(200).json({ id: seal(s), round: pub(deal(s)), chips: s.chips, best: s.best });
       return;
     }
@@ -146,11 +146,26 @@ module.exports = async (req, res) => {
 
     if (body.op === "pick") {
       if (s.over) { res.status(409).json({ error: "finished" }); return; }
-      const R = deal(s), cup = Number(body.cup), bet = Math.floor(Number(body.bet));
-      if (!Number.isInteger(cup) || cup < 0 || cup >= R.n) { res.status(400).json({ error: "bad-cup" }); return; }
-      if (!(bet >= E.minBet(s.chips) && bet <= s.chips)) { res.status(400).json({ error: "bad-bet" }); return; }
-      const { ok } = E.settle(s, R, cup, bet);
-      res.status(200).json({ ok, d: R.d, chips: s.chips, safe: s.safe || 0, best: s.best, won: s.won, id: seal(s), round: s.over ? null : pub(deal(s)) });
+      const R = deal(s), mode = String(body.mode || "one");
+      const picks = Array.isArray(body.cups) ? body.cups.map(Number) : [Number(body.cup)];
+      if (!picks.length || picks.length > 2 || picks.some((c) => !Number.isInteger(c) || c < 0 || c >= R.n)) { res.status(400).json({ error: "bad-cup" }); return; }
+      if (!E.diceOk(mode, s, R)) { res.status(400).json({ error: "bad-mode" }); return; }
+      const { ok, dm, delta } = E.settle(s, R, picks, mode);
+      res.status(200).json({ ok, dm, delta, d: R.d, x: R.x, chips: s.chips, safe: s.safe || 0, mult: s.mult, best: s.best, won: s.won, id: seal(s), round: s.over ? null : pub(deal(s)) });
+      return;
+    }
+    // one more glass on the table, for good: the multiplier grows ×1.5 and the round is dealt again
+    if (body.op === "glass") {
+      if (!E.canAddGlass(s)) { res.status(400).json({ error: "cannot-add" }); return; }
+      E.addGlass(s);
+      res.status(200).json({ id: seal(s), mult: s.mult, round: pub(deal(s)) });
+      return;
+    }
+    // the wheel, every five rounds: it only multiplies
+    if (body.op === "spin") {
+      if (!E.wheelDue(s)) { res.status(400).json({ error: "no-spin" }); return; }
+      const w = E.spin(s, rng(`${s.g}:wheel:${s.r}`));
+      res.status(200).json({ id: seal(s), mult: s.mult, i: w.i, m: w.m, frac: w.frac });
       return;
     }
     // the shop: one help per kind and round, paid from the table

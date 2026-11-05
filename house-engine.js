@@ -20,8 +20,11 @@
   const movesFor = (r) => Math.min(4 + r, 26);
 
   // rnd(): a float in [0, 1). A move is a permutation: the glass in slot k goes to slot p[k].
-  function round(r, rnd) {
-    const n = cupsFor(r), moves = [];
+  // add: glasses the player has added to the table (they stay for the rest of the game)
+  const MAX_CUPS = 7;
+  const cupsAt = (r, add) => Math.min(MAX_CUPS, cupsFor(r) + (add || 0));
+  function round(r, rnd, add) {
+    const n = cupsAt(r, add), moves = [];
     const idx = () => Math.floor(rnd() * n);
     for (let i = 0, m = movesFor(r); i < m; i++) {
       const p = Array.from({ length: n }, (_, k) => k);
@@ -35,25 +38,64 @@
       }
       moves.push(p);
     }
-    return { r, n, d: idx(), moves, ms: msFor(r), pay: payFor(n) };
+    // where the dice sit: d is the white die; x holds the glasses of the other dice, used by the dice modes
+    const d = idx();
+    let x0 = idx(); while (x0 === d) x0 = idx();
+    let x1 = idx(); while (x1 === d || x1 === x0) x1 = idx();
+    return { r, n, d, x: [x0, x1], moves, ms: msFor(r), pay: payFor(cupsFor(r)) };
   }
-  // the smallest bet: a tenth of the stack (so nobody climbs the board without risk), at least 1
+  // kept for old clients; the stake is no longer chosen
   const minBet = (chips) => Math.max(1, Math.min(chips, Math.ceil(chips / 10)));
+  // the stake is fixed: a quarter of the table (at least 10, or all of it when less is left)
+  const stakeFor = (chips) => (chips <= 10 ? chips : Math.max(10, Math.ceil(chips * 0.25)));
   // where you sit back down after a game ends at round `last`: five rounds earlier (1 means no checkpoint)
   const checkpoint = (last) => Math.max(1, Math.floor(last) - 5);
+
+  /* ---------- multipliers ----------
+     The game multiplier starts at ×1 and only grows:
+       · every glass you add to the table: ×1.5, for good (up to seven glasses)
+       · the wheel, every five rounds: ×1.2 to ×10, it never takes anything away
+     The dice of each round (a choice before each round, unlocked as you go):
+       one    · 1  · one white die                                     ×1
+       decoy  · 3  · a black decoy die too: pick it and you miss        ×2
+       pair   · 6  · two white dice: you pick two glasses, both must hit ×3
+       colors · 10 · white ×1, red ×3, gold ×10 under three glasses; needs 5 glasses or more */
+  const GLASS_MULT = 1.5;
+  const DICE = {
+    one: { at: 1, mult: 1 },
+    decoy: { at: 3, mult: 2 },
+    pair: { at: 6, mult: 3 },
+    colors: { at: 10, mult: 1, cups: 5 },
+  };
+  const COLORS = [1, 3, 10]; // white, red, gold
+  const diceOk = (mode, s, R) => !!DICE[mode] && s.r >= DICE[mode].at && R.n >= (DICE[mode].cups || 3);
+  const canAddGlass = (s) => !s.over && cupsAt(s.r, s.add) < MAX_CUPS;
+  function addGlass(s) { s.add = (s.add || 0) + 1; s.mult = round2((s.mult || 1) * GLASS_MULT); }
+  const round2 = (v) => Math.round(v * 100) / 100;
+  // the wheel: equal slices except the big ones, which are narrow
+  const WHEEL = [[1.2, 1], [2, 1], [1.5, 1], [3, 0.7], [1.2, 1], [5, 0.45], [1.5, 1], [2, 1], [1.2, 1], [10, 0.22]];
+  const wheelDue = (s) => !s.over && s.r > 1 && (s.r - 1) % 5 === 0 && s.spun !== s.r;
+  function spin(s, rnd) {
+    const total = WHEEL.reduce((a, w) => a + w[1], 0);
+    let t = rnd() * total, i = 0;
+    while (t >= WHEEL[i][1] && i < WHEEL.length - 1) { t -= WHEEL[i][1]; i++; }
+    s.spun = s.r; s.mult = round2((s.mult || 1) * WHEEL[i][0]);
+    return { i, m: WHEEL[i][0], frac: (t / WHEEL[i][1]) };
+  }
+
   /* the shop: helps bought with chips from the table, one of each per round, for the next hand.
      Each one opens at a round; the price is a share of your chips, with a floor.
        hint    · 5  · when you choose, the house lifts one empty glass
-       gold    · 8  · the golden die: a hit pays ×3
+       lucky   · 8  · the charm: a hit pays ×3
        slow    · 10 · the croupier shuffles at half speed
-       insure  · 12 · a miss costs only half the bet
+       insure  · 12 · a miss costs only half the stake
        pact    · 15 · the pact with the devil: a hit pays ×5, a miss takes every chip on the table
-       glass   · 20 · crystal glasses: you see the die all the way (the dearest of all)
+       glass   · 20 · crystal glasses: you see the dice all the way (the dearest of all)
      And the safe: chips put there are yours for good. The score of a game is the safe,
      plus the table if you cash out; if you go broke you keep only the safe. */
   const SHOP = {
     hint: { at: 5, pct: 0.35, min: 150 },
-    gold: { at: 8, pct: 0.45, min: 300 },
+    lucky: { at: 8, pct: 0.45, min: 300 },
     slow: { at: 10, pct: 0.4, min: 400 },
     insure: { at: 12, pct: 0.35, min: 500 },
     pact: { at: 15, pct: 0.3, min: 666 },
@@ -64,24 +106,29 @@
   function buy(s, item) { const p = price(item, s.chips); s.chips -= p; s.buy = Object.assign({}, s.buy, { [item]: 1 }); return p; }
   const canSave = (s, amount) => !s.over && Number.isInteger(amount) && amount >= 1 && amount <= s.chips - 1;
   function save(s, amount) { s.chips -= amount; s.safe = (s.safe || 0) + amount; }
-  // one hand: what the table pays or takes, with the helps bought for it
-  const gainFor = (b, bet, pay) => bet * pay * (b.gold ? 3 : 1) * (b.double ? 2 : 1) * (b.pact ? 5 : 1);
-  function lossFor(b, bet, chips) {
-    if (b.pact) return chips;
-    let l = bet * (b.double ? 2 : 1);
-    if (b.insure) l = Math.ceil(l / 2);
-    return Math.min(chips, l);
+
+  // one hand: picks is a list of glasses (two for the pair), mode the dice of the round
+  function judge(mode, R, picks) {
+    const p = picks.map(Number);
+    if (mode === "pair") return p.length === 2 && p[0] !== p[1] && p.includes(R.d) && p.includes(R.x[0]) ? 3 : 0;
+    if (mode === "colors") { const c = p[0]; return c === R.d ? COLORS[0] : c === R.x[0] ? COLORS[1] : c === R.x[1] ? COLORS[2] : 0; }
+    return p[0] === R.d ? DICE[mode].mult : 0;
   }
-  function settle(s, R, cup, bet) {
-    const b = s.buy || {}, ok = cup === R.d;
-    const delta = ok ? gainFor(b, bet, R.pay) : -lossFor(b, bet, s.chips);
+  const gainFor = (b, stake, pay, diceMult, mult) => Math.round(stake * pay * diceMult * (mult || 1) * (b.lucky ? 3 : 1) * (b.pact ? 5 : 1));
+  function lossFor(b, stake, chips) {
+    if (b.pact) return chips;
+    return Math.min(chips, b.insure ? Math.ceil(stake / 2) : stake);
+  }
+  function settle(s, R, picks, mode) {
+    const b = s.buy || {}, stake = stakeFor(s.chips), dm = judge(mode, R, picks), ok = dm > 0;
+    const delta = ok ? gainFor(b, stake, R.pay, dm, s.mult) : -lossFor(b, stake, s.chips);
     s.chips += delta;
     if (ok) s.won += 1;
     s.r += 1; s.buy = {};
     if (s.chips <= 0) { s.chips = 0; s.over = true; }
     s.best = Math.max(s.best, s.chips + (s.safe || 0));
-    return { ok, delta };
+    return { ok, delta, dm, stake };
   }
   const score = (s) => (s.safe || 0) + (s.cashed ? s.chips : 0);
-  return { START, round, msFor, cupsFor, payFor, minBet, checkpoint, SHOP, price, canBuy, buy, canSave, save, gainFor, lossFor, settle, score };
+  return { START, round, msFor, cupsFor, cupsAt, MAX_CUPS, payFor, minBet, stakeFor, checkpoint, GLASS_MULT, DICE, COLORS, diceOk, canAddGlass, addGlass, WHEEL, wheelDue, spin, SHOP, price, canBuy, buy, canSave, save, judge, gainFor, lossFor, settle, score };
 });

@@ -726,3 +726,151 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house.is-hell .house-guide, .house.is-god .house-guide { background: radial-gradient(120% 70% at 50% 0%, #141416 0%, #09090a 65%); }
 @media (prefers-reduced-motion: reduce) { .hg-plate * { animation: none !important; } .house-guide-open.is-new { animation: none; } }
 .hg-plate .g-solid { fill: #0b0b0d; }
+
+/* ============================================================
+   MULTIPLIERS: the dice of the round, added glasses, the wheel,
+   and the shop as neon icons
+   ============================================================ */
+/* the big multiplier, on the felt */
+.house-mult {
+  position: absolute; right: 12px; top: 10px; z-index: 4; display: flex; flex-direction: column; align-items: flex-end; line-height: 1;
+  pointer-events: none;
+}
+.house-mult small { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--smoke); }
+.house-mult b { margin-top: 3px; font-size: 30px; font-weight: 600; letter-spacing: -0.04em; color: #fff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.55), 0 0 26px rgba(255, 255, 255, 0.25); font-variant-numeric: tabular-nums; }
+.house-mult.is-hot b { color: #ffd36b; text-shadow: 0 0 10px rgba(255, 211, 107, 0.8), 0 0 30px rgba(255, 180, 60, 0.45); }
+.house-mult.is-wild b { color: #fff; text-shadow: 0 0 8px #ff5ad1, 0 0 20px #6ff2ff, 0 0 40px #ffd36b; animation: multWild 2.4s linear infinite; }
+@keyframes multWild { to { filter: hue-rotate(360deg); } }
+.house-mult.bump b { animation: multBump 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes multBump { 0% { transform: scale(1.7); } 100% { transform: none; } }
+
+/* the dice of the round */
+.hb-dice { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.hb-dice button {
+  position: relative; display: grid; justify-items: start; gap: 3px; padding: 10px 9px 9px; border-radius: 10px; text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); background: linear-gradient(160deg, #131316, #0b0b0d); transition: box-shadow 0.3s, transform 0.3s var(--ease), opacity 0.3s;
+}
+.hb-dice button b { font-size: 12px; font-weight: 600; letter-spacing: -0.01em; color: #fff; }
+.hb-dice button small { font-size: 9.5px; line-height: 1.3; color: var(--smoke); }
+.hb-dice button em { position: absolute; right: 8px; top: 9px; font-style: normal; font-family: var(--mono); font-size: 10px; color: #fff; }
+.hb-dice button:not(:disabled):hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
+.hb-dice button.is-on { box-shadow: inset 0 0 0 1.5px #fff, 0 0 20px rgba(255, 255, 255, 0.18); }
+.hb-dice button.is-locked { opacity: 0.35; }
+.hb-dice button.is-locked em { color: var(--smoke); }
+.hd-ico { display: flex; gap: 3px; height: 14px; margin-bottom: 3px; }
+.hd-ico i { width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1.2px #fff; background: #0c0c0e; position: relative; }
+.hd-ico i::after { content: ""; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px; border-radius: 50%; background: #fff; }
+.hd-decoy .hd-ico i:nth-child(2) { background: #000; box-shadow: inset 0 0 0 1.2px #55555d; }
+.hd-decoy .hd-ico i:nth-child(2)::after { background: #55555d; }
+.hd-colors .hd-ico i:nth-child(2) { box-shadow: inset 0 0 0 1.2px #ff3b4a, 0 0 6px #ff3b4a; }
+.hd-colors .hd-ico i:nth-child(2)::after { background: #ff3b4a; }
+.hd-colors .hd-ico i:nth-child(3) { background: #f0c45a; box-shadow: 0 0 8px #ffd36b; }
+.hd-colors .hd-ico i:nth-child(3)::after { background: #fff; }
+.hd-colors em { color: #ffd36b !important; }
+@media (max-width: 520px) { .hb-dice { grid-template-columns: 1fr 1fr; } }
+
+/* a glass more, for good */
+.hb-glass {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 10px; text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); transition: box-shadow 0.3s, background 0.3s;
+}
+.hb-glass-ico { width: 18px; height: 22px; clip-path: polygon(14% 0, 86% 0, 100% 100%, 0 100%); background: linear-gradient(90deg, #1b1b20, #2a2a30); box-shadow: inset 0 0 0 1px #fff; position: relative; }
+.hb-glass-ico::after { content: "+"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: #fff; }
+.hb-glass b { display: block; font-size: 12.5px; font-weight: 600; color: #fff; }
+.hb-glass small { display: block; margin-top: 2px; font-size: 10px; color: var(--smoke); }
+.hb-glass em { margin-left: auto; font-style: normal; font-family: var(--mono); font-size: 14px; color: #fff; text-shadow: var(--neon-glow); }
+.hb-glass:not(:disabled):hover { box-shadow: inset 0 0 0 1px #fff, 0 0 18px rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.02); }
+.hb-glass:disabled { opacity: 0.4; }
+
+/* the other dice on the felt */
+.shell-die.is-x { z-index: 1; }
+.house .shell-die.is-x.is-decoy { background: #020203; box-shadow: inset 0 0 0 1.5px #44444b, 0 0 10px rgba(0, 0, 0, 0.8); animation: none; }
+.house .shell-die.is-x.is-decoy i:nth-child(odd) { background: #44444b; box-shadow: none; }
+.house .shell-die.is-x.is-red { background: radial-gradient(circle at 30% 25%, rgba(255, 90, 90, 0.35), rgba(255, 0, 0, 0.05) 60%), #2a0306; box-shadow: inset 0 0 0 1.5px #ff3b42, 0 0 14px rgba(255, 30, 40, 0.8); animation: none; }
+.house .shell-die.is-x.is-red i:nth-child(odd) { background: #ff2a35; box-shadow: 0 0 6px #ff0010; }
+.house .shell-die.is-x.is-gold { background: radial-gradient(circle at 30% 25%, #fff6d8, #f0c45a 45%, #a8761a); box-shadow: inset 0 0 0 1.5px #fff6d8, 0 0 18px rgba(255, 210, 110, 0.95), 0 0 40px rgba(255, 210, 110, 0.5); animation: none; }
+.house .shell-die.is-x.is-gold i:nth-child(odd) { background: #fff; box-shadow: 0 0 6px #fff; }
+.house.is-crystal .shell-die.is-x { z-index: 3; }
+/* the pair: the first glass you pick stays marked */
+.shell-cup.is-chosen .shell-glass { transform: translateY(-10px); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 16px rgba(255, 255, 255, 0.6)); }
+/* the charm on the table */
+.house.is-lucky .house-felt { box-shadow: inset 0 0 0 1px rgba(93, 255, 156, 0.5), inset 0 0 50px rgba(93, 255, 156, 0.12); }
+
+/* ---------- the shop: neon icons ---------- */
+.house-shop { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; overflow: visible; -webkit-mask-image: none; mask-image: none; padding: 4px 0 2px; }
+.hs-n { --c: #fff; position: relative; display: grid; justify-items: center; gap: 6px; width: 64px; }
+.hs-buy {
+  width: 54px; height: 54px; display: grid; place-items: center; border-radius: 16px; color: var(--c);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 0 16px color-mix(in srgb, var(--c) 22%, transparent);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 14%, transparent), transparent 70%);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s;
+}
+.hs-buy svg * { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.hs-buy svg { filter: drop-shadow(0 0 3px var(--c)) drop-shadow(0 0 8px color-mix(in srgb, var(--c) 60%, transparent)); }
+.hs-buy:not(:disabled):hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px var(--c), 0 0 26px color-mix(in srgb, var(--c) 45%, transparent); }
+.hs-n em { font-style: normal; font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; color: var(--c); font-variant-numeric: tabular-nums; }
+.hs-more {
+  position: absolute; right: 0; top: -5px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 10px; color: #fff; background: #0c0c0e; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); transition: box-shadow 0.3s, color 0.3s;
+}
+.hs-more:hover { color: var(--c); box-shadow: inset 0 0 0 1px var(--c), 0 0 10px color-mix(in srgb, var(--c) 50%, transparent); }
+.hs-n.is-locked .hs-buy { color: #55555d; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); background: none; }
+.hs-n.is-locked .hs-buy svg { filter: none; }
+.hs-n.is-locked em { color: var(--smoke); }
+.hs-n.is-poor .hs-buy { opacity: 0.45; }
+.hs-n.is-poor em { color: #ff8a96; }
+.hs-n.is-got .hs-buy { color: #0c0c0e; background: var(--c); box-shadow: 0 0 26px var(--c); }
+.hs-n.is-got .hs-buy svg { filter: none; }
+
+/* ---------- the card of a help, and the wheel: panels like the guide ---------- */
+.house-card, .house-wheel {
+  position: absolute; inset: 0; z-index: 6; display: grid; grid-template-rows: auto 1fr auto; padding: 22px 22px 18px; border-radius: inherit;
+  background: radial-gradient(120% 70% at 50% 0%, #141416 0%, #09090a 65%); color: var(--bone);
+  opacity: 0; transform: translateY(14px); transition: opacity 0.35s var(--ease), transform 0.45s var(--ease);
+}
+.house-card.on, .house-wheel.on { opacity: 1; transform: none; }
+.house-card header, .house-wheel header { display: flex; justify-content: space-between; align-items: center; }
+.house-card { --c: #fff; background: radial-gradient(90% 60% at 50% 30%, color-mix(in srgb, var(--c) 12%, #09090a), #09090a 70%); }
+.hc-x { font-family: var(--mono); font-size: 12px; color: var(--smoke); padding: 6px; }
+.hc-x:hover { color: #fff; }
+.hc-body { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 10px; }
+.hc-ico { align-self: center; color: var(--c); margin-bottom: 14px; }
+.hc-ico svg * { fill: none; stroke: currentColor; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+.hc-ico svg { filter: drop-shadow(0 0 4px var(--c)) drop-shadow(0 0 18px color-mix(in srgb, var(--c) 60%, transparent)); animation: hcFloat 3.4s ease-in-out infinite; }
+@keyframes hcFloat { 50% { transform: translateY(-6px); } }
+.house-card h3 { font-size: clamp(28px, 6vw, 38px); font-weight: 600; letter-spacing: -0.04em; line-height: 0.95; text-transform: uppercase; color: var(--c); text-shadow: 0 0 22px color-mix(in srgb, var(--c) 45%, transparent); }
+.hc-t { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #fff; }
+.hc-long { max-width: 420px; font-size: 14px; line-height: 1.5; color: var(--mist); }
+.house-card footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.hc-price small { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke); }
+.hc-price b { display: block; margin-top: 4px; font-family: var(--mono); font-size: 24px; font-weight: 500; color: var(--c); }
+.hc-price em { display: block; margin-top: 3px; font-style: normal; font-size: 10.5px; color: var(--smoke); }
+.hc-buy { padding: 12px 20px; border-radius: 99px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #0c0c0e; background: var(--c); box-shadow: 0 0 24px color-mix(in srgb, var(--c) 50%, transparent); }
+.hc-buy:disabled { background: none; color: var(--smoke); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
+
+/* the wheel */
+.hw-stage { position: relative; display: grid; place-items: center; min-height: 0; }
+.hw-stage svg { width: min(78%, 340px); height: auto; overflow: visible; filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.12)); }
+.hw-disc { transform-origin: 120px 120px; transform-box: view-box; }
+.hw-disc path { stroke: rgba(255, 255, 255, 0.55); stroke-width: 0.8; }
+.hw-disc path.is-a { fill: #0d0d10; }
+.hw-disc path.is-b { fill: #17171b; }
+.hw-disc path.is-hot { fill: #2a0a10; stroke: #ff3b4a; }
+.hw-disc path.is-gold { fill: #f0c45a; stroke: #fff6d8; }
+.hw-disc text { fill: #fff; font-family: var(--mono); font-size: 9px; text-anchor: middle; dominant-baseline: middle; }
+.hw-disc text.is-hot { fill: #ff6a73; }
+.hw-disc text.is-gold { fill: #2a1c04; font-size: 7px; font-weight: 600; }
+.hw-rim { fill: none; stroke: #fff; stroke-width: 1.4; filter: drop-shadow(0 0 4px #fff); }
+.hw-hub { fill: #0c0c0e; stroke: #fff; stroke-width: 1.2; }
+.hw-pin { position: absolute; left: 50%; top: calc(50% - min(39%, 170px) - 14px); width: 0; height: 0; margin-left: -9px; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 18px solid #fff; filter: drop-shadow(0 0 6px #fff); z-index: 1; }
+.hw-say { text-align: center; font-size: 14px; line-height: 1.45; color: var(--mist); min-height: 2.9em; }
+.house-wheel footer { display: flex; justify-content: center; margin-top: 10px; }
+.hw-go { padding: 13px 26px; border-radius: 99px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #0c0c0e; background: #ecebe7; transition: box-shadow 0.3s; }
+.hw-go:hover { box-shadow: 0 0 24px rgba(255, 255, 255, 0.4); }
+.hw-go:disabled { opacity: 0.4; }
+
+/* the guide's new plates */
+.hg-plate .g-decoy { fill: #000; stroke: #55555d; }
+.hg-plate .g-redd { fill: #2a0306; stroke: #ff3b4a; }
+.hg-plate .g-goldd { fill: #f0c45a; stroke: #fff6d8; }
+@media (prefers-reduced-motion: reduce) { .hc-ico svg, .house-mult.is-wild b { animation: none; } }
