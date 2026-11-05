@@ -387,3 +387,119 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 @keyframes bannerNeon { 50% { opacity: 0.4; } }
 @media (prefers-reduced-motion: reduce) { .house.is-allin .house-machine { animation: none; } }
 @media (max-width: 480px) { .hb-chips button { width: 50px; height: 50px; } .hb-amount input { width: 120px; font-size: 20px; } .house-score { grid-template-columns: 1.4fr 1fr 1fr; } .house-score > div.is-bank b { font-size: 21px; } .bank-chip { display: none; } }
+
+/* ============================================================
+   THE LADDER: rank, streak, hit rate, awards; and the mood of the table
+   ============================================================ */
+.house-rank {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 14px;
+  margin-top: 8px; padding: 9px 12px; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: box-shadow 0.6s, background 0.6s;
+}
+.rk-sigil { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; font-size: 13px; color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); text-shadow: var(--neon-glow); transition: color 0.6s, box-shadow 0.6s; }
+.house-rank small { display: block; font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke); }
+.house-rank b { display: block; margin-top: 2px; font-family: var(--mono); font-size: 12.5px; font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-name b { font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: -0.02em; text-transform: uppercase; }
+.rk-heat { display: flex; gap: 3px; align-items: flex-end; height: 18px; }
+.rk-heat i { width: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); transform-origin: bottom; transition: background 0.4s, box-shadow 0.4s; }
+.rk-heat i:nth-child(1) { height: 6px; } .rk-heat i:nth-child(2) { height: 9px; } .rk-heat i:nth-child(3) { height: 12px; } .rk-heat i:nth-child(4) { height: 15px; } .rk-heat i:nth-child(5) { height: 18px; }
+.rk-heat i.on { background: #f1d8a0; box-shadow: 0 0 6px rgba(241, 216, 160, 0.8); }
+.rk-heat.is-max i.on { background: #ff6a3d; box-shadow: 0 0 8px #ff6a3d; animation: rkFlame 0.5s ease-in-out infinite alternate; }
+.rk-heat.is-max i:nth-child(even) { animation-delay: 0.25s; }
+@keyframes rkFlame { to { transform: scaleY(0.75); } }
+.rk-meta { text-align: right; }
+
+/* the awards: a toast slides over the rank bar */
+.house-toasts { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.house-toast {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: 10px;
+  background: linear-gradient(90deg, #1e1a10, #0d0c09); box-shadow: inset 0 0 0 1px #d8b56f, 0 0 26px rgba(216, 181, 111, 0.3);
+  animation: toastIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.house-toast.off { animation: toastOut 0.45s var(--ease) both; }
+.house-toast i { font-style: normal; font-size: 16px; color: #f1d8a0; text-shadow: 0 0 10px #d8b56f; animation: toastSpin 1.4s var(--ease); }
+.house-toast b { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; text-transform: uppercase; color: #f6e7c4; }
+.house-toast small { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #b9a882; }
+.house-toast em { margin-left: auto; padding: 3px 7px; border-radius: 99px; font-style: normal; font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #0c0c0e; background: #f1d8a0; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px) scale(0.96); clip-path: inset(0 100% 0 0 round 10px); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 10px); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes toastSpin { from { transform: rotate(-180deg) scale(0.3); } }
+
+/* ---------- the flames under the felt (lit only when the table burns) ---------- */
+.house-hell { position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0; transition: opacity 1.2s; }
+.house-hell::before {
+  content: ""; position: absolute; left: -10%; right: -10%; bottom: -30px; height: 110px;
+  background: radial-gradient(40% 80% at 20% 100%, rgba(255, 70, 20, 0.55), transparent 70%), radial-gradient(35% 90% at 55% 100%, rgba(255, 30, 30, 0.5), transparent 70%), radial-gradient(40% 75% at 85% 100%, rgba(255, 110, 30, 0.45), transparent 70%);
+  filter: blur(8px); animation: hellFlames 1.6s ease-in-out infinite alternate;
+}
+.house-hell i { position: absolute; bottom: -6px; width: 3px; height: 3px; border-radius: 50%; background: #ff8a3d; box-shadow: 0 0 6px #ff5a1d; opacity: 0; animation: ember 3.2s linear infinite; }
+.house-hell i:nth-child(1) { left: 6%; animation-delay: 0s; } .house-hell i:nth-child(2) { left: 13%; animation-delay: 1.1s; } .house-hell i:nth-child(3) { left: 21%; animation-delay: 2.3s; }
+.house-hell i:nth-child(4) { left: 28%; animation-delay: 0.6s; } .house-hell i:nth-child(5) { left: 36%; animation-delay: 1.9s; } .house-hell i:nth-child(6) { left: 43%; animation-delay: 2.8s; }
+.house-hell i:nth-child(7) { left: 51%; animation-delay: 0.3s; } .house-hell i:nth-child(8) { left: 58%; animation-delay: 1.5s; } .house-hell i:nth-child(9) { left: 66%; animation-delay: 2.5s; }
+.house-hell i:nth-child(10) { left: 73%; animation-delay: 0.9s; } .house-hell i:nth-child(11) { left: 80%; animation-delay: 2.1s; } .house-hell i:nth-child(12) { left: 87%; animation-delay: 0.2s; }
+.house-hell i:nth-child(13) { left: 93%; animation-delay: 1.3s; } .house-hell i:nth-child(14) { left: 47%; animation-delay: 3s; }
+@keyframes hellFlames { 0% { transform: scaleY(0.85) translateX(-2%); opacity: 0.8; } 100% { transform: scaleY(1.15) translateX(2%); opacity: 1; } }
+@keyframes ember { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(14px, -240px); opacity: 0; } }
+.shell-stage { z-index: 1; }
+
+/* ---------- round 10: the table warms up ---------- */
+.house.is-warm .house-hell { opacity: 0.35; }
+.house.is-warm .house-machine { box-shadow: inset 0 0 0 1px rgba(255, 150, 80, 0.32), 0 0 0 1px #000, 0 0 60px rgba(255, 110, 40, 0.14), 0 40px 100px rgba(0, 0, 0, 0.7); }
+.house.is-warm .house-top h2 { text-shadow: 0 0 22px rgba(255, 130, 60, 0.4); }
+.house.is-warm .rk-sigil { color: #ffb37a; box-shadow: inset 0 0 0 1px rgba(255, 150, 80, 0.6); text-shadow: 0 0 10px rgba(255, 120, 50, 0.8); }
+.house.is-warm .house-rank { box-shadow: inset 0 0 0 1px rgba(255, 150, 80, 0.3); }
+
+/* ---------- round 15: devil mode ---------- */
+.house.is-hell .house-machine {
+  background: radial-gradient(120% 70% at 50% 0%, #2a0607 0%, #120304 55%, #070102 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 40, 50, 0.6), 0 0 0 1px #000, 0 0 90px rgba(255, 20, 30, 0.32), 0 40px 100px rgba(0, 0, 0, 0.8);
+  animation: hellPulse 2.4s ease-in-out infinite;
+}
+@keyframes hellPulse { 50% { box-shadow: inset 0 0 0 1px rgba(255, 60, 60, 0.85), 0 0 0 1px #000, 0 0 130px rgba(255, 20, 30, 0.45), 0 40px 100px rgba(0, 0, 0, 0.8); } }
+.house.is-hell .house-scan { background: repeating-linear-gradient(rgba(255, 40, 40, 0.05) 0 1px, transparent 1px 3px); opacity: 0.6; }
+.house.is-hell .house-k { color: #ff8a8a; }
+.house.is-hell .house-top h2 { color: #ff3b42; text-shadow: 0 0 10px rgba(255, 40, 50, 0.9), 0 0 34px rgba(255, 20, 30, 0.6); animation: hellFlicker 4s steps(1) infinite; }
+@keyframes hellFlicker { 0%, 100% { opacity: 1; } 42% { opacity: 1; } 43% { opacity: 0.4; } 44% { opacity: 1; } 71% { opacity: 0.7; } 72% { opacity: 1; } }
+.house.is-hell .house-score > div { box-shadow: inset 0 0 0 1px rgba(255, 50, 60, 0.35); }
+.house.is-hell .house-score > div.is-bank { box-shadow: inset 0 0 0 1px rgba(255, 50, 60, 0.75), 0 0 26px rgba(255, 30, 40, 0.25); }
+.house.is-hell .house-score small, .house.is-hell .house-rank small { color: #c46a6e; }
+.house.is-hell .house-score b, .house.is-hell .house-rank b { color: #ffd9da; }
+.house.is-hell .house-score > div.is-bank b { color: #ff4d55; text-shadow: 0 0 8px #ff2a35, 0 0 22px rgba(255, 30, 40, 0.7); }
+.house.is-hell .bank-chip { background: repeating-conic-gradient(#ff3b42 0 14deg, #1a0204 14deg 30deg); box-shadow: 0 0 16px rgba(255, 30, 40, 0.6); }
+.house.is-hell .bank-chip::after { background: radial-gradient(circle at 35% 30%, #3a0508, #120203); box-shadow: inset 0 0 0 1px rgba(255, 80, 80, 0.7); }
+.house.is-hell .house-rank { background: linear-gradient(90deg, rgba(255, 30, 40, 0.12), transparent 70%); box-shadow: inset 0 0 0 1px rgba(255, 50, 60, 0.5); }
+.house.is-hell .rk-name b { color: #ff4d55; text-shadow: 0 0 12px rgba(255, 30, 40, 0.8); }
+.house.is-hell .rk-sigil { color: #ff3b42; box-shadow: inset 0 0 0 1px #ff3b42, 0 0 14px rgba(255, 30, 40, 0.6); text-shadow: 0 0 10px #ff2a35; }
+.house.is-hell .rk-heat i.on { background: #ff3b42; box-shadow: 0 0 8px #ff2a35; }
+.house.is-hell .house-felt { background: radial-gradient(ellipse at 50% 40%, #1d0405, #0a0102 75%); box-shadow: inset 0 0 0 1px rgba(255, 50, 60, 0.3), inset 0 20px 40px rgba(0, 0, 0, 0.5); }
+.house.is-hell .house-hell { opacity: 1; }
+.house.is-hell .house-print text { fill: rgba(255, 60, 70, 0.28); }
+.house.is-hell .shell-glass { filter: drop-shadow(0 0 1px rgba(255, 120, 130, 0.9)) drop-shadow(0 0 14px rgba(255, 30, 40, 0.4)); }
+.house.is-hell .house-say { color: #ffb3b6; }
+.house.is-hell .house-actions button.is-main { color: #fff; background: linear-gradient(180deg, #e0242f, #7d0a10); box-shadow: 0 0 22px rgba(255, 30, 40, 0.45); }
+/* the die turns: red body, neon red pips */
+.house.is-hell .shell-die {
+  background: radial-gradient(circle at 30% 25%, rgba(255, 90, 90, 0.35), rgba(255, 0, 0, 0.05) 60%), #2a0306;
+  box-shadow: inset 0 0 0 1.5px #ff3b42, 0 0 14px rgba(255, 30, 40, 0.8), 0 0 40px rgba(255, 20, 30, 0.45);
+}
+.house.is-hell .shell-die i:nth-child(1), .house.is-hell .shell-die i:nth-child(3), .house.is-hell .shell-die i:nth-child(5), .house.is-hell .shell-die i:nth-child(7), .house.is-hell .shell-die i:nth-child(9) {
+  background: #ff2a35; box-shadow: 0 0 4px #ff2a35, 0 0 10px #ff0010, 0 0 18px rgba(255, 0, 20, 0.7);
+}
+.house.is-hell .shell-die.on { animation: dieBurn 1.2s ease-in-out infinite alternate; }
+@keyframes dieBurn { to { box-shadow: inset 0 0 0 1.5px #ff6a70, 0 0 22px rgba(255, 30, 40, 1), 0 0 60px rgba(255, 20, 30, 0.6); } }
+
+/* ---------- round 20: the abyss, the cabinet beats like a heart ---------- */
+.house.is-abyss .house-machine { animation: hellPulse 2.4s ease-in-out infinite, heartbeat 1.1s ease-in-out infinite; }
+@keyframes heartbeat { 0%, 100% { transform: none; } 12% { transform: scale(1.006); } 24% { transform: none; } 36% { transform: scale(1.004); } }
+.house.is-abyss .house-hell::before { height: 160px; }
+/* round 30: beyond hell, everything goes white-hot */
+.house.is-beyond .house-top h2, .house.is-beyond .rk-name b { color: #fff; text-shadow: 0 0 8px #ff2a35, 0 0 30px #ff2a35, 0 0 60px #ff7a3d; }
+.house.is-beyond .shell-die i:nth-child(odd) { background: #fff; }
+
+@media (max-width: 480px) {
+  .house-rank { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; }
+  .house-rank .rk-meta:last-of-type { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .house.is-hell .house-machine, .house.is-hell .house-top h2, .house.is-hell .shell-die.on, .house-hell::before, .house-hell i, .rk-heat i { animation: none !important; }
+}

@@ -71,10 +71,19 @@
         <div><small>${T("Ronda", "Round")}</small><b data-k="round">1</b></div>
         <div><small>${T("Récord", "Best")}</small><b data-k="best">${E.START}</b></div>
       </div>
+      <div class="house-rank">
+        <span class="rk-sigil" data-k="sigil" aria-hidden="true">♠</span>
+        <div class="rk-name"><small>${T("Rango", "Rank")}</small><b data-k="rank">${T("Turista", "Tourist")}</b></div>
+        <div class="rk-heat" data-k="heat" title="${T("Racha", "Streak")}" aria-hidden="true">${"<i></i>".repeat(5)}</div>
+        <div class="rk-meta"><small>${T("Acierto", "Hit rate")}</small><b data-k="acc">—</b></div>
+        <div class="rk-meta"><small>${T("Logros", "Awards")}</small><b data-k="awards">0</b></div>
+        <div class="house-toasts" data-k="toasts" aria-live="polite"></div>
+      </div>
       <section class="house-play">
         <div class="house-felt">
           <svg class="house-print" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true"><path id="housePrintArc" d="M40 108 Q200 76 360 108" fill="none"/><text><textPath href="#housePrintArc" startOffset="50%" text-anchor="middle">${T("LA CASA NUNCA PIERDE DE VISTA EL DADO", "THE HOUSE NEVER LOSES SIGHT OF THE DIE")}</textPath></text></svg>
           <div class="house-fx" aria-hidden="true"></div>
+          <div class="house-hell" aria-hidden="true">${"<i></i>".repeat(14)}</div>
           <div class="shell-stage">
             <div class="shell-die" aria-hidden="true">${"<i></i>".repeat(9)}</div>
           </div>
@@ -145,20 +154,181 @@
   const G = {
     mode: null, id: null, round: null, phase: "idle", signed: false, meTab: "",
     chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false,
+    streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set(),
     record: Math.max(E.START, +(store.get(BEST_KEY) || 0)), // your best ever, in this browser
   };
   let slotOf = [0, 1, 2]; // slotOf[cup] = where that glass stands now
 
+  /* ---------- the ladder: every few rounds a new rank, and the table changes with it ----------
+     0 Tourist · 1 Gambler (5) · 2 Shark (10, the table warms up) · 3 Devil (15, devil mode)
+     4 Lord of the abyss (20) · 5 Beyond hell (30) */
+  const TIERS = [
+    { at: 1, n: () => T("Turista", "Tourist"), sigil: "♠" },
+    { at: 5, n: () => T("Jugador", "Gambler"), sigil: "♣" },
+    { at: 10, n: () => T("Tiburón", "Shark"), sigil: "♦" },
+    { at: 15, n: () => T("Diablo", "Devil"), sigil: "♥" },
+    { at: 20, n: () => T("Señor del abismo", "Lord of the abyss"), sigil: "✶" },
+    { at: 30, n: () => T("Más allá del infierno", "Beyond hell"), sigil: "✹" },
+  ];
+  const tierOf = (r) => TIERS.reduce((t, x, i) => (r >= x.at ? i : t), 0);
+  // a line for this tier: each tier has its own list, the last one covers everything deeper
+  const byTier = (lists) => { const l = lists[Math.min(G.tier, lists.length - 1)]; return pick(T(l[0], l[1])); };
+
+  const TALK = {
+    bet: [
+      [["Haga su apuesta.", "¿Cuánto se juega?", "Las fichas sobre la mesa.", "La casa invita a la primera… no, era broma. Apueste."], ["Place your bet.", "How much are you playing?", "Chips on the table.", "The first one's on the house… no, kidding. Bet."]],
+      [["Ya le ha cogido el gusto. ¿Cuánto?", "La casa le escucha.", "Se le ve cómodo. Apueste.", "Ronda a ronda, la mesa se acuerda de usted."], ["You've got a taste for it. How much?", "The house is listening.", "You look comfortable. Bet.", "Round by round, the table remembers you."]],
+      [["¿Cuánto vale su ojo hoy?", "La mesa se calienta. Apueste.", "El encargado ya le mira desde la barra.", "Huele a quemado. Debe de ser usted."], ["What's your eye worth today?", "The table is warming up. Bet.", "The manager is watching you from the bar.", "Something's burning. Must be you."]],
+      [["Apueste, si se atreve.", "El diablo espera su ofrenda.", "Las fichas arden. ¿Cuántas?", "Aquí abajo nadie apuesta poco.", "Firme aquí… quiero decir, apueste."], ["Bet, if you dare.", "The devil awaits your offering.", "The chips are burning. How many?", "Down here nobody bets small.", "Sign here… I mean, bet."]],
+      [["Usted manda. ¿Cuánto?", "Ponga precio a su leyenda.", "El abismo escucha. Apueste.", "La casa ya no reparte: obedece."], ["You're in charge. How much?", "Name the price of your legend.", "The abyss is listening. Bet.", "The house no longer deals: it obeys."]],
+      [["Más allá del infierno no hay casa. Solo usted.", "Nadie había llegado aquí. Apueste.", "El tiempo se ha parado en esta mesa."], ["Beyond hell there is no house. Only you.", "Nobody had come this far. Bet.", "Time has stopped at this table."]],
+    ],
+    watch: [
+      [["Mira bien. Está aquí.", "Aquí está. Por ahora.", "Fíjate. Solo lo verás un momento."], ["Look closely. It's here.", "Here it is. For now.", "Watch. You'll only see it for a moment."]],
+      [["Aquí. No lo pierda.", "Un vistazo. No habrá otro."], ["Here. Don't lose it.", "One look. There won't be another."]],
+      [["Míralo. La casa ya no se lo pone fácil.", "Último vistazo antes del baile."], ["Look. The house won't make it easy now.", "Last look before the dance."]],
+      [["Ahí arde el dado. Mírelo bien.", "Mírelo. Puede que sea la última vez.", "El dado brilla como una brasa."], ["There the die burns. Look closely.", "Look. It may be the last time.", "The die glows like an ember."]],
+      [["El abismo se lo enseña una vez.", "Ni un parpadeo."], ["The abyss shows you once.", "Not one blink."]],
+    ],
+    shuffle: [
+      [["La casa baraja…", "Sigue el vaso…", "No parpadees…"], ["The house shuffles…", "Follow the glass…", "Don't blink…"]],
+      [["Más rápido…", "Siga, siga…", "La mano es más rápida que el ojo…"], ["Faster…", "Keep up, keep up…", "The hand is quicker than the eye…"]],
+      [["El crupier se arremanga…", "Esto ya va en serio…", "Ni el encargado lo sigue…"], ["The croupier rolls up his sleeves…", "Now it's serious…", "Not even the manager can follow…"]],
+      [["El diablo baraja…", "Las manos del infierno no tiemblan…", "Arde la mesa…"], ["The devil shuffles…", "Hell's hands don't shake…", "The table is on fire…"]],
+      [["El abismo da vueltas…", "Todo gira…"], ["The abyss spins…", "Everything turns…"]],
+    ],
+    ask: [
+      [["¿Dónde está el dado?", "¿Cuál es?", "Tú dirás."], ["Where is the die?", "Which one?", "Your call."]],
+      [["¿Cuál? Sin prisa… o sí.", "Elija."], ["Which? No rush… or yes.", "Choose."]],
+      [["Demuestre que es un tiburón.", "¿Cuál, tiburón?"], ["Prove you're a shark.", "Which one, shark?"]],
+      [["Elija. Con cuidado.", "¿Dónde está su alma? Digo… el dado.", "El diablo espera."], ["Choose. Carefully.", "Where is your soul? I mean… the die.", "The devil waits."]],
+      [["Elija, señor del abismo.", "Su turno. Como siempre."], ["Choose, lord of the abyss.", "Your turn. As always."]],
+    ],
+    right: [
+      [["Bien visto. +{w} fichas.", "Principiante con suerte. +{w}.", "Ahí estaba. Cobra {w}.", "La casa toma nota. +{w}."], ["Well spotted. +{w} chips.", "Beginner's luck. +{w}.", "There it was. Collect {w}.", "The house takes note. +{w}."]],
+      [["Ya no es suerte. +{w}.", "Tiene ojo. La casa paga {w}.", "Así se juega. +{w}.", "El crupier frunce el ceño. +{w}."], ["That's not luck anymore. +{w}.", "You've got an eye. The house pays {w}.", "That's how it's played. +{w}.", "The croupier frowns. +{w}."]],
+      [["Tiburón en la mesa. +{w}.", "La casa empieza a sudar: {w} para usted.", "Ni yo sé dónde lo puse. Usted sí. +{w}.", "Esto ya es personal. +{w}."], ["Shark at the table. +{w}.", "The house starts to sweat: {w} for you.", "Even I don't know where I put it. You do. +{w}.", "Now it's personal. +{w}."]],
+      [["El diablo aplaude. +{w}.", "Ese ojo no es humano. +{w}.", "Arde la mesa: {w} para usted.", "Hasta el infierno paga sus deudas. +{w}."], ["The devil applauds. +{w}.", "That eye isn't human. +{w}.", "The table burns: {w} for you.", "Even hell pays its debts. +{w}."]],
+      [["Usted ya no juega: reina. +{w}.", "El abismo le devuelve la mirada. +{w}.", "La casa firma su rendición. {w} más.", "Ni Lucifer baraja tan rápido como usted mira. +{w}."], ["You don't play anymore: you reign. +{w}.", "The abyss stares back. +{w}.", "The house signs its surrender. {w} more.", "Not even Lucifer shuffles as fast as you look. +{w}."]],
+    ],
+    wrong: [
+      [["Estaba aquí. La casa se queda {l}.", "Esta vez no. −{l} fichas.", "Tranquilo, a todos nos pasa. −{l}."], ["It was here. The house keeps {l}.", "Not this time. −{l} chips.", "Relax, it happens to everyone. −{l}."]],
+      [["Casi. La casa se queda {l}.", "Era el de al lado. −{l}.", "Un parpadeo de más. −{l}."], ["Close. The house keeps {l}.", "It was the next one. −{l}.", "One blink too many. −{l}."]],
+      [["El tiburón muerde el anzuelo. −{l}.", "La casa respira: {l} para nosotros.", "Hasta los mejores fallan. −{l}."], ["The shark bites the hook. −{l}.", "The house breathes: {l} for us.", "Even the best miss. −{l}."]],
+      [["El diablo cobra su parte: {l}.", "Las llamas se tragan {l} fichas.", "Cerca, pero el infierno no perdona. −{l}."], ["The devil takes his cut: {l}.", "The flames swallow {l} chips.", "Close, but hell doesn't forgive. −{l}."]],
+      [["El abismo también cobra. −{l}.", "Un tropiezo de leyenda. −{l}.", "Hasta los dioses fallan. −{l}."], ["The abyss collects too. −{l}.", "A legendary stumble. −{l}.", "Even gods miss. −{l}."]],
+    ],
+    broke: [
+      [["Sin fichas. La casa siempre gana… casi siempre.", "Se acabó. La próxima, con más calma."], ["Out of chips. The house always wins… almost always.", "That's it. Next time, calmer."]],
+      [["Sin fichas. Pero se le daba bien.", "Fin de la partida. La casa respira."], ["Out of chips. You were good at it.", "Game over. The house breathes again."]],
+      [["Cae el tiburón. Qué partida.", "Sin fichas. La casa lo celebrará en voz baja."], ["The shark falls. What a game.", "Out of chips. The house will celebrate quietly."]],
+      [["El infierno se queda sus fichas. Vuelva cuando quiera… siempre vuelven.", "El diablo cierra la mesa. Por esta noche."], ["Hell keeps your chips. Come back any time… they always do.", "The devil closes the table. For tonight."]],
+      [["Cae una leyenda. La casa lo recordará.", "El abismo se lo traga todo. Hasta a usted."], ["A legend falls. The house will remember.", "The abyss swallows everything. Even you."]],
+    ],
+  };
+  const fill = (str, o) => str.replace(/\{(\w)\}/g, (_, x) => o[x]);
+
+  /* ---------- awards: cosmetic, kept in this browser, a toast when one is won ---------- */
+  const AWARD_KEY = "woblo:house-awards";
+  const AWARDS = {
+    first: [() => T("Primera mano", "First hand"), () => T("La casa le saluda", "The house greets you")],
+    hot3: [() => T("En llamas", "On fire"), () => T("3 aciertos seguidos", "3 in a row")],
+    hot5: [() => T("Imparable", "Unstoppable"), () => T("5 seguidos", "5 in a row")],
+    hot8: [() => T("Intocable", "Untouchable"), () => T("8 seguidos", "8 in a row")],
+    hot12: [() => T("Pacto firmado", "Pact signed"), () => T("12 seguidos", "12 in a row")],
+    allin: [() => T("Todo o nada", "All or nothing"), () => T("Ganó apostándolo todo", "Won betting it all")],
+    allin3: [() => T("Kamikaze", "Kamikaze"), () => T("Tres veces todo o nada", "All in, three times")],
+    phoenix: [() => T("Resurrección", "Resurrection"), () => T("De menos de 20 a más de 100", "From under 20 back over 100")],
+    c200: [() => T("Doble", "Double"), () => T("200 fichas", "200 chips")],
+    c500: [() => T("Quinientas", "Five hundred"), () => T("500 fichas", "500 chips")],
+    c1000: [() => T("Mil fichas", "A thousand"), () => T("1.000 fichas", "1,000 chips")],
+    c5000: [() => T("Fortuna", "Fortune"), () => T("5.000 fichas", "5,000 chips")],
+    c25000: [() => T("Magnate", "Magnate"), () => T("25.000 fichas", "25,000 chips")],
+    c100000: [() => T("Banca rota", "Broke the bank"), () => T("100.000: la casa no tiene más", "100,000: the house has no more")],
+    beast: [() => T("La bestia", "The beast"), () => T("Exactamente 666 fichas", "Exactly 666 chips")],
+    perfect: [() => T("Sin un fallo", "Flawless"), () => T("10 rondas, 10 aciertos", "10 rounds, 10 hits")],
+    r5: [() => T("Jugador", "Gambler"), () => T("Llegó a la ronda 5", "Reached round 5")],
+    r10: [() => T("Tiburón", "Shark"), () => T("Llegó a la ronda 10", "Reached round 10")],
+    r15: [() => T("Diablo", "Devil"), () => T("Llegó a la ronda 15", "Reached round 15")],
+    r20: [() => T("Señor del abismo", "Lord of the abyss"), () => T("Llegó a la ronda 20", "Reached round 20")],
+    r30: [() => T("Más allá", "Beyond"), () => T("Llegó a la ronda 30", "Reached round 30")],
+  };
+  const everGot = (() => { try { return new Set(JSON.parse(store.get(AWARD_KEY) || "[]")); } catch (e) { return new Set(); } })();
+  const toastQ = [];
+  let toasting = false;
+  function award(id) {
+    if (G.got.has(id) || !AWARDS[id]) return;
+    G.got.add(id);
+    const fresh = !everGot.has(id);
+    if (fresh) { everGot.add(id); store.set(AWARD_KEY, JSON.stringify([...everGot])); }
+    toastQ.push({ id, fresh });
+    paintRank();
+    if (!toasting) nextToast();
+  }
+  function nextToast() {
+    const t = toastQ.shift();
+    if (!t) { toasting = false; return; }
+    toasting = true;
+    const box = k("toasts"), el = document.createElement("div");
+    el.className = "house-toast" + (t.fresh ? " is-new" : "");
+    el.innerHTML = `<i aria-hidden="true">✦</i><div><b>${AWARDS[t.id][0]()}</b><small>${AWARDS[t.id][1]()}</small></div>${t.fresh ? `<em>${T("Nuevo", "New")}</em>` : ""}`;
+    box.appendChild(el);
+    const s = snd(); if (s) { s.chip(0.8); setTimeout(() => s.chip(1), 110); }
+    setTimeout(() => { el.classList.add("off"); setTimeout(() => { el.remove(); nextToast(); }, 450); }, reduce ? 1600 : 2300);
+  }
+
+  // the rank bar and the table's mood
+  function paintRank() {
+    const r = G.round ? G.round.r : 1;
+    const t = tierOf(r);
+    if (t !== G.tier) { G.tier = t; }
+    k("rank").textContent = TIERS[G.tier].n();
+    k("sigil").textContent = TIERS[G.tier].sigil;
+    const heat = Math.max(0, Math.min(5, G.streak));
+    [...k("heat").children].forEach((x, i) => x.classList.toggle("on", i < heat));
+    k("heat").classList.toggle("is-max", G.streak >= 5);
+    k("acc").textContent = G.played ? Math.round((G.won / G.played) * 100) + "%" : "—";
+    k("awards").textContent = `${everGot.size}/${Object.keys(AWARDS).length}`;
+    root.classList.toggle("is-warm", G.tier === 2);
+    root.classList.toggle("is-hell", G.tier >= 3);
+    root.classList.toggle("is-abyss", G.tier >= 4);
+    root.classList.toggle("is-beyond", G.tier >= 5);
+    const hell = G.tier >= 3;
+    $(".house-top .house-k").textContent = hell ? T("Mesa del diablo", "The devil's table") : G.tier === 2 ? T("La mesa arde", "The table burns") : T("Mesa de la casa", "The house table");
+    $(".house-top h2").textContent = hell ? T("¿Dónde está el alma?", "Where is the soul?") : T("¿Dónde está el dado?", "Where is the die?");
+    $(".is-bank small").textContent = hell ? T("Fichas malditas", "Cursed chips") : T("Tus fichas", "Your chips");
+    k("round").previousElementSibling.textContent = hell ? T("Círculo", "Circle") : T("Ronda", "Round");
+    $(".house-print textPath").textContent = hell ? T("EL DIABLO NUNCA PIERDE DE VISTA EL DADO", "THE DEVIL NEVER LOSES SIGHT OF THE DIE") : T("LA CASA NUNCA PIERDE DE VISTA EL DADO", "THE HOUSE NEVER LOSES SIGHT OF THE DIE");
+  }
+
+  // a word on your play, now and then: how good your eye is
+  function skillLine() {
+    if (G.played < 4) return null;
+    const a = G.won / G.played;
+    if (a >= 0.95) return T(`${G.won} de ${G.played}. La casa empieza a sospechar de usted.`, `${G.won} of ${G.played}. The house is starting to suspect you.`);
+    if (a >= 0.8) return T(`Acierta el ${Math.round(a * 100)}%. Un ojo así no se ve todos los días.`, `You hit ${Math.round(a * 100)}%. An eye like that is rare.`);
+    if (a >= 0.6) return T(`${Math.round(a * 100)}% de aciertos. Mejor que la media de la casa.`, `${Math.round(a * 100)}% hits. Better than the house average.`);
+    return T(`${Math.round(a * 100)}% de aciertos. La suerte le debe una.`, `${Math.round(a * 100)}% hits. Luck owes you one.`);
+  }
+  // what the croupier says about your stack
+  function stackLine() {
+    if (G.chips >= 25000) return T("Con esa montaña, la casa le trata de usted… y de señor.", "With that mountain, the house calls you sir.");
+    if (G.chips >= 5000) return T("Esa pila ya hace sombra en la mesa.", "That stack casts a shadow on the table.");
+    if (G.chips >= 1000) return T("Más de mil fichas. La mesa ya nota el peso.", "Over a thousand chips. The table feels the weight.");
+    if (G.chips <= 10) return T("Le quedan las justas. Cada ficha cuenta.", "You're down to the last few. Every chip counts.");
+    return null;
+  }
+
   const LINES = {
     welcome: () => T("100 fichas, un dado, tres vasos. Haga su apuesta.", "100 chips, one die, three glasses. Place your bet."),
-    bet: () => pick(T(["Haga su apuesta.", "¿Cuánto se juega?", "Las fichas sobre la mesa."], ["Place your bet.", "How much are you playing?", "Chips on the table."])),
-    allin: () => pick(T(["Todo o nada. Que Dios reparta suerte.", "Todo a una mano. Valiente.", "Todo sobre la mesa. La casa contiene la respiración."], ["All or nothing. Good luck to you.", "Everything on one hand. Brave.", "All on the table. The house holds its breath."])),
-    watch: () => pick(T(["Mira bien. Está aquí.", "Aquí está. Por ahora.", "Fíjate. Solo lo verás un momento."], ["Look closely. It's here.", "Here it is. For now.", "Watch. You'll only see it for a moment."])),
-    shuffle: () => pick(T(["La casa baraja…", "Sigue el vaso…", "No parpadees…"], ["The house shuffles…", "Follow the glass…", "Don't blink…"])),
-    ask: () => pick(T(["¿Dónde está el dado?", "¿Cuál es?", "Tú dirás."], ["Where is the die?", "Which one?", "Your call."])),
-    right: (w) => pick(T([`Bien visto. +${w} fichas.`, `Ojo de halcón. La casa paga ${w}.`, `Ahí estaba. Cobra ${w}.`], [`Well spotted. +${w} chips.`, `Hawk eye. The house pays ${w}.`, `There it was. Collect ${w}.`])),
-    wrong: (l) => pick(T([`Estaba aquí. La casa se queda ${l}.`, `Esta vez no. −${l} fichas.`, `La casa gana esta mano: ${l}.`], [`It was here. The house keeps ${l}.`, `Not this time. −${l} chips.`, `The house takes this hand: ${l}.`])),
-    broke: () => T("Sin fichas. La casa siempre gana… casi siempre.", "Out of chips. The house always wins… almost always."),
+    bet: () => byTier(TALK.bet),
+    allin: () => G.tier >= 3 ? pick(T(["Todo al fuego. El diablo se frota las manos.", "Todo o nada en el infierno. Así me gusta.", "Se lo juega todo. Hasta el alma."], ["Everything into the fire. The devil rubs his hands.", "All or nothing in hell. That's the spirit.", "You're betting it all. Even your soul."])) : pick(T(["Todo o nada. Que Dios reparta suerte.", "Todo a una mano. Valiente.", "Todo sobre la mesa. La casa contiene la respiración."], ["All or nothing. Good luck to you.", "Everything on one hand. Brave.", "All on the table. The house holds its breath."])),
+    watch: () => byTier(TALK.watch),
+    shuffle: () => byTier(TALK.shuffle),
+    ask: () => byTier(TALK.ask),
+    right: (w) => fill(byTier(TALK.right), { w }),
+    wrong: (l) => fill(byTier(TALK.wrong), { l }),
+    broke: () => byTier(TALK.broke),
     cashed: (b) => T(`Se retira con estilo. Su mejor marca: ${fmt(b)} fichas.`, `You leave in style. Your best: ${fmt(b)} chips.`),
     offline: () => T("Sin conexión con la casa: jugamos aquí, sin ranking.", "The house is offline: we play here, unranked."),
   };
@@ -200,6 +370,7 @@
     cups.forEach((c) => { c.disabled = G.phase !== "pick"; });
     root.classList.toggle("is-picking", G.phase === "pick");
     sign.hidden = !canSign();
+    paintRank();
     $(".house-tab").hidden = G.mode !== "remote";
   }
 
@@ -239,7 +410,7 @@
 
   /* ---------- a game ---------- */
   async function newGame() {
-    Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false });
+    Object.assign(G, { signed: false, chips: E.START, best: E.START, won: 0, bet: 25, recordShown: false, streak: 0, played: 0, allinWins: 0, low: E.START, tier: 0, got: new Set() });
     try {
       const j = await post({ op: "start" });
       G.mode = "remote"; G.id = j.id; G.round = j.round;
@@ -254,7 +425,10 @@
     G.phase = "bet";
     buildCups(G.round.n); slotOf = cups.map((_, i) => i); place();
     render();
-    speak(G.round.r > 1 && G.round.n > 3 && G.round.r % 10 === 0 ? T(`Ronda ${G.round.r}: entra un vaso más. La mesa paga ×${G.round.pay}.`, `Round ${G.round.r}: one more glass. The table pays ×${G.round.pay}.`) : LINES.bet());
+    const r = G.round.r;
+    if (r === 5) award("r5"); if (r === 10) award("r10"); if (r === 15) award("r15"); if (r === 20) award("r20"); if (r === 30) award("r30");
+    const extra = r % 4 === 0 ? skillLine() : r % 3 === 0 ? stackLine() : null;
+    speak(r > 1 && G.round.n > 3 && r % 10 === 0 ? T(`Ronda ${r}: entra un vaso más. La mesa paga ×${G.round.pay}.`, `Round ${r}: one more glass. The table pays ×${G.round.pay}.`) : extra || LINES.bet());
   }
 
   async function playRound() {
@@ -279,7 +453,7 @@
   async function choose(cup) {
     if (G.phase !== "pick") return;
     G.phase = "reveal"; render();
-    const R = G.round, bet = G.bet, before = G.chips;
+    const R = G.round, bet = G.bet, before = G.chips, wasAllIn = allIn();
     let res;
     try {
       if (G.mode === "remote") { res = await post({ op: "pick", id: G.id, cup, bet }); G.id = res.id; }
@@ -297,17 +471,40 @@
     const s = snd();
     const diff = G.chips - before;
     countTo(before, G.chips);
+    G.played++;
+    G.streak = res.ok ? Math.max(1, G.streak + 1) : Math.min(-1, G.streak - 1);
     if (res.ok) {
       if (s) { s.chip(1); setTimeout(() => s.chip(0.7), 120); }
-      burst(diff >= 100); delta(diff);
-      speak(LINES.right(fmt(diff)));
+      burst(diff >= 100 || G.streak >= 3); delta(diff);
+      if (wasAllIn) G.allinWins++;
+      const st = G.streak;
+      speak(wasAllIn && G.allinWins === 1 ? (G.tier >= 3 ? T(`Le ha vendido el alma al vaso correcto. +${fmt(diff)}.`, `You sold your soul to the right glass. +${fmt(diff)}.`) : T(`¡Todo o nada… y es todo! +${fmt(diff)}.`, `All or nothing… and it's all! +${fmt(diff)}.`))
+        : st === 3 ? T(`Tres seguidas. Está en llamas. +${fmt(diff)}.`, `Three in a row. You're on fire. +${fmt(diff)}.`)
+        : st === 5 ? T(`Cinco seguidas. La casa llama al encargado. +${fmt(diff)}.`, `Five in a row. The house calls the manager. +${fmt(diff)}.`)
+        : st === 8 ? T(`Ocho seguidas. Esto ya no es normal. +${fmt(diff)}.`, `Eight in a row. This isn't normal. +${fmt(diff)}.`)
+        : st >= 10 && st % 2 === 0 ? T(`${st} seguidas. ¿Ha hecho usted un pacto? +${fmt(diff)}.`, `${st} in a row. Did you make a pact? +${fmt(diff)}.`)
+        : G.low < 20 && before < 100 && G.chips >= 100 ? T(`De las cenizas. Vuelve a las ${fmt(G.chips)}.`, `From the ashes. Back to ${fmt(G.chips)}.`)
+        : LINES.right(fmt(diff)));
     } else {
       if (s) s.thud(1);
       shake(); delta(diff);
       await wait(520);
       lift(cups[res.d], true);
-      speak(LINES.wrong(fmt(-diff)));
+      const st = -G.streak;
+      speak(G.chips > 0 && st === 3 ? T(`Tres fallos. Respire hondo. −${fmt(-diff)}.`, `Three misses. Breathe. −${fmt(-diff)}.`)
+        : G.chips > 0 && st >= 5 ? T(`La casa le invita a una copa. Y se queda ${fmt(-diff)}.`, `The house buys you a drink. And keeps ${fmt(-diff)}.`)
+        : LINES.wrong(fmt(-diff)));
     }
+    G.low = Math.min(G.low, G.chips);
+    if (res.ok) {
+      award("first");
+      if (G.streak >= 3) award("hot3"); if (G.streak >= 5) award("hot5"); if (G.streak >= 8) award("hot8"); if (G.streak >= 12) award("hot12");
+      if (wasAllIn) award("allin"); if (G.allinWins >= 3) award("allin3");
+      if (G.low < 20 && G.chips >= 100) award("phoenix");
+      if (G.played === 10 && G.won === 10) award("perfect");
+    }
+    [[200, "c200"], [500, "c500"], [1000, "c1000"], [5000, "c5000"], [25000, "c25000"], [100000, "c100000"]].forEach(([n, id]) => { if (G.chips >= n) award(id); });
+    if (G.chips === 666) award("beast");
     // a new personal best: the great rain, once a game
     if (G.best > G.record) {
       G.record = G.best; store.set(BEST_KEY, String(G.record)); flashBest();
@@ -331,9 +528,9 @@
     const r = G.round.r, lv = r === 5 ? 1 : r === 10 ? 2 : r === 15 ? 4 : r >= 20 && r % 10 === 0 ? 5 : 0;
     if (lv) await rain(lv, T(`Ronda ${r}`, `Round ${r}`), {
       1: T("La casa empieza a sudar", "The house starts to sweat"),
-      2: T("Entra un vaso más", "One more glass comes in"),
-      4: T("Ojo de halcón", "Hawk eye"),
-      5: r === 20 ? T("Leyenda de la casa", "Legend of the house") : T("La casa se rinde", "The house gives in"),
+      2: T("Entra un vaso más · la mesa arde", "One more glass · the table burns"),
+      4: T("Modo diablo", "Devil mode"),
+      5: r === 20 ? T("Señor del abismo", "Lord of the abyss") : r === 30 ? T("Más allá del infierno", "Beyond hell") : T("El infierno se rinde", "Hell gives in"),
     }[lv]);
     toBet();
   }
@@ -438,7 +635,7 @@
   }
 
   // on a local server only: the rains can be called by hand, to look at them
-  if (/^(localhost|127.0.0.1)$/.test(location.hostname)) window.__houseRain = rain;
+  if (/^(localhost|127.0.0.1)$/.test(location.hostname)) { window.__houseRain = rain; window.__house = { G, E, render, award, jump: (r) => { G.round = E.round(r, Math.random); toBet(); } }; }
 
   /* ---------- the ranking ---------- */
   nameIn.value = store.get(NAME_KEY) || "";
