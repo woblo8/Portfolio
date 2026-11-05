@@ -874,3 +874,6 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .hg-plate .g-redd { fill: #2a0306; stroke: #ff3b4a; }
 .hg-plate .g-goldd { fill: #f0c45a; stroke: #fff6d8; }
 @media (prefers-reduced-motion: reduce) { .hc-ico svg, .house-mult.is-wild b { animation: none; } }
+.house-score b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.house-score b.is-long { font-size: 15px !important; letter-spacing: -0.02em; }
+.house-score > div.is-bank b.is-long { font-size: 18px !important; }

@@ -28,7 +28,13 @@
   const snd = () => { const s = window.CASINO && window.CASINO.sound; return s && s.on ? s : null; };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const pick = (l) => l[Math.floor(Math.random() * l.length)];
-  const fmt = (n) => Math.round(n).toLocaleString(T("es-ES", "en-GB"));
+  // from a thousand million up, the big words: 1 Billion, 2,5 Trillion…
+  const BIG = [[1e15, "Quadrillion"], [1e12, "Trillion"], [1e9, "Billion"]];
+  const fmt = (n) => {
+    const v = Math.round(n), big = BIG.find(([at]) => Math.abs(v) >= at);
+    if (!big) return v.toLocaleString(T("es-ES", "en-GB"));
+    return `${(v / big[0]).toLocaleString(T("es-ES", "en-GB"), { maximumFractionDigits: 2 })} ${big[1]}`;
+  };
   const API = "/api/house";
   const post = async (body) => {
     const r = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -586,6 +592,7 @@
     k("round").textContent = R ? R.r : 1;
     k("best").textContent = fmt(G.record);
     k("safe").textContent = fmt(G.safe);
+    ["chips", "safe", "best"].forEach((x) => k(x).classList.toggle("is-long", k(x).textContent.length > 9));
     const fx = Object.assign({}, G.shown, G.buy); // what this round bought, until its reveal is over
     root.classList.toggle("is-crystal", !!fx.glass);
     root.classList.toggle("is-lucky", !!fx.lucky);
