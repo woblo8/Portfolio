@@ -255,7 +255,6 @@
       .stats { grid-template-columns: repeat(2, 1fr); }
       .book { grid-template-columns: 1fr; }
       .invite-wrap { position: static; }
-      .invite { aspect-ratio: auto; min-height: 380px; }
     }
     @media (max-width: 560px) {
       .office { padding: 26px 16px 160px; gap: 24px; }
@@ -305,6 +304,18 @@
     .invite p { font-family: var(--sans); font-style: normal; font-size: 14.5px; color: var(--mist); }
     .invite li { color: var(--ivory); }
     .invite .sig { font-family: var(--mono); font-style: normal; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke); }
+    /* the invitation, compact: as tall as what it says, read from the left like the rest of the site */
+    .invite { aspect-ratio: auto; min-height: 0; display: block; padding: 26px 28px 24px; border-radius: 16px; transform: none; }
+    .invite:hover { transform: translateY(-2px); }
+    .invite .k { display: flex; justify-content: space-between; text-align: left; }
+    .invite h3 { margin-top: 22px; text-align: left; font-size: 32px; line-height: 1; }
+    .invite h3 em { margin-bottom: 8px; }
+    .invite .rule { width: 36px; margin: 16px 0 14px; }
+    .invite p { flex: none; text-align: left; font-size: 14px; line-height: 1.6; max-height: 9.6em; -webkit-mask: none; mask: none; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; }
+    .invite-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+    .invite ol { margin: 0; justify-content: flex-start; gap: 6px; }
+    .invite li { font-size: 9px; padding: 4px 9px; }
+    .invite .sig { margin: 0; }
     .linkbox code { color: #fff; }
     .guest .num { font-family: var(--mono); font-style: normal; font-size: 13px; color: var(--smoke); }
     .guest h4 { font-size: 22px; } .guest:hover { background: rgba(255, 255, 255, 0.03); }
@@ -385,12 +396,11 @@
         </form>
         <div class="invite-wrap">
           <article class="invite" aria-label="Vista previa de la carta">
-            <span class="k">Mesa privada · reservada</span>
+            <span class="k"><span>Mesa privada</span><span>Reservada</span></span>
             <h3><em>Para</em><span id="pvName">Su invitado</span></h3>
             <div class="rule"></div>
             <p id="pvNote"></p>
-            <ol id="pvProjects"></ol>
-            <div class="sig">— Carlos</div>
+            <div class="invite-foot"><ol id="pvProjects"></ol><div class="sig">— Carlos</div></div>
           </article>
           <div class="linkbox" id="out">
             <span class="k">Enlace listo</span>
