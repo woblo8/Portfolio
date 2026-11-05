@@ -1,4 +1,8 @@
-// Vercel serverless function: the private tables (?vip=Name).
+// Vercel serverless function: who comes in, and the private tables (?vip=Name).
+//
+// 0. Every visit to the site: one email to Carlos (NOTIFY_EMAIL), sent through ntfy.sh (NTFY_TOPIC,
+//    no account) or Resend (RESEND_API_KEY) when it is set up. Telegram too, if configured.
+//    POST /api/vip { op: "hit", sid, path, ref, lang, vip } → 204
 //
 // 1. Visits: the table reports when a guest sits down and when they leave, and Carlos gets a
 //    Telegram message (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID). Every visit is also kept as a
@@ -26,6 +30,32 @@ function isAdmin(req) {
   const got = String(req.headers["x-admin-key"] || "");
   if (!want || got.length !== want.length) return false;
   return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
+}
+
+// one notice, every channel that is set up: email (Resend, else ntfy.sh) and Telegram
+const plain = (t) => String(t).replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+async function email(subject, text) {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return false;
+  if (process.env.RESEND_API_KEY) {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: process.env.RESEND_FROM || "woblo.io <onboarding@resend.dev>", to: [to], subject, text }),
+    });
+    if (r.ok) return true;
+  }
+  const topic = process.env.NTFY_TOPIC;
+  if (!topic) return false;
+  // ntfy only takes plain ASCII in headers: the title travels encoded (RFC 2047)
+  const r = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
+    method: "POST",
+    headers: { Title: `=?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`, Email: to, Tags: "game_die", Priority: "default" },
+    body: text,
+  });
+  return r.ok;
+}
+async function notify(subject, htmlText) {
+  await Promise.all([telegram(htmlText).catch(() => false), email(subject, plain(htmlText)).catch(() => false)]);
 }
 
 async function telegram(text) {
@@ -99,6 +129,28 @@ module.exports = async (req, res) => {
     if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
     body = body || {};
 
+    if (body.op === "hit") {
+      const sid = clean(body.sid, 24), ua = String(req.headers["user-agent"] || "");
+      // no robots, no previews, no speed tests: only people
+      if (!/^[a-z0-9]{8,24}$/.test(sid) || /bot|crawl|spider|headless|lighthouse|preview|facebookexternalhit|slurp|vercel/i.test(ua) || !once(`hit:${sid}`)) return res.status(204).end();
+      const city = decodeURIComponent(String(req.headers["x-vercel-ip-city"] || "")), country = String(req.headers["x-vercel-ip-country"] || "");
+      const where = [city, country].filter(Boolean).join(", ");
+      const device = /iPad|Tablet/i.test(ua) ? "Tablet" : /Mobi|Android|iPhone/i.test(ua) ? "Móvil" : "Ordenador";
+      const browser = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "";
+      const vip = clean(body.vip, 40), path = clean(body.path, 60) || "/", lang = clean(body.lang, 5);
+      let ref = clean(body.ref, 120);
+      try { if (ref) { const u = new URL(ref); ref = /woblo\.io$/.test(u.hostname) ? "" : u.hostname.replace(/^www\./, "") + (u.pathname.length > 1 ? u.pathname : ""); } } catch (e) { ref = ""; }
+      const lines = [
+        vip ? `🎲 <b>${html(vip)}</b> ha abierto su enlace privado.` : "👀 Alguien ha entrado en woblo.io.",
+        `${device === "Móvil" ? "📱" : "💻"} ${device}${browser ? " · " + browser : ""}${where ? " · " + html(where) : ""}`,
+        path !== "/" ? `📄 Entró por ${html(path)}` : "",
+        ref ? `↩︎ Viene de ${html(ref)}` : "↩︎ Entrada directa",
+        lang ? `🌐 Idioma: ${lang.toUpperCase()}` : "",
+      ].filter(Boolean);
+      await notify(vip ? `🎲 ${vip} ha abierto su mesa privada` : `👀 Nueva visita en woblo.io${where ? " · " + where : ""}`, lines.join("\n"));
+      return res.status(204).end();
+    }
+
     if (body.op === "visit") {
       const name = clean(body.name, 40), slug = slugOf(name), sid = clean(body.sid, 24);
       const ev = body.ev === "end" ? "end" : "open";
@@ -117,7 +169,7 @@ module.exports = async (req, res) => {
         text = [`🃏 <b>${html(name)}</b> se levanta de la mesa tras <b>${mmss(secs)}</b>.`, ...summary(did)].join("\n");
       }
       await Promise.all([
-        telegram(text).catch(() => false),
+        ev === "end" ? notify(`🃏 ${name} se levanta de su mesa (${mmss(secs)})`, text) : telegram(text).catch(() => false),
         hasBlob ? blob().then(({ put }) => {
           const flags = `${did.n ? "n" : ""}${did.r ? "r" + Math.min(99, +did.r) : ""}${did.c ? "c" : ""}${did.m ? "m" : ""}${did.p ? "p" : ""}`;
           return put(`vip/visits/${Date.now()}__${slug}__${ev}__${secs}__${flags}.txt`, "1", Object.assign({}, putOpts, { contentType: "text/plain" }));
