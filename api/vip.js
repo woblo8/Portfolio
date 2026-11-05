@@ -1,7 +1,7 @@
 // Vercel serverless function: who comes in, and the private tables (?vip=Name).
 //
-// 0. Every visit to the site: a push to Carlos's phone (ntfy.sh, NTFY_TOPIC, no account), an email
-//    (NOTIFY_EMAIL through Resend, RESEND_API_KEY) and Telegram, whichever are set up.
+// 0. Every visit to the site: an email to Carlos (NOTIFY_EMAIL, sent through Resend: RESEND_API_KEY),
+//    and Telegram if it is ever configured.
 //    POST /api/vip { op: "hit", sid, path, ref, lang, vip } → 204
 //
 // 1. Visits: the table reports when a guest sits down and when they leave, and Carlos gets a
@@ -44,21 +44,9 @@ async function email(subject, text) {
   });
   return r.ok;
 }
-// a push to the phone through ntfy.sh: no account, the topic name is the secret (NTFY_TOPIC)
-async function push(subject, text, tag) {
-  const topic = process.env.NTFY_TOPIC;
-  if (!topic) return false;
-  const r = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
-    method: "POST",
-    // headers only take plain ASCII: the title travels encoded (RFC 2047)
-    headers: { Title: `=?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`, Tags: tag || "game_die", Priority: "default" },
-    body: text,
-  });
-  return r.ok;
-}
 async function notify(subject, htmlText) {
   const text = plain(htmlText);
-  await Promise.all([telegram(htmlText).catch(() => false), email(subject, text).catch(() => false), push(subject, text).catch(() => false)]);
+  await Promise.all([telegram(htmlText).catch(() => false), email(subject, text).catch(() => false)]);
 }
 
 async function telegram(text) {
