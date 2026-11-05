@@ -32,7 +32,7 @@ function isAdmin(req) {
   return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
 }
 
-// one notice, every channel that is set up: email (Resend, else ntfy.sh) and Telegram
+// one notice, every channel that is set up: email (Resend) and Telegram
 const plain = (t) => String(t).replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 // email through Resend (RESEND_API_KEY; the free plan sends to the account owner from onboarding@resend.dev)
 async function email(subject, text) {
