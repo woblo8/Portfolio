@@ -288,3 +288,102 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house-top h2 { font-size: clamp(22px, 4vw, 30px); }
 .house-tab { white-space: nowrap; }
 [hidden] { display: none !important; }
+
+/* ============================================================
+   CHIPS AND BETS — the bank, the bet, all-or-nothing in red,
+   the rains of chips, a glass more every ten rounds
+   ============================================================ */
+/* the bank: your chips, apart from everything else, with a chip of its own */
+.house-score { grid-template-columns: 1.5fr 1fr 1fr; }
+.house-score > div.is-bank { position: relative; display: flex; align-items: center; gap: 12px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 0 22px rgba(255, 255, 255, 0.06); }
+.house-score > div.is-bank b { font-size: 26px; text-shadow: var(--neon-glow); }
+.bank-chip { flex: none; width: 34px; height: 34px; border-radius: 50%; position: relative; background: repeating-conic-gradient(#ecebe7 0 14deg, #0c0c0e 14deg 30deg); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+.bank-chip::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #1d1d21, #0a0a0b); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
+/* the stake, printed on the felt while the round plays */
+.house-pot { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 4; font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--mist); white-space: nowrap; }
+.house-pot:empty { display: none; }
+
+/* the bet panel */
+.house-bet { display: grid; justify-items: center; gap: 12px; margin-top: 4px; }
+.hb-chips { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.hb-chips button {
+  position: relative; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: #fff;
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.85) 0 10deg, #0c0c0e 10deg 45deg);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5); transition: transform 0.35s var(--ease), box-shadow 0.35s, opacity 0.3s;
+}
+.hb-chips button span { position: relative; z-index: 1; }
+.hb-chips button::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #222226, #0b0b0c); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45); }
+.hb-chips button:nth-child(2) { background: repeating-conic-gradient(#8c8c92 0 10deg, #0c0c0e 10deg 45deg); }
+.hb-chips button:nth-child(3) { background: repeating-conic-gradient(#c4c3bf 0 6deg, #0c0c0e 6deg 22deg); }
+.hb-chips button.is-all { background: repeating-conic-gradient(#e0333d 0 10deg, #2a0507 10deg 45deg); }
+.hb-chips button.is-all::after { background: radial-gradient(circle at 35% 30%, #4a0a0e, #1a0204); box-shadow: inset 0 0 0 1px rgba(255, 120, 120, 0.6); }
+.hb-chips button:hover:not(:disabled) { transform: translateY(-5px); }
+.hb-chips button.is-on { transform: translateY(-7px); box-shadow: 0 0 0 2px #fff, 0 0 24px rgba(255, 255, 255, 0.45), 0 10px 18px rgba(0, 0, 0, 0.5); }
+.hb-chips button.is-all.is-on { box-shadow: 0 0 0 2px #ff5560, 0 0 30px rgba(255, 60, 70, 0.7), 0 10px 18px rgba(0, 0, 0, 0.5); }
+.hb-chips button:disabled { opacity: 0.25; cursor: default; }
+.hb-amount { display: flex; align-items: flex-end; gap: 10px; }
+.hb-amount > button { width: 40px; height: 40px; border-radius: 50%; font-family: var(--mono); font-size: 18px; color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); transition: box-shadow 0.3s; }
+.hb-amount > button:hover { box-shadow: inset 0 0 0 1px #fff, 0 0 14px rgba(255, 255, 255, 0.25); }
+.hb-amount label { display: grid; gap: 6px; justify-items: center; }
+.hb-amount label span { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--smoke); }
+.hb-amount input {
+  width: 150px; padding: 9px 12px; border: 0; border-radius: 12px; outline: 0; text-align: center;
+  font-family: var(--mono); font-size: 24px; color: #fff; background: #0c0c0e; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); font-variant-numeric: tabular-nums;
+}
+.hb-amount input:focus { box-shadow: inset 0 0 0 1.5px #fff, 0 0 18px rgba(255, 255, 255, 0.2); }
+.hb-info { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--smoke); text-align: center; }
+
+/* all or nothing: the table runs red */
+.house.is-allin .house-machine { box-shadow: inset 0 0 0 1px rgba(255, 70, 80, 0.55), 0 0 0 1px #000, 0 0 70px rgba(255, 40, 50, 0.28), 0 40px 100px rgba(0, 0, 0, 0.7); animation: allinPulse 1.6s ease-in-out infinite; }
+.house.is-allin .house-felt { box-shadow: inset 0 0 0 1px rgba(255, 70, 80, 0.5), inset 0 0 60px rgba(255, 30, 40, 0.18); }
+.house.is-allin .house-top h2, .house.is-allin .is-bank b { color: #ff5a64; text-shadow: 0 0 18px rgba(255, 50, 60, 0.6); }
+.house.is-allin .house-pot { color: #ff7a82; text-shadow: 0 0 10px rgba(255, 50, 60, 0.6); }
+.house.is-allin .hb-amount input { color: #ff7a82; box-shadow: inset 0 0 0 1.5px #ff5a64, 0 0 22px rgba(255, 40, 50, 0.35); }
+.house-actions button.is-allin { color: #fff; background: linear-gradient(180deg, #ff4a55, #b5141e); box-shadow: 0 0 26px rgba(255, 40, 50, 0.55); }
+.house.is-allin .shell-glass { filter: drop-shadow(0 0 1px rgba(255, 120, 130, 0.95)) drop-shadow(0 0 12px rgba(255, 40, 50, 0.35)); }
+@keyframes allinPulse { 50% { box-shadow: inset 0 0 0 1px rgba(255, 90, 100, 0.85), 0 0 0 1px #000, 0 0 100px rgba(255, 40, 50, 0.45), 0 40px 100px rgba(0, 0, 0, 0.7); } }
+
+/* a glass more every ten rounds: they slim down to fit */
+.house { --cups: 3; }
+.shell-cup { width: calc(92px * min(1, 3.4 / var(--cups))); margin-left: calc(-46px * min(1, 3.4 / var(--cups))); }
+.shell-glass { height: calc(112px * min(1, 3.6 / var(--cups) + 0.12)); }
+
+/* ---------- the rains ---------- */
+.house-rain { position: absolute; inset: 0; z-index: 20; overflow: hidden; pointer-events: none; border-radius: inherit; transition: opacity 0.6s; }
+.house-rain.is-full { position: fixed; z-index: 200; border-radius: 0; }
+.house-rain.off { opacity: 0; }
+.house-rain .rc, .house-rain .rb {
+  position: absolute; width: var(--s); height: var(--s); border-radius: 50%;
+  background: repeating-conic-gradient(var(--c) 0 12deg, #0c0c0e 12deg 40deg);
+  box-shadow: 0 0 0 2px #0c0c0e, 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+.house-rain .rc::after, .house-rain .rb::after { content: ""; position: absolute; inset: 22%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #2a2a2e, #0b0b0c); box-shadow: inset 0 0 0 1px var(--c); }
+.house-rain .rc { left: var(--x); top: -60px; animation: rainFall var(--d) cubic-bezier(0.35, 0, 0.7, 1) var(--w) both; }
+@keyframes rainFall {
+  0% { transform: translate(0, 0) rotateX(var(--tilt)) rotate(0); opacity: 0; }
+  8% { opacity: 1; }
+  100% { transform: translate(var(--sway), calc(100vh + 120px)) rotateX(var(--tilt)) rotate(var(--spin)); opacity: 1; }
+}
+.house-rain .rb { left: 50%; top: 50%; margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); animation: rainBurst 1.6s cubic-bezier(0.15, 0.8, 0.3, 1) var(--w) both; }
+@keyframes rainBurst { 0% { transform: translate(0, 0) scale(0.2) rotate(0); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(var(--bx), var(--by)) scale(1) rotate(var(--spin)); opacity: 0; } }
+/* the flash and the sweep of light */
+.house-rain .rf { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 60%); animation: rainFlash 0.9s ease-out both; }
+.house-rain.lv3 .rf { background: radial-gradient(circle at 50% 45%, rgba(255, 220, 150, 0.6), rgba(255, 60, 70, 0.15) 45%, transparent 70%); }
+@keyframes rainFlash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+.house-rain .rs { position: absolute; top: -20%; bottom: -20%; width: 30%; left: -40%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent); transform: skewX(-18deg); animation: rainSweep 1.6s cubic-bezier(0.5, 0, 0.3, 1) 0.2s both; }
+.house-rain.lv5 .rs { animation-iteration-count: 2; }
+@keyframes rainSweep { to { left: 120%; } }
+/* the title */
+.house-banner { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; animation: bannerIn 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) 0.15s both; }
+.house-banner small { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--mist); }
+.house-banner b { display: block; margin-top: 8px; font-weight: 600; font-size: clamp(36px, 7vw, 64px); letter-spacing: -0.04em; line-height: 1; color: #fff; text-shadow: 0 0 30px rgba(255, 255, 255, 0.45); }
+.house-rain.lv2 .house-banner b { text-shadow: 0 0 30px rgba(216, 181, 111, 0.7); }
+.house-rain.lv3 .house-banner b { font-size: clamp(48px, 10vw, 110px); color: #f1d8a0; text-shadow: 0 0 40px rgba(216, 181, 111, 0.9), 0 0 90px rgba(255, 60, 70, 0.5); }
+.house-rain.lv4 .house-banner b { font-size: clamp(52px, 11vw, 120px); text-shadow: 0 0 40px rgba(255, 255, 255, 0.8), 0 0 100px rgba(216, 181, 111, 0.6); }
+.house-rain.lv5 .house-banner b { font-size: clamp(60px, 13vw, 150px); color: #fff; animation: bannerNeon 0.6s steps(2) 0.9s 3; text-shadow: 0 0 20px #fff, 0 0 60px rgba(255, 60, 70, 0.8), 0 0 120px rgba(216, 181, 111, 0.8); }
+.house-rain.is-full .house-banner small { font-size: 13px; color: #fff; }
+@keyframes bannerIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } }
+@keyframes bannerNeon { 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .house.is-allin .house-machine { animation: none; } }
+@media (max-width: 480px) { .hb-chips button { width: 50px; height: 50px; } .hb-amount input { width: 120px; font-size: 20px; } .house-score { grid-template-columns: 1.4fr 1fr 1fr; } .house-score > div.is-bank b { font-size: 21px; } .bank-chip { display: none; } }

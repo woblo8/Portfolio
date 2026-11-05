@@ -1930,9 +1930,50 @@
       glass: new THREE.Quaternion().setFromEuler(new THREE.Euler(0.38, 0, 0)),
       cigar: new THREE.Quaternion().setFromEuler(new THREE.Euler(0.3, 0, 0.12)),
     };
+    /* the hints: a dot and the word "look", barely there, on each thing that can be picked up;
+       once a kind has been looked at, its hint is gone for good (in this browser) */
+    const PEEK_KEY = "woblo:peek-seen";
+    const seenPeeks = (() => { try { return new Set(JSON.parse(localStorage.getItem(PEEK_KEY) || "[]")); } catch (e) { return new Set(); } })();
+    const peeks = [];
+    const peekAt = new THREE.Vector3();
+    function addPeek(obj, kind, lift) {
+      if (!obj || seenPeeks.has(kind)) return;
+      const el = document.createElement("button");
+      el.type = "button"; el.className = "vt3-peek"; el.tabIndex = -1;
+      el.setAttribute("aria-label", `${T("Mirar de cerca", "Take a closer look")}: ${INSPECT_TEXT[kind][0]}`);
+      el.innerHTML = `<i></i><b>${T("mirar", "look")}</b>`;
+      el.addEventListener("click", (e) => { e.stopPropagation(); inspect(kind, obj); });
+      vt.appendChild(el);
+      peeks.push({ obj, kind, el, lift });
+    }
+    function seePeek(kind) {
+      if (seenPeeks.has(kind)) return;
+      seenPeeks.add(kind);
+      try { localStorage.setItem(PEEK_KEY, JSON.stringify([...seenPeeks])); } catch (e) { /* private mode */ }
+      peeks.filter((p) => p.kind === kind).forEach((p) => { p.el.classList.add("gone"); setTimeout(() => p.el.remove(), 600); });
+    }
+    // one hint per kind, on its most visible piece: the glass, the cigar, the top note of a bundle, the top chip of each colour
+    {
+      const top = (kind) => INSPECT.list.filter((o) => o.userData.inspect === kind).reduce((best, o) => { o.getWorldPosition(peekAt); const y = peekAt.y; return !best || y > best.y ? { o, y } : best; }, null);
+      addPeek(INSPECT.hide.glass, "glass", 0.3);
+      addPeek(INSPECT.hide.cigar, "cigar", 0.05);
+      ["bill", "chip0", "chip1", "chip2"].forEach((k) => { const t = top(k); if (t) addPeek(t.o, k, 0.05); });
+    }
+    function stepPeeks() {
+      const quiet = NOTE.cam > 0 || INS.on || roll.on;
+      const r = canvas.getBoundingClientRect(), v = vt.getBoundingClientRect();
+      peeks.forEach((p) => {
+        if (!p.el.isConnected) return;
+        p.obj.getWorldPosition(peekAt); peekAt.y += p.lift; peekAt.project(camera);
+        const vis = !quiet && peekAt.z < 1 && Math.abs(peekAt.x) < 0.92 && peekAt.y < 0.8 && peekAt.y > -0.9;
+        p.el.classList.toggle("on", vis);
+        if (vis) p.el.style.transform = `translate(${r.left - v.left + (peekAt.x + 1) / 2 * r.width}px, ${r.top - v.top + (1 - peekAt.y) / 2 * r.height}px)`;
+      });
+    }
     async function inspect(kind, src) {
       if (INS.on || INS.busy || NOTE.cam > 0) return;
       INS.busy = true; INS.on = true; INS.kind = kind; INS.src = src; INS.spin = 0;
+      seePeek(kind);
       (window.WOBLO_TRACK && window.WOBLO_TRACK("click", INSPECT_TEXT[kind][0]));
       const obj = INSPECT.make[kind]();
       obj.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
@@ -2201,6 +2242,7 @@
       camera.lookAt(target);
       stepNote(Math.min(0.25, raw / 1000)); // real time: the note takes as long on a slow device
       stepInspect(Math.min(0.05, raw / 1000));
+      stepPeeks();
       stepDie(dt);
       {
         const hgt = Math.max(0, die.position.y - DS / 2);

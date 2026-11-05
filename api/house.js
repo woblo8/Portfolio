@@ -1,13 +1,15 @@
 // Vercel serverless function: "La casa — ¿Dónde está el dado?"
-// The server deals every round (which glass hides the die, the moves, the speed) and checks
-// every pick, so a score on the board means those rounds were really played. The game state
-// travels to the browser sealed with an HMAC (the key never leaves the server).
+// The server deals every round (how many glasses, which one hides the die, the moves, the speed),
+// checks every bet and every pick and keeps the chips, so a score on the board means that game
+// was really played. The game state travels to the browser sealed with an HMAC (the key never
+// leaves the server). The score is the most chips held at any point of the game.
 // The board lives in Upstash Redis when it is configured (KV_REST_API_URL / _TOKEN or
 // UPSTASH_REDIS_REST_URL / _TOKEN) and otherwise in Vercel Blob (BLOB_READ_WRITE_TOKEN).
 //
 //   GET  /api/house?p=<player>            → { week, all, me }   top 10s, and where you stand
 //   POST /api/house { op: "start" }        → { id, round }
-//   POST /api/house { op: "pick", id, cup } → { ok, d, score, id, round? }
+//   POST /api/house { op: "pick", id, cup, bet } → { ok, d, chips, best, id, round? }
+//   POST /api/house { op: "cashout", id } → { id, best }   stop and keep the score
 //   POST /api/house { op: "submit", id, name, p } → { rank, score }   name: three letters A–Z
 const crypto = require("crypto");
 const E = require("../house-engine.js");
@@ -29,7 +31,7 @@ function unseal(tok) {
 // the dealer's random numbers: a stream per game and round, so a round is always the same round
 function rng(seed) { let i = 0; return () => mac(`${seed}:${i++}`).readUInt32BE(0) / 4294967296; }
 const deal = (s) => E.round(s.r, rng(`${s.g}:${s.r}`));
-const pub = (R) => ({ r: R.r, d: R.d, moves: R.moves, ms: R.ms });
+const pub = (R) => ({ r: R.r, n: R.n, d: R.d, moves: R.moves, ms: R.ms, pay: R.pay });
 
 // ---------- the board ----------
 function weekKey(d = new Date()) {
@@ -51,13 +53,13 @@ function redisStore() {
   const parse = (flat) => { const out = []; for (let i = 0; i < (flat || []).length; i += 2) { const [name, g, p] = String(flat[i]).split("·"); out.push({ name, g, p: p || "", score: Number(flat[i + 1]) }); } return out; };
   return {
     async read() {
-      const [w, a] = await Promise.all([R("ZREVRANGE", `shell:week:${weekKey()}`, 0, 999, "WITHSCORES"), R("ZREVRANGE", "shell:all", 0, 999, "WITHSCORES")]);
+      const [w, a] = await Promise.all([R("ZREVRANGE", `shell2:week:${weekKey()}`, 0, 999, "WITHSCORES"), R("ZREVRANGE", "shell2:all", 0, 999, "WITHSCORES")]);
       return { week: parse(w), all: parse(a) };
     },
-    async claim(g) { return (await R("SET", `shell:sub:${g}`, "1", "NX", "EX", 60 * 60 * 24 * 30)) === "OK"; },
+    async claim(g) { return (await R("SET", `shell2:sub:${g}`, "1", "NX", "EX", 60 * 60 * 24 * 30)) === "OK"; },
     async add({ name, g, p, score }) {
-      const member = `${name}·${g}·${p}`, wk = `shell:week:${weekKey()}`;
-      await Promise.all([R("ZADD", wk, score, member), R("ZADD", "shell:all", score, member), R("EXPIRE", wk, 60 * 60 * 24 * 21)]);
+      const member = `${name}·${g}·${p}`, wk = `shell2:week:${weekKey()}`;
+      await Promise.all([R("ZADD", wk, score, member), R("ZADD", "shell2:all", score, member), R("EXPIRE", wk, 60 * 60 * 24 * 21)]);
     },
   };
 }
@@ -73,14 +75,14 @@ function blobStore() {
       do {
         const page = await list({ prefix, cursor, limit: 1000 });
         for (const b of page.blobs) {
-          const m = b.pathname.slice(prefix.length).match(/^(\d{5})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
+          const m = b.pathname.slice(prefix.length).match(/^(\d{9})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
           if (m) out.push({ score: Number(m[1]), name: m[2], g: m[3], p: m[4] || "" });
         }
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       return out.sort((x, y) => y.score - x.score);
     };
-    const [week, all] = await Promise.all([folder(`shell/w/${weekKey()}/`), folder("shell/a/")]);
+    const [week, all] = await Promise.all([folder(`shell2/w/${weekKey()}/`), folder("shell2/a/")]);
     blobCache = { at: Date.now(), data: { week, all } };
     return blobCache.data;
   };
@@ -89,14 +91,14 @@ function blobStore() {
     read,
     async claim(g) {
       const { list, put } = await import("@vercel/blob");
-      if ((await list({ prefix: `shell/g/${g}`, limit: 1 })).blobs.length) return false;
-      await put(`shell/g/${g}.txt`, "1", opts);
+      if ((await list({ prefix: `shell2/g/${g}`, limit: 1 })).blobs.length) return false;
+      await put(`shell2/g/${g}.txt`, "1", opts);
       return true;
     },
     async add({ name, g, p, score }) {
       const { put } = await import("@vercel/blob");
-      const file = `${String(Math.min(99999, score)).padStart(5, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
-      await Promise.all([put(`shell/w/${weekKey()}/${file}`, "1", opts), put(`shell/a/${file}`, "1", opts)]);
+      const file = `${String(Math.min(999999999, score)).padStart(9, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
+      await Promise.all([put(`shell2/w/${weekKey()}/${file}`, "1", opts), put(`shell2/a/${file}`, "1", opts)]);
       blobCache.at = 0;
     },
   };
@@ -123,8 +125,8 @@ module.exports = async (req, res) => {
     body = body || {};
 
     if (body.op === "start") {
-      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r: 1, score: 0, over: false };
-      res.status(200).json({ id: seal(s), round: pub(deal(s)) });
+      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r: 1, chips: E.START, best: E.START, won: 0, over: false };
+      res.status(200).json({ id: seal(s), round: pub(deal(s)), chips: s.chips, best: s.best });
       return;
     }
     const s = unseal(body.id);
@@ -133,25 +135,35 @@ module.exports = async (req, res) => {
 
     if (body.op === "pick") {
       if (s.over) { res.status(409).json({ error: "finished" }); return; }
-      const cup = Number(body.cup);
-      if (![0, 1, 2].includes(cup)) { res.status(400).json({ error: "bad-cup" }); return; }
-      const R = deal(s), ok = cup === R.d;
-      if (ok) { s.score = s.r; s.r += 1; } else s.over = true;
-      res.status(200).json({ ok, d: R.d, score: s.score, id: seal(s), round: ok ? pub(deal(s)) : null });
+      const R = deal(s), cup = Number(body.cup), bet = Math.floor(Number(body.bet));
+      if (!Number.isInteger(cup) || cup < 0 || cup >= R.n) { res.status(400).json({ error: "bad-cup" }); return; }
+      if (!(bet >= E.minBet(s.chips) && bet <= s.chips)) { res.status(400).json({ error: "bad-bet" }); return; }
+      const ok = cup === R.d;
+      s.chips += ok ? bet * R.pay : -bet;
+      if (ok) s.won += 1;
+      s.best = Math.max(s.best, s.chips);
+      s.r += 1;
+      if (s.chips <= 0) { s.chips = 0; s.over = true; }
+      res.status(200).json({ ok, d: R.d, chips: s.chips, best: s.best, won: s.won, id: seal(s), round: s.over ? null : pub(deal(s)) });
+      return;
+    }
+    if (body.op === "cashout") {
+      s.over = true;
+      res.status(200).json({ id: seal(s), chips: s.chips, best: s.best });
       return;
     }
     if (body.op === "submit") {
       const name = String(body.name || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
       if (!/^[A-Z]{3}$/.test(name)) { res.status(400).json({ error: "bad-name" }); return; }
       if (BLOCKED.has(name)) { res.status(400).json({ error: "blocked-name" }); return; }
-      if (!(s.score >= 1)) { res.status(400).json({ error: "too-short" }); return; }
+      if (!(s.won >= 1) || !(s.best > E.START)) { res.status(400).json({ error: "too-short" }); return; }
       if (!(await store.claim(s.g))) { res.status(409).json({ error: "already" }); return; }
       const p = /^[a-f0-9]{12}$/.test(String(body.p || "")) ? body.p : "";
-      await store.add({ name, g: s.g, p, score: s.score });
+      await store.add({ name, g: s.g, p, score: s.best });
       // the place on the board that never resets
       const { all } = await store.read(true);
       const i = all.findIndex((r) => r.g === s.g);
-      res.status(200).json({ rank: i < 0 ? null : i + 1, score: s.score });
+      res.status(200).json({ rank: i < 0 ? null : i + 1, score: s.best });
       return;
     }
     res.status(400).json({ error: "bad-op" });
