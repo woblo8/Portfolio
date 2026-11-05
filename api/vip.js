@@ -132,7 +132,26 @@ async function telegram(text) {
 
 // Spanish to English, paragraph by paragraph so the line breaks stay where they were.
 // Three free services, tried in turn: Google's two public endpoints, then MyMemory. null if all fail
+// DeepL first, when a key is set (DEEPL_API_KEY; free keys end in ":fx"): the whole letter in one go,
+// its line breaks kept. Returns null if there is no key or it fails
+async function deepl(text) {
+  const key = process.env.DEEPL_API_KEY;
+  if (!key) return null;
+  try {
+    const host = /:fx$/.test(key) ? "api-free.deepl.com" : "api.deepl.com";
+    const r = await fetch(`https://${host}/v2/translate`, {
+      method: "POST",
+      headers: { Authorization: `DeepL-Auth-Key ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: [text], source_lang: "ES", target_lang: "EN-GB", preserve_formatting: true, formality: "more" }),
+    });
+    if (!r.ok) { console.error("deepl", r.status); return null; }
+    const j = await r.json();
+    return (j.translations && j.translations[0] && j.translations[0].text || "").trim() || null;
+  } catch (e) { return null; }
+}
 async function translate(text) {
+  const best = await deepl(text);
+  if (best) return best;
   const one = async (p) => {
     const q = encodeURIComponent(p);
     const tries = [
@@ -377,7 +396,8 @@ module.exports = async (req, res) => {
       // the letter is written in Spanish; the English one is translated here, once, for guests who read the site in English
       // the letter keeps its line breaks (paragraphs); everything else that is not text goes
       const es = String((body.note && body.note.es) || "").replace(/\r/g, "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1200);
-      const en = es ? (await translate(es)) || es : "";
+      const enIn = String((body.note && body.note.en) || "").replace(/\r/g, "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1400);
+      const en = es ? enIn || (await translate(es)) || es : "";
       const order = (Array.isArray(body.order) ? body.order : []).map(Number).filter((i) => Number.isInteger(i) && i >= 0 && i < 20).slice(0, 3);
       const g = { name, slug, note: es ? { es, en } : null, order: order.length ? order : null, at: Date.now() };
       await put(`vip/guests/${slug}.json`, JSON.stringify(g), putOpts);

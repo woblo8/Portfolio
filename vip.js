@@ -1956,7 +1956,24 @@
       vt.classList.remove("is-note");
       NOTE.open = false; NOTE.busy = false;
     }
-    noteEl.addEventListener("click", (e) => { if (e.target === noteEl || e.target.closest(".vt3-note-close")) closeNote(); });
+    // while it is read: a click on the card turns it over (the "continues overleaf" is on it);
+    // a click anywhere else puts it back in the envelope
+    const onCard = (e) => {
+      const r = canvas.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      return ray.intersectObject(noteCard, false).length > 0;
+    };
+    noteEl.addEventListener("click", (e) => {
+      if (e.target.closest(".vt3-note-close")) return closeNote();
+      if (e.target !== noteEl) return;
+      if (NOTE.open && onCard(e)) { if (noteBack && turnBtn) turnBtn.click(); return; }
+      closeNote();
+    });
+    noteEl.addEventListener("pointermove", (e) => {
+      if (!NOTE.open) return;
+      noteEl.style.cursor = onCard(e) ? (noteBack ? "pointer" : "default") : "";
+    });
     const turnQ = new THREE.Quaternion(), turnAxis = new THREE.Vector3(0, 0, 1);
     const turnBtn = noteEl.querySelector(".vt3-note-turn");
     if (turnBtn) {
