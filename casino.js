@@ -306,6 +306,66 @@
   const langBtn = $("#langBtn");
   if (langBtn) langBtn.addEventListener("click", () => window.setLang(window.LANG === "es" ? "en" : "es"));
 
+  /* ---------- the whisper: under the sound button, a few times after the intro ----------
+     It alternates two lines in the croupier's voice: turn the sound on, and try the other
+     language (written in that language). It blinks in, waits, blinks out, and after a few
+     rounds it stops. Clicking it does what it says. Never again once you've touched either. */
+  (() => {
+    const NUDGE_KEY = "woblo:nudged";
+    if (store.get(NUDGE_KEY) === "1" || !soundBtn) return;
+    const pick = (l) => l[Math.floor(Math.random() * l.length)];
+    const SOUND = [
+      () => T("Psst… esta casa tiene música. Suba el volumen, se lo recomiendo.", "Psst… this house has music. Turn it up, I insist."),
+      () => T("La casa suena mejor con sonido. Hágame caso.", "The house sounds better with the sound on. Trust me."),
+      () => T("Un consejo de amigo: active el sonido.", "A friendly piece of advice: turn the sound on."),
+    ];
+    // the language line is written in the other language, so whoever needs it can read it
+    const LANG = () => (window.LANG === "es" ? "Psst… we speak English here too. Just say the word." : "Psst… en esta casa también se habla español.");
+    const el = document.createElement("button");
+    el.type = "button"; el.className = "whisper"; el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+    let kind = "sound", shown = 0, timer = 0, done = false;
+    const place = () => {
+      // under the sound button; on a phone (where it is hidden) under the language button
+      const anchor = soundBtn.offsetParent ? soundBtn : langBtn || soundBtn;
+      const r = anchor.getBoundingClientRect();
+      el.style.top = Math.round(r.bottom + 8) + "px";
+      el.style.right = Math.max(12, Math.round(innerWidth - r.right)) + "px";
+    };
+    const stop = (forever) => { done = true; clearTimeout(timer); el.classList.remove("on"); if (forever) store.set(NUDGE_KEY, "1"); setTimeout(() => el.remove(), 800); };
+    function next() {
+      if (done) return;
+      // the sound line only while the sound is off
+      if (kind === "sound" && SND.on) kind = "lang";
+      if (shown >= 6) return stop(false);
+      el.textContent = kind === "sound" ? pick(SOUND)() : LANG();
+      el.dataset.kind = kind;
+      place();
+      el.classList.remove("on", "blink"); void el.offsetWidth; el.classList.add("on", "blink");
+      shown++;
+      timer = setTimeout(() => {
+        el.classList.remove("on");
+        kind = kind === "sound" ? "lang" : "sound";
+        timer = setTimeout(next, 2600);
+      }, 5200);
+    }
+    el.addEventListener("click", () => {
+      if (el.dataset.kind === "sound") { if (!SND.on) { setSound(true); chip(0.8); } }
+      else if (langBtn) langBtn.click();
+      stop(true);
+    });
+    soundBtn.addEventListener("click", () => stop(true));
+    if (langBtn) langBtn.addEventListener("click", () => stop(true));
+    addEventListener("resize", place);
+    // after the intro, when the menu is there
+    const start = () => setTimeout(next, 2200);
+    if (document.body.classList.contains("ui-in")) start();
+    else new MutationObserver((m, o) => { if (document.body.classList.contains("ui-in")) { o.disconnect(); start(); } }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    // not while a page or the game is open
+    const page = document.getElementById("page");
+    if (page) new MutationObserver(() => el.classList.toggle("away", page.classList.contains("open"))).observe(page, { attributes: true, attributeFilter: ["class"] });
+  })();
+
   /* ---------- the cursor roulette: hold outside the die, release, land ---------- */
   const canvas = $("#gl"), cursorEl = $("#cursor");
   let hold = null;
