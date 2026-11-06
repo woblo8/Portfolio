@@ -237,7 +237,7 @@ module.exports = async (req, res) => {
       // nobody follows a shuffle faster than it can be shown
       if (s.dt && Date.now() - s.dt < E.minPlayMs(R)) { res.status(400).json({ error: "too-fast" }); return; }
       const picks = Array.isArray(body.cups) ? body.cups.map(Number) : [Number(body.cup)];
-      if (!picks.length || picks.length > 2 || picks.some((c) => !Number.isInteger(c) || c < 0 || c >= R.n)) { res.status(400).json({ error: "bad-cup" }); return; }
+      if (!picks.length || picks.length > 3 || picks.some((c) => !Number.isInteger(c) || c < 0 || c >= R.n)) { res.status(400).json({ error: "bad-cup" }); return; }
       if (!E.diceOk(mode, s, R)) { res.status(400).json({ error: "bad-mode" }); return; }
       const { ok, dm, delta } = E.settle(s, R, picks, mode);
       s.dt = Date.now();

@@ -16,9 +16,11 @@
   // a right guess pays the bet times this: harder table, better odds
   const payFor = (n) => n - 2;
   // a smooth curve: every round a little quicker (−4.5%) and a little longer, never a cliff
-  //   round 1: 470 ms, 6 passes · round 10: 312 ms, 12 · round 20: 197 ms, 18 · round 30: 170 ms, 24
-  const msFor = (r) => Math.max(170, Math.round(470 * Math.pow(0.955, r - 1)));
-  const movesFor = (r) => Math.min(26, 6 + Math.floor(r * 0.6));
+  //   round 1: 430 ms, 7 passes · round 10: 286 ms, 13 · round 20: 180 ms, 19 · round 30: 160 ms, 25
+  const msFor = (r) => Math.max(160, Math.round(430 * Math.pow(0.955, r - 1)));
+  const movesFor = (r) => Math.min(26, 7 + Math.floor(r * 0.6));
+  // every glass on the table beyond three: each move 7% quicker
+  const glassSpeed = (n) => Math.pow(0.93, Math.max(0, n - 3));
 
   // rnd(): a float in [0, 1). A move is a permutation: the glass in slot k goes to slot p[k].
   // add: glasses the player has added to the table (they stay for the rest of the game)
@@ -30,11 +32,11 @@
     const idx = () => Math.floor(rnd() * n);
     // every glass on the table makes it harder, step by step: one more pass per glass, and from
     // four glasses on, more swaps at once and longer reaches (see stepMove)
-    for (let i = 0, m = Math.min(36, movesFor(r) + (n - 3)); i < m; i++) {
+    for (let i = 0, m = Math.min(44, movesFor(r) + (n - 3) * 2); i < m; i++) {
       const p = Array.from({ length: n }, (_, k) => k);
       if (n >= 4) {
         stepMove(p, n, r, rnd);
-      } else if (r >= 3 && rnd() < 0.25) {
+      } else if (r >= 2 && rnd() < 0.3) {
         // three glasses at once, round a little circle
         const a = idx(); let b = idx(); while (b === a) b = idx(); let c = idx(); while (c === a || c === b) c = idx();
         p[a] = b; p[b] = c; p[c] = a;
@@ -48,16 +50,17 @@
     const d = idx();
     let x0 = idx(); while (x0 === d) x0 = idx();
     let x1 = idx(); while (x1 === d || x1 === x0) x1 = idx();
-    return { r, n, d, x: [x0, x1], moves, ms: msFor(r), pay: payFor(cupsFor(r)) };
+    return { r, n, d, x: [x0, x1], moves, ms: Math.max(130, Math.round(msFor(r) * glassSpeed(n))), pay: payFor(cupsFor(r)) };
   }
-  /* four glasses or more. Each extra glass adds difficulty a little at a time:
-       swaps at once:  4 → 1 · 5–6 → 2 · 7–8 → 3 · 9–10 → 4
-       reach (how far a glass can jump): 4–6 → 3 places · 7–9 → 4 · 10 → 5
+  /* four glasses or more. Every extra glass makes it considerably harder, four ways at once:
+       swaps at once:  4–5 → 2 · 6–7 → 3 · 8–9 → 4 · 10 → 5 (almost every glass moves every pass)
+       reach (how far a glass can jump): up to 5 glasses → 3 places · from 6 → anywhere on the table
+       two more passes per glass, and each move 7% quicker (glassSpeed)
      Sometimes one swap becomes a little circle of three; on a crowded table the whole row
      sometimes slides one place. Every glass moves at most once per pass, so it can always be followed. */
   function stepMove(p, n, r, rnd) {
     if (n >= 7 && rnd() < 0.14) { const dir = rnd() < 0.5 ? 1 : -1; for (let k = 0; k < n; k++) p[k] = (k + dir + n) % n; return; }
-    const swaps = 1 + Math.floor((n - 3) / 2), reach = Math.min(n - 1, 1 + Math.ceil(n / 3));
+    const swaps = Math.ceil((n - 1) / 2), reach = n <= 5 ? 3 : n - 1;
     const used = new Set();
     let circle = r >= 3 && rnd() < 0.25;
     for (let tries = 0, done = 0; done < swaps && tries < 80; tries++) {
@@ -87,17 +90,17 @@
        · the wheel, every five rounds: ×1.2 to ×10, it never takes anything away
      The dice of each round (a choice before each round, unlocked as you go):
        one    · 1  · one white die                                     ×1
-       decoy  · 3  · a black decoy die too: pick it and you miss        ×2
+       decoy  · 3  · two identical dice: the real one glints for a moment, remember it ×3
        pair   · 6  · two white dice: you pick two glasses, both must hit ×6
-       colors · 10 · white ×1, red ×2, gold ×5 under three glasses; needs 6 glasses or more */
+       trio   · 10 · three dice: you pick three glasses, all three must hit (6 glasses or more) ×15 */
   const GLASS_MULT = 1.3;
   const DICE = {
     one: { at: 1, mult: 1 },
-    decoy: { at: 3, mult: 2 },
+    decoy: { at: 3, mult: 3 },
     pair: { at: 6, mult: 6 },
-    colors: { at: 10, mult: 1, cups: 6 },
+    trio: { at: 10, mult: 15, cups: 6 },
   };
-  const COLORS = [1, 2, 5]; // white, red, gold
+  const COLORS = [1, 2, 5]; // (the old coloured dice, kept for old clients)
   const diceOk = (mode, s, R) => !!DICE[mode] && s.r >= DICE[mode].at && R.n >= (DICE[mode].cups || 3);
   const canAddGlass = (s) => !s.over && cupsAt(s.r, s.add) < MAX_CUPS;
   function addGlass(s) { s.add = (s.add || 0) + 1; s.mult = round2((s.mult || 1) * GLASS_MULT); }
@@ -168,7 +171,7 @@
   function judge(mode, R, picks) {
     const p = picks.map(Number);
     if (mode === "pair") return p.length === 2 && p[0] !== p[1] && p.includes(R.d) && p.includes(R.x[0]) ? DICE.pair.mult : 0;
-    if (mode === "colors") { const c = p[0]; return c === R.d ? COLORS[0] : c === R.x[0] ? COLORS[1] : c === R.x[1] ? COLORS[2] : 0; }
+    if (mode === "trio") return p.length === 3 && new Set(p).size === 3 && [R.d, R.x[0], R.x[1]].every((c) => p.includes(c)) ? DICE.trio.mult : 0;
     return p[0] === R.d ? DICE[mode].mult : 0;
   }
   const gainFor = (b, stake, pay, diceMult, mult) => Math.round(stake * pay * diceMult * (mult || 1) * (b.lucky ? 3 : 1) * (b.pact ? 5 : 1));

@@ -1027,3 +1027,8 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house-mini li .rk-r, .house-board li .rk-r { display: inline-block; margin: 0 0 0 8px; }
 .rk-who .rk-n { font-size: 20px; } .rk-who .rk-r { display: block; margin: 3px 0 0; }
 
+
+/* the decoy: the real die glints for a moment, then both look the same */
+.shell-die.is-glint { box-shadow: inset 0 0 0 2px #fff, 0 0 24px #fff, 0 0 50px rgba(255, 255, 255, 0.7) !important; transform-origin: center; }
+.shell-die.is-glint i { background: #fff !important; box-shadow: 0 0 8px #fff !important; }
+.hd-trio .hd-ico i { box-shadow: inset 0 0 0 1.2px #fff; }
