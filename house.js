@@ -156,10 +156,10 @@
       svg: `${glassAt(70, 40)}${glassAt(170, 40)}<g class="g-lift">${glassAt(120, 16)}</g>${dieAt(120, 68)}<path class="g-ok" d="M146 70 L152 76 L164 62"/>` },
     { k: T("Más vasos, más premio", "More glasses, bigger pay"), t: T("Cada 10 rondas entra un vaso más y la mesa paga más.", "Every 10 rounds one more glass comes in and the table pays more."),
       svg: [[3, 30, "×1", "1"], [4, 62, "×2", "10"], [5, 94, "×3", "20"]].map(([n, y, p, r]) => Array.from({ length: n }, (_, i) => glassAt(70 + i * 18, y - 10, 13, 17)).join("") + `<text x="196" y="${y + 6}" class="g-t g-big">${p}</text><text x="40" y="${y + 6}" class="g-t">R${r}</text>`).join("") },
-    { k: T("Dados", "Dice"), t: T("Antes de cada ronda eliges los dados: uno (×1), con señuelo negro (×2), una pareja que hay que acertar entera (×3) o colores: blanco ×1, rojo ×3, oro ×10.", "Before each round you pick the dice: one (×1), with a black decoy (×2), a pair you must find both of (×3) or colours: white ×1, red ×3, gold ×10."),
-      svg: `${dieAt(40, 60, 16)}<text x="40" y="92" class="g-t">×1</text>${dieAt(88, 60, 16)}${dieAt(108, 60, 16, "g-die g-decoy")}<text x="98" y="92" class="g-t">×2</text>${dieAt(150, 60, 16)}${dieAt(170, 60, 16)}<text x="160" y="92" class="g-t">×3</text>${dieAt(204, 46, 12)}${dieAt(204, 62, 12, "g-die g-redd")}${dieAt(204, 78, 12, "g-die g-goldd")}<text x="204" y="100" class="g-t">×10</text>` },
-    { k: T("El multiplicador", "The multiplier"), t: T("Todo lo que ganas pasa por él. Súbelo añadiendo vasos (×1,5 cada uno, hasta 10) o quítalos si se pone imposible (÷1,5, mínimo 3). La ruleta sale cada 5 rondas y nunca resta.", "Everything you win goes through it. Raise it by adding glasses (×1.5 each, up to 10) or take them away if it gets impossible (÷1.5, at least 3). The wheel comes every 5 rounds and never takes away."),
-      svg: `${glassAt(40, 40, 22, 30)}${glassAt(66, 40, 22, 30)}<path class="g-arrow" d="M84 50 H96 M90 44 V56"/>${glassAt(114, 40, 22, 30, "g-glow")}<circle cx="186" cy="58" r="34"/>${Array.from({ length: 10 }, (_, i) => { const a = (i * 36 * Math.PI) / 180; return `<path d="M186 58 L${(186 + Math.cos(a) * 34).toFixed(1)} ${(58 + Math.sin(a) * 34).toFixed(1)}" class="g-dash"/>`; }).join("")}<circle cx="186" cy="58" r="6"/><path d="M186 18 L182 10 H190 Z" class="g-glow"/><text x="78" y="100" class="g-t g-big">×1,5</text><text x="186" y="106" class="g-t g-big">×1,2 – ×10</text>` },
+    { k: T("Dados", "Dice"), t: T("Antes de cada ronda eliges los dados: uno (×1), con señuelo negro (×2), una pareja que hay que acertar entera (×6) o colores: blanco ×1, rojo ×2, oro ×5.", "Before each round you pick the dice: one (×1), with a black decoy (×2), a pair you must find both of (×6) or colours: white ×1, red ×2, gold ×5."),
+      svg: `${dieAt(40, 60, 16)}<text x="40" y="92" class="g-t">×1</text>${dieAt(88, 60, 16)}${dieAt(108, 60, 16, "g-die g-decoy")}<text x="98" y="92" class="g-t">×2</text>${dieAt(150, 60, 16)}${dieAt(170, 60, 16)}<text x="160" y="92" class="g-t">×6</text>${dieAt(204, 46, 12)}${dieAt(204, 62, 12, "g-die g-redd")}${dieAt(204, 78, 12, "g-die g-goldd")}<text x="204" y="100" class="g-t">×5</text>` },
+    { k: T("El multiplicador", "The multiplier"), t: T("Todo lo que ganas pasa por él. Súbelo añadiendo vasos (×1,3 cada uno, hasta 10) o quítalos si se pone imposible (÷1,3, mínimo 3). La ruleta sale cada 5 rondas y nunca resta.", "Everything you win goes through it. Raise it by adding glasses (×1.3 each, up to 10) or take them away if it gets impossible (÷1.3, at least 3). The wheel comes every 5 rounds and never takes away."),
+      svg: `${glassAt(40, 40, 22, 30)}${glassAt(66, 40, 22, 30)}<path class="g-arrow" d="M84 50 H96 M90 44 V56"/>${glassAt(114, 40, 22, 30, "g-glow")}<circle cx="186" cy="58" r="34"/>${Array.from({ length: 10 }, (_, i) => { const a = (i * 36 * Math.PI) / 180; return `<path d="M186 58 L${(186 + Math.cos(a) * 34).toFixed(1)} ${(58 + Math.sin(a) * 34).toFixed(1)}" class="g-dash"/>`; }).join("")}<circle cx="186" cy="58" r="6"/><path d="M186 18 L182 10 H190 Z" class="g-glow"/><text x="78" y="100" class="g-t g-big">×1,3</text><text x="186" y="106" class="g-t g-big">×1,2 – ×10</text>` },
     { k: T("Tres vidas", "Three lives"), t: T("Cada fallo te quita una vida y la mitad de la mesa. Al tercero, la partida vale 0: retírate a tiempo, tu marca son las fichas con las que te vas.", "Each miss takes a life and half the table. At the third, the game is worth 0: cash out in time, your score is the chips you leave with."),
       svg: `<path class="g-heart" d="M70 66 C54 54 58 42 70 50 C82 42 86 54 70 66 Z"/><path class="g-heart" d="M120 66 C104 54 108 42 120 50 C132 42 136 54 120 66 Z"/><path class="g-dash" d="M170 66 C154 54 158 42 170 50 C182 42 186 54 170 66 Z"/><path class="g-arrow" d="M156 40 L184 68 M184 40 L156 68"/><text x="120" y="96" class="g-t">${T("cada fallo: −1 vida · −50% mesa", "each miss: −1 life · −50% table")}</text>` },
     { k: T("Ayudas", "Helps"), t: T("Canjea fichas de la mesa por ayudas. Cada pocas rondas se desbloquea una nueva, más cara; y cada una, al usarla, tarda unas rondas en volver.", "Trade table chips for helps. Every few rounds a new one unlocks, each dearer than the last."),
@@ -529,8 +529,8 @@
   const DICE_UI = {
     one: { n: () => T("Un dado", "One die"), t: () => T("El de siempre", "The usual"), m: "×1" },
     decoy: { n: () => T("Señuelo", "Decoy"), t: () => T("Un dado negro de engaño", "A black decoy die"), m: "×2" },
-    pair: { n: () => T("Pareja", "Pair"), t: () => T("Dos dados: acierta los dos", "Two dice: find both"), m: "×3" },
-    colors: { n: () => T("Colores", "Colours"), t: () => T("Blanco ×1 · rojo ×3 · oro ×10", "White ×1 · red ×3 · gold ×10"), m: "×10" },
+    pair: { n: () => T("Pareja", "Pair"), t: () => T("Dos dados: acierta los dos", "Two dice: find both"), m: "×6" },
+    colors: { n: () => T("Colores", "Colours"), t: () => T("Blanco ×1 · rojo ×2 · oro ×5", "White ×1 · red ×2 · gold ×5"), m: "×5" },
   };
   // which dice are on the felt this round: [element, glass, look]
   function diceOn(R, mode) {
@@ -622,7 +622,7 @@
     betBox.hidden = !betting;
     if (betting) {
       G.bet = E.stakeFor(G.chips);
-      const pay = R ? R.pay : 1, top = G.dice === "colors" ? 10 : E.DICE[G.dice].mult;
+      const pay = R ? R.pay : 1, top = G.dice === "colors" ? Math.max(...E.COLORS) : E.DICE[G.dice].mult;
       const win = E.gainFor(G.buy, G.bet, pay, top, G.mult), lose = E.lossFor(G.buy, G.bet, G.chips);
       k("betInfo").textContent = T(`Te juegas ${fmt(G.bet)} · ganarías ${G.dice === "colors" ? "hasta " : ""}${fmt(win)} · si fallas −${fmt(lose)}${G.buy.insure ? "" : " y una vida"}`, `You stake ${fmt(G.bet)} · you'd win ${G.dice === "colors" ? "up to " : ""}${fmt(win)} · a miss costs ${fmt(lose)}${G.buy.insure ? "" : " and a life"}`);
       paintDice();
@@ -841,9 +841,9 @@
       burst(diff >= 100 || G.streak >= 3); delta(diff);
       if (wasAllIn) G.allinWins++;
       const st = G.streak;
-      if (mode === "colors" && res.dm >= 3) rain(res.dm === 10 ? 4 : 2, res.dm === 10 ? T("×10 · Dado de oro", "×10 · Golden die") : T("×3 · Dado rojo", "×3 · Red die"), "+" + fmt(diff));
-      speak(mode === "colors" && res.dm === 10 ? T(`¡El dorado! ×10. +${fmt(diff)}.`, `The gold one! ×10. +${fmt(diff)}.`)
-        : mode === "colors" && res.dm === 3 ? T(`El rojo: ×3. +${fmt(diff)}.`, `The red one: ×3. +${fmt(diff)}.`)
+      if (mode === "colors" && res.dm >= 3) rain(res.dm === E.COLORS[2] ? 4 : 2, res.dm === E.COLORS[2] ? T(`×${E.COLORS[2]} · Dado de oro`, `×${E.COLORS[2]} · Golden die`) : T(`×${E.COLORS[1]} · Dado rojo`, `×${E.COLORS[1]} · Red die`), "+" + fmt(diff));
+      speak(mode === "colors" && res.dm === E.COLORS[2] ? T(`¡El dorado! ×${E.COLORS[2]}. +${fmt(diff)}.`, `The gold one! ×${E.COLORS[2]}. +${fmt(diff)}.`)
+        : mode === "colors" && res.dm === E.COLORS[1] ? T(`El rojo: ×${E.COLORS[1]}. +${fmt(diff)}.`, `The red one: ×${E.COLORS[1]}. +${fmt(diff)}.`)
         : wasAllIn && G.allinWins === 1 ? (G.tier >= 4 ? T(`Un acto de fe… y el cielo paga. +${fmt(diff)}.`, `An act of faith… and heaven pays. +${fmt(diff)}.`) : G.tier === 3 ? T(`Le ha vendido el alma al vaso correcto. +${fmt(diff)}.`, `You sold your soul to the right glass. +${fmt(diff)}.`) : T(`¡Todo o nada… y es todo! +${fmt(diff)}.`, `All or nothing… and it's all! +${fmt(diff)}.`))
         : st === 3 ? T(`Tres seguidas. Está en llamas. +${fmt(diff)}.`, `Three in a row. You're on fire. +${fmt(diff)}.`)
         : st === 5 ? T(`Cinco seguidas. La casa llama al encargado. +${fmt(diff)}.`, `Five in a row. The house calls the manager. +${fmt(diff)}.`)
@@ -851,9 +851,7 @@
         : st >= 10 && st % 2 === 0 && G.tier >= 4 ? T(`${st} seguidas. Ya no es suerte: es fe. +${fmt(diff)}.`, `${st} in a row. Not luck anymore: faith. +${fmt(diff)}.`)
         : st >= 10 && st % 2 === 0 ? T(`${st} seguidas. ¿Ha hecho usted un pacto? +${fmt(diff)}.`, `${st} in a row. Did you make a pact? +${fmt(diff)}.`)
         : G.low < 20 && before < 100 && G.chips >= 100 ? T(`De las cenizas. Vuelve a las ${fmt(G.chips)}.`, `From the ashes. Back to ${fmt(G.chips)}.`)
-        : mode === "colors" && res.dm === 10 ? T(`¡El dorado! ×10. +${fmt(diff)}.`, `The gold one! ×10. +${fmt(diff)}.`)
-        : mode === "colors" && res.dm === 3 ? T(`El rojo: ×3. +${fmt(diff)}.`, `The red one: ×3. +${fmt(diff)}.`)
-        : mode === "pair" ? T(`Los dos. ×3. +${fmt(diff)}.`, `Both of them. ×3. +${fmt(diff)}.`)
+        : mode === "pair" ? T(`Los dos. ×${E.DICE.pair.mult}. +${fmt(diff)}.`, `Both of them. ×${E.DICE.pair.mult}. +${fmt(diff)}.`)
         : LINES.right(fmt(diff)));
     } else {
       if (s) s.thud(1);
@@ -899,7 +897,8 @@
     const r = G.round.r, lv = r === 5 ? 1 : r === 10 ? 2 : r === 15 ? 4 : r >= 20 && r % 10 === 0 ? 5 : 0;
     if (lv) await rain(lv, T(`Ronda ${r}`, `Round ${r}`), {
       1: T("La casa empieza a sudar", "The house starts to sweat"),
-      2: T("Entra un vaso más · la mesa arde", "One more glass · the table burns"),
+      // the round brings a new glass only if the table had room for it
+      2: G.round.n > R.n ? T("Entra un vaso más · la mesa arde", "One more glass · the table burns") : T("La mesa arde", "The table burns"),
       4: T("Modo diablo", "Devil mode"),
       5: r === 20 ? T("Modo dios", "God mode") : r === 30 ? T("Omnisciente", "Omniscient") : T("El cielo se rinde", "Heaven gives in"),
     }[lv]);
