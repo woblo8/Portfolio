@@ -30,8 +30,8 @@
   function round(r, rnd, add) {
     const n = cupsAt(r, add), moves = [];
     const idx = () => Math.floor(rnd() * n);
-    // every glass on the table makes it harder, step by step: one more pass per glass, and from
-    // four glasses on, more swaps at once and longer reaches (see stepMove)
+    // every glass on the table makes it harder: two more passes per glass and quicker moves,
+    // while what moves at once stays readable (see stepMove)
     for (let i = 0, m = Math.min(44, movesFor(r) + (n - 3) * 2); i < m; i++) {
       const p = Array.from({ length: n }, (_, k) => k);
       if (n >= 4) {
@@ -52,15 +52,12 @@
     let x1 = idx(); while (x1 === d || x1 === x0) x1 = idx();
     return { r, n, d, x: [x0, x1], moves, ms: Math.max(130, Math.round(msFor(r) * glassSpeed(n))), pay: payFor(cupsFor(r)) };
   }
-  /* four glasses or more. Every extra glass makes it considerably harder, four ways at once:
-       swaps at once:  4–5 → 2 · 6–7 → 3 · 8–9 → 4 · 10 → 5 (almost every glass moves every pass)
-       reach (how far a glass can jump): up to 5 glasses → 3 places · from 6 → anywhere on the table
-       two more passes per glass, and each move 7% quicker (glassSpeed)
-     Sometimes one swap becomes a little circle of three; on a crowded table the whole row
-     sometimes slides one place. Every glass moves at most once per pass, so it can always be followed. */
+  /* four glasses or more. The eye can follow two crossings at a time, not more: so at most two
+     pairs cross at once (four glasses), never the whole row, and no glass jumps further than
+     three places. What every extra glass adds is time pressure: two more passes per glass, and
+     each move 7% quicker (glassSpeed). Sometimes one swap becomes a little circle of three. */
   function stepMove(p, n, r, rnd) {
-    if (n >= 7 && rnd() < 0.14) { const dir = rnd() < 0.5 ? 1 : -1; for (let k = 0; k < n; k++) p[k] = (k + dir + n) % n; return; }
-    const swaps = Math.ceil((n - 1) / 2), reach = n <= 5 ? 3 : n - 1;
+    const swaps = n <= 4 ? (rnd() < 0.5 ? 1 : 2) : rnd() < 0.3 ? 1 : 2, reach = Math.min(3, n - 1);
     const used = new Set();
     let circle = r >= 3 && rnd() < 0.25;
     for (let tries = 0, done = 0; done < swaps && tries < 80; tries++) {
