@@ -17,7 +17,7 @@
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
   };
-  const BEST_KEY = "woblo:shell3-best", NAME_KEY = "woblo:house-name", PLAYER_KEY = "woblo:house-player";
+  const BEST_KEY = "woblo:shell4-best", NAME_KEY = "woblo:house-name", PLAYER_KEY = "woblo:house-player";
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   // who you are, without an account: a random id kept by this browser
   const PLAYER = (() => {

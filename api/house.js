@@ -68,13 +68,13 @@ function redisStore() {
   const parse = (flat) => { const out = []; for (let i = 0; i < (flat || []).length; i += 2) { const [name, g, p] = String(flat[i]).split("·"); out.push({ name, g, p: p || "", score: Number(flat[i + 1]) }); } return out; };
   return {
     async read() {
-      const [w, a] = await Promise.all([R("ZREVRANGE", `shell3:week:${weekKey()}`, 0, 999, "WITHSCORES"), R("ZREVRANGE", "shell3:all", 0, 999, "WITHSCORES")]);
+      const [w, a] = await Promise.all([R("ZREVRANGE", `shell4:week:${weekKey()}`, 0, 999, "WITHSCORES"), R("ZREVRANGE", "shell4:all", 0, 999, "WITHSCORES")]);
       return { week: parse(w), all: parse(a) };
     },
-    async claim(g) { return (await R("SET", `shell3:sub:${g}`, "1", "NX", "EX", 60 * 60 * 24 * 30)) === "OK"; },
+    async claim(g) { return (await R("SET", `shell4:sub:${g}`, "1", "NX", "EX", 60 * 60 * 24 * 30)) === "OK"; },
     async add({ name, g, p, score }) {
-      const member = `${name}·${g}·${p}`, wk = `shell3:week:${weekKey()}`;
-      await Promise.all([R("ZADD", wk, score, member), R("ZADD", "shell3:all", score, member), R("EXPIRE", wk, 60 * 60 * 24 * 21)]);
+      const member = `${name}·${g}·${p}`, wk = `shell4:week:${weekKey()}`;
+      await Promise.all([R("ZADD", wk, score, member), R("ZADD", "shell4:all", score, member), R("EXPIRE", wk, 60 * 60 * 24 * 21)]);
     },
   };
 }
@@ -97,7 +97,7 @@ function blobStore() {
       } while (cursor);
       return out.sort((x, y) => y.score - x.score);
     };
-    const [week, all] = await Promise.all([folder(`shell3/w/${weekKey()}/`), folder("shell3/a/")]);
+    const [week, all] = await Promise.all([folder(`shell4/w/${weekKey()}/`), folder("shell4/a/")]);
     blobCache = { at: Date.now(), data: { week, all } };
     return blobCache.data;
   };
@@ -106,21 +106,21 @@ function blobStore() {
     read,
     async claim(g) {
       const { list, put } = await import("@vercel/blob");
-      if ((await list({ prefix: `shell3/g/${g}`, limit: 1 })).blobs.length) return false;
-      await put(`shell3/g/${g}.txt`, "1", opts);
+      if ((await list({ prefix: `shell4/g/${g}`, limit: 1 })).blobs.length) return false;
+      await put(`shell4/g/${g}.txt`, "1", opts);
       return true;
     },
     async add({ name, g, p, score }) {
       const { put } = await import("@vercel/blob");
       const file = `${BigInt(Math.round(Math.min(score, 1e40))).toString().padStart(16, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
-      await Promise.all([put(`shell3/w/${weekKey()}/${file}`, "1", opts), put(`shell3/a/${file}`, "1", opts)]);
+      await Promise.all([put(`shell4/w/${weekKey()}/${file}`, "1", opts), put(`shell4/a/${file}`, "1", opts)]);
       blobCache.at = 0;
     },
   };
 }
 // rows only say whether they are yours; the player id itself never goes back out
-// names that are not allowed any more never show, even if they were signed before the rule
-const clean = (l) => l.filter((r) => E.nameCheck(r.name).ok);
+// a name that is not allowed (signed before the rule) keeps its place but shows as another name
+const clean = (l) => l.map((r) => (E.nameCheck(r.name).ok ? r : Object.assign({}, r, { name: "???" })));
 const strip = (l, p) => l.slice(0, 10).map((r) => (p && r.p === p ? { name: r.name, score: r.score, me: true } : { name: r.name, score: r.score }));
 function mine(l, p) { const i = l.findIndex((r) => r.p === p); return i < 0 ? null : { name: l[i].name, score: l[i].score, rank: i + 1 }; }
 const query = (req) => new URL(req.url || "/", "http://x").searchParams;
