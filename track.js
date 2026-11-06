@@ -44,6 +44,12 @@
     rolls: +session.get("woblo:rolls") || 0,
   };
 
+  // the real phone model (Android hides it in the user agent as "K"): asked to the browser, when it can tell
+  try {
+    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues)
+      navigator.userAgentData.getHighEntropyValues(["model", "platformVersion"]).then((v) => { rec.dev.model = String(v.model || "").slice(0, 40); rec.dev.osv = String(v.platformVersion || "").slice(0, 12); }).catch(() => {});
+  } catch (e) { /* not this browser */ }
+
   // the timeline: [seconds since arrival, what, detail]
   const secs = () => Math.round((Date.now() - t0) / 1000);
   function add(what, detail) {

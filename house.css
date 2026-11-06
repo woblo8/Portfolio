@@ -1017,13 +1017,13 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .rk-n { font-weight: 600; letter-spacing: 0.12em; }
 .rk-r { display: block; margin-top: 2px; font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--smoke); white-space: nowrap; }
 .rk-t0 { color: #c4c3bf; }
-.rk-t1 { color: #ffffff; text-shadow: 0 0 8px rgba(255, 255, 255, 0.35); }
-.rk-t2 { color: #ffb37a; text-shadow: 0 0 10px rgba(255, 130, 60, 0.55); }
-.rk-t3 { color: #ff4d55; text-shadow: 0 0 10px rgba(255, 30, 40, 0.75); }
-.rk-t4 { color: #ffd36b; text-shadow: 0 0 10px rgba(255, 207, 90, 0.8); }
-.rk-t5 { color: #fff; text-shadow: 0 0 8px #ff5ad1, 0 0 16px #6ff2ff; animation: rkPrism 3s linear infinite; }
+.rk-t1 { color: #8fd3ff; }
+.rk-t2 { color: #ff9a4d; }
+.rk-t3 { color: #ff3b4a; }
+.rk-t4 { color: #ffd36b; }
+.rk-t5 { color: #c08cff; }
 @keyframes rkPrism { to { filter: hue-rotate(360deg); } }
 .house-mini li, .house-board li { align-items: center; }
 .house-mini li .rk-r, .house-board li .rk-r { display: inline-block; margin: 0 0 0 8px; }
 .rk-who .rk-n { font-size: 20px; } .rk-who .rk-r { display: block; margin: 3px 0 0; }
-@media (prefers-reduced-motion: reduce) { .rk-t5 { animation: none; } }
+

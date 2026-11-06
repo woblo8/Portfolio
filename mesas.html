@@ -248,6 +248,15 @@
     .ps.wide { grid-column: span 2; }
     .ps.wide b { font-family: var(--sans); font-size: 15px; font-weight: 500; line-height: 1.45; }
     .ps b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ps.wide b { white-space: normal; }
+    .people-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; margin-top: 8px; }
+    .pt { padding: 14px 16px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line-hi); background: rgba(255, 255, 255, 0.025); }
+    .pt h4 { font-family: var(--serif); font-size: 18px; font-weight: 600; letter-spacing: -0.02em; display: flex; justify-content: space-between; gap: 10px; }
+    .pt h4 span { font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--smoke); letter-spacing: 0.06em; }
+    .pt ol { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .pt li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; font-size: 12.5px; color: var(--mist); }
+    .pt li b { font-family: var(--mono); font-size: 11px; font-weight: 500; color: #fff; }
+    .pt li em { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--smoke); white-space: nowrap; }
+    .pv h4 .who { font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--smoke); letter-spacing: 0.04em; margin-left: 8px; }
     .people-bar { display: flex; gap: 8px; margin: 22px 0 14px; flex-wrap: wrap; }
     .people-bar input, .people-bar select { flex: 1; min-width: 180px; padding: 11px 13px; border-radius: 10px; border: 0; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--line); color: var(--ivory); font: 14px var(--sans); }
     .people-bar select { flex: 0 0 auto; }
@@ -521,6 +530,7 @@
       <button class="btn ghost small" type="button" id="peopleClose">Cerrar ✕</button>
     </header>
     <div class="people-sum" id="peopleSum"></div>
+    <div class="people-tables" id="peopleTables"></div>
     <div class="people-bar">
       <input id="peopleFind" type="search" placeholder="Buscar ciudad, país, nombre, dispositivo…" autocomplete="off">
       <select id="peopleSort" aria-label="Ordenar">
@@ -798,7 +808,7 @@
           id: p.id, name: [...p.names][0] || "", visits: v.length, first: first.at, last: last.at, time, avg: time / v.length,
           longest: Math.max(...v.map((x) => x.secs || 0)),
           place: [g.city, g.region && g.region !== g.city ? g.region : "", g.country].filter(Boolean).join(", "), country: g.country || "",
-          device: [a.device, a.model].filter(Boolean).join(" · "), os: a.os || "", browser: a.browser || "", mobile: /m[oó]vil|phone|tablet/i.test(a.device || "") || !!d.touch,
+          device: [a.device, d.model || (a.model && a.model !== "K" ? a.model : "")].filter(Boolean).join(" · "), os: [a.os, d.osv && !String(a.os || "").includes(d.osv) ? d.osv : ""].filter(Boolean).join(" "), browser: a.browser || "", mobile: /m[oó]vil|phone|tablet/i.test(a.device || "") || !!d.touch,
           screen: d.sw ? `${d.sw}×${d.sh}` : "", tz: d.tz || "", langs: d.langs || "", lang: last.lang || "",
           refs: top(count(v.map((x) => x.ref || "Entrada directa")), 3),
           proj, projOpens: k("open").length, projDistinct: proj.size,
@@ -811,6 +821,20 @@
           sessions: v,
         };
       });
+    }
+    // people who came through the same private link, numbered by when they first came
+    function tagPeople(P) {
+      const groups = new Map();
+      P.filter((p) => p.name).forEach((p) => { if (!groups.has(p.name)) groups.set(p.name, []); groups.get(p.name).push(p); });
+      groups.forEach((list) => list.sort((a, b) => a.first - b.first).forEach((p, i) => { p.idx = i + 1; p.of = list.length; }));
+      return groups;
+    }
+    function paintTables(groups) {
+      $("peopleTables").innerHTML = [...groups].sort((a, b) => Math.max(...b[1].map((p) => p.last)) - Math.max(...a[1].map((p) => p.last))).map(([name, list]) => {
+        const visits = list.reduce((a, p) => a + p.visits, 0), time = list.reduce((a, p) => a + p.time, 0);
+        return `<div class="pt"><h4>${esc(name)}<span>${list.length} ${list.length === 1 ? "persona" : "personas"} · ${visits} visitas · ${pmm(time)}</span></h4>
+          <ol>${list.map((p) => `<li><b>#${p.idx}</b><span>${esc([p.device, p.os, p.place].filter(Boolean).join(" · "))}</span><em>${p.visits}× · ${pmm(p.time)}${p.note ? " · carta" : ""}${p.contact ? " · contacto" : ""}</em></li>`).join("")}</ol></div>`;
+      }).join("");
     }
     function paintSummary(P, S) {
       const T = (n, l, sm, wide) => `<div class="ps${wide ? " wide" : ""}"><b>${n}</b><span>${l}</span>${sm ? `<small>${sm}</small>` : ""}</div>`;
@@ -838,7 +862,7 @@
         const maxP = Math.max(1, ...[...p.proj.values()].map((o) => o.secs || o.n));
         const projBars = [...p.proj].sort((a, b) => b[1].secs - a[1].secs || b[1].n - a[1].n).map(([n, o]) => `<div><span>${esc(n)}</span><span>${o.n}× · ${pmm(o.secs)}</span><i style="--w:${Math.round(((o.secs || o.n) / maxP) * 100)}%"></i></div>`).join("") || `<p class="empty" style="padding:6px;font-size:13px">No abrió proyectos.</p>`;
         return `<details class="pv"><summary>
-            <div><h4>${esc(p.name || p.place || "Visitante")}${p.name ? `<span class="tag">Mesa privada</span>` : ""}${p.contact ? `<span class="tag" style="background:#9fd6b0">Contacto</span>` : ""}</h4>
+            <div><h4>${esc(p.name || p.place || "Visitante")}${p.name && p.of > 1 ? `<span class="who">persona ${p.idx} de ${p.of}</span>` : ""}${p.name ? `<span class="tag">Mesa privada</span>` : ""}${p.contact ? `<span class="tag" style="background:#9fd6b0">Contacto</span>` : ""}</h4>
               <span class="sub">${esc([p.name ? p.place : "", p.device, p.os, p.browser].filter(Boolean).join(" · "))} · última ${dayFmt(p.last)}</span></div>
             <div class="num"><b>${p.visits}</b><span>visitas</span></div>
             <div class="num"><b>${pmm(p.time)}</b><span>en total</span></div>
@@ -851,7 +875,7 @@
             <div class="pv-box"><h5>El dado y la mesa</h5><dl>${row("Tiradas del dado", p.rolls)}${row("Caras vistas", p.faces)}${row("Abrió su mesa privada", p.vip)}${row("Abrió la carta", p.note)}${row("Tiradas en la mesa", p.viproll)}${row("Cambió de idioma", p.lang2)}</dl></div>
             <div class="pv-box"><h5>La casa (minijuego)</h5><dl>${row("Veces que lo abrió", p.house)}${row("Partidas terminadas", p.games)}${row("Mejor ronda", p.bestRound || "—")}${row("Más fichas", p.bestChips ? p.bestChips.toLocaleString("es-ES") : "—")}${row("Ranking", p.ranked.join(" · ") || "No se apuntó")}${row("Compartió", p.shared)}</dl></div>
             <div class="pv-box"><h5>Contacto</h5><dl>${row("Reservar llamada", p.call)}${row("Correo", p.mail)}${row("CV", p.cv)}${row("LinkedIn", p.linkedin)}${row("Otros enlaces", p.links - p.linkedin)}</dl></div>
-            <div class="pv-box"><h5>Quién</h5><dl>${row("Lugar", p.place)}${row("Dispositivo", p.device)}${row("Sistema", p.os)}${row("Navegador", p.browser)}${row("Pantalla", p.screen)}${row("Zona horaria", p.tz)}${row("Idiomas", p.langs)}${row("Web en", p.lang === "en" ? "Inglés" : "Español")}${row("Viene de", p.refs.map(([r, n]) => n > 1 ? `${r} (${n})` : r).join(", "))}${row("Id", p.id)}</dl></div>
+            <div class="pv-box"><h5>Quién</h5><dl>${row("Lugar (por IP, aprox.)", p.place)}${row("Dispositivo", p.device)}${row("Sistema", p.os)}${row("Navegador", p.browser)}${row("Pantalla", p.screen)}${row("Zona horaria", p.tz)}${row("Idiomas", p.langs)}${row("Web en", p.lang === "en" ? "Inglés" : "Español")}${row("Viene de", p.refs.map(([r, n]) => n > 1 ? `${r} (${n})` : r).join(", "))}${row("Id", p.id)}</dl></div>
             <div class="pv-box" style="grid-column:1/-1"><h5>Sus visitas</h5><ol class="vlist">${p.sessions.map((x) => {
               const e = x.ev || [], op = e.filter((y) => y[1] === "open").length;
               return `<li><span>${dayFmt(x.at)}</span><span>${esc(x.ref || "Entrada directa")}${op ? ` · ${op} proyecto${op > 1 ? "s" : ""}` : ""}${x.rolls ? ` · dado ×${x.rolls}` : ""}${e.some((y) => y[1] === "game") ? " · La casa" : ""}</span><span>${pmm(x.secs || 0)}</span></li>`;
@@ -865,7 +889,7 @@
       try {
         const { sessions } = await api("GET", null, "?admin=sessions&n=600");
         peopleSessions = sessions; people = aggregate(sessions);
-        paintSummary(people, sessions); paintPeople();
+        paintSummary(people, sessions); paintTables(tagPeople(people)); paintPeople();
       } catch (e) { $("peopleList").innerHTML = `<p class="empty">Las visitas no responden ahora mismo.</p>`; }
     }
     function closePeople() { const el = $("people"); el.classList.remove("on"); document.body.style.overflow = ""; setTimeout(() => { el.hidden = true; }, 400); }
