@@ -999,3 +999,16 @@ body.ui-in .house-open { opacity: 1; transform: none; }
   .hc-buy { padding: 11px 15px; font-size: 9.5px; letter-spacing: 0.1em; flex: none; }
   .hw-stage svg { width: min(88%, 300px); }
 }
+
+/* ---------- the boss round: a violet glow, the lights going out, the tremor ---------- */
+.house.is-boss .house-felt { box-shadow: inset 0 0 0 1px rgba(190, 120, 255, 0.7), inset 0 0 60px rgba(160, 90, 255, 0.18), 0 0 30px rgba(160, 90, 255, 0.2); animation: bossGlow 1.8s ease-in-out infinite; }
+@keyframes bossGlow { 50% { box-shadow: inset 0 0 0 1px rgba(210, 160, 255, 0.95), inset 0 0 80px rgba(160, 90, 255, 0.28), 0 0 44px rgba(160, 90, 255, 0.35); } }
+.house.is-boss .house-say { color: #d8b8ff; }
+.house-felt::after { content: ""; position: absolute; inset: 0; z-index: 5; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.12s; border-radius: inherit; }
+.house-felt.is-dark::after { opacity: 0.94; }
+.house-felt.is-shake .shell-cup .shell-glass { animation: cupShake 0.12s linear infinite; }
+@keyframes cupShake { 0% { transform: translate(0, 0); } 25% { transform: translate(-3px, 1px) rotate(-1.5deg); } 50% { transform: translate(2px, -1px); } 75% { transform: translate(3px, 1px) rotate(1.5deg); } 100% { transform: translate(0, 0); } }
+/* the last life: the hearts beat */
+.house.is-lastlife .house-lives i.on { animation: lastBeat 1.25s ease-in-out infinite; display: inline-block; }
+@keyframes lastBeat { 0%, 30%, 100% { transform: scale(1); } 12% { transform: scale(1.45); } 22% { transform: scale(1.2); } }
+@media (prefers-reduced-motion: reduce) { .house.is-boss .house-felt, .house.is-lastlife .house-lives i.on, .house-felt.is-shake .shell-cup .shell-glass { animation: none; } }

@@ -27,6 +27,8 @@
   })();
   const snd = () => { const s = window.CASINO && window.CASINO.sound; return s && s.on ? s : null; };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // a buzz on the phone: short on a hit, long and double on a miss (never with reduced motion)
+  const buzz = (p) => { try { if (!reduce && navigator.vibrate) navigator.vibrate(p); } catch (e) { /* not on this device */ } };
   const pick = (l) => l[Math.floor(Math.random() * l.length)];
   // from a thousand million up, the big words: 1 Billion, 2,5 Trillion…
   const BIG = [[1e100, "Googol"], [1e33, "Decillion"], [1e30, "Nonillion"], [1e27, "Octillion"], [1e24, "Septillion"], [1e21, "Sextillion"],
@@ -585,11 +587,26 @@
     render();
   }
 
+  // one life left: a slow heartbeat while the game goes on
+  let heartT = 0;
+  function heartbeat() {
+    clearTimeout(heartT);
+    const go = () => {
+      if (!root.classList.contains("on") || G.lives !== 1 || G.phase === "over" || G.phase === "idle") return;
+      const sn = snd(); if (sn) { sn.thud(0.32); setTimeout(() => sn.thud(0.22), 190); }
+      buzz([18, 170, 12]);
+      heartT = setTimeout(go, 1250);
+    };
+    heartT = setTimeout(go, 400);
+  }
   function render() {
     const R = G.round;
     k("chips").textContent = fmt(G.chips);
     k("round").textContent = R ? R.r : 1;
     k("best").textContent = fmt(G.record);
+    const lastLife = G.lives === 1 && G.phase !== "over" && G.phase !== "idle";
+    if (lastLife && !root.classList.contains("is-lastlife")) heartbeat();
+    root.classList.toggle("is-lastlife", lastLife);
     k("lives").innerHTML = Array.from({ length: E.LIVES }, (_, i) => `<i class="${i < G.lives ? "on" : ""}">♥</i>`).join("");
     ["chips", "best"].forEach((x) => k(x).classList.toggle("is-long", k(x).textContent.length > 9));
     const fx = Object.assign({}, G.shown, G.buy); // what this round bought, until its reveal is over
@@ -619,6 +636,7 @@
       over: [
         ...(G.cp > 1 ? [["resume", T(`Volver a la ronda ${G.cp}`, `Back to round ${G.cp}`) + " ↺", !canSign()]] : []),
         ["again", G.cp > 1 ? T("Desde cero", "From scratch") : T("Otra partida", "Play again"), !canSign() && !(G.cp > 1)],
+        ["share", T("Compartir", "Share") + " ↗", false],
       ],
     }[G.phase] || [];
     actions.innerHTML = A.map(([a, label, main]) => `<button type="button" data-a="${a}" class="${main ? "is-main" : ""}${a === "bet" && allIn() ? " is-allin" : ""}">${label}</button>`).join("");
@@ -685,6 +703,27 @@
     if (crowd >= 4 && !reduce) await wait(Math.min(140, 40 + crowd * 14));
   }
   const lift = (c, on) => c.classList.toggle("up", on);
+  // the boss's tricks: none of them moves a glass for real, they only test your eye
+  async function trick(kind) {
+    const felt = $(".house-felt"), sn = snd();
+    if (kind === "dark") {
+      // the lights go out for a moment, nothing moves
+      felt.classList.add("is-dark"); if (sn) sn.thud(0.4);
+      await wait(reduce ? 200 : 520); felt.classList.remove("is-dark"); await wait(120);
+    } else if (kind === "feint") {
+      // a glass starts towards its neighbour, then goes back where it was
+      const i = Math.floor(Math.random() * cups.length), c = cups[i], x0 = xOf(slotOf[i]);
+      const dir = slotOf[i] === 0 ? 1 : slotOf[i] === cups.length - 1 ? -1 : Math.random() < 0.5 ? -1 : 1;
+      if (sn) sn.glass(0.3);
+      await c.animate([{ transform: `translateX(${x0}px)` }, { transform: `translate(${x0 + dir * gap() * 0.42}px, -6px)`, offset: 0.5 }, { transform: `translateX(${x0}px)` }],
+        { duration: reduce ? 150 : 420, easing: "ease-in-out" }).finished.catch(() => {});
+      await wait(80);
+    } else {
+      // every glass trembles at once
+      felt.classList.add("is-shake"); if (sn) sn.thud(0.6);
+      await wait(reduce ? 150 : 600); felt.classList.remove("is-shake"); await wait(80);
+    }
+  }
 
   /* ---------- a game ---------- */
   async function newGame(fromCp) {
@@ -711,6 +750,8 @@
     [[5, "r5"], [10, "r10"], [15, "r15"], [20, "r20"], [30, "r30"]].forEach(([n, id]) => { if (r >= n) award(id); });
     const opens = unlocking(r);
     const extra = opens.length ? T(`Nueva ayuda en la tienda: ${ITEMS[opens[0]].n()}.`, `New help in the shop: ${ITEMS[opens[0]].n()}.`) : r % 4 === 0 ? skillLine() : r % 3 === 0 ? stackLine() : null;
+    root.classList.toggle("is-boss", E.isBoss(r));
+    if (E.isBoss(r)) { speak(T(`Ronda jefe. El crupier saca sus trucos: si acierta, el multiplicador se dobla.`, `Boss round. The croupier pulls out his tricks: hit it and the multiplier doubles.`)); return; }
     speak(r > 1 && G.round.n > 3 && r % 10 === 0 ? T(`Ronda ${r}: entra un vaso más. La mesa paga ×${G.round.pay}.`, `Round ${r}: one more glass. The table pays ×${G.round.pay}.`) : extra || LINES.bet());
   }
 
@@ -729,7 +770,17 @@
     if (!G.buy.glass) diceShow(false);
     G.phase = "shuffle"; render(); speak(LINES.shuffle());
     await wait(260);
-    for (const p of R.moves) await move(p, G.buy.slow ? R.ms * 2 : R.ms);
+    // the boss round: two or three tricks dropped between passes (a blackout, a feint, a tremor)
+    const boss = E.isBoss(R.r), tricks = new Map();
+    if (boss) {
+      const kinds = ["dark", "feint", "shake"].sort(() => Math.random() - 0.5).slice(0, 2 + (R.r >= 20 ? 1 : 0));
+      kinds.forEach((kd, i) => tricks.set(Math.floor((R.moves.length * (i + 1)) / (kinds.length + 1)), kd));
+    }
+    for (let i = 0; i < R.moves.length; i++) {
+      const sn = snd(); if (sn && sn.tick) sn.tick(0.35 + (i / R.moves.length) * 0.65);
+      if (tricks.has(i)) await trick(tricks.get(i));
+      await move(R.moves[i], G.buy.slow ? R.ms * 2 : R.ms);
+    }
     G.phase = "pick"; render();
     // the tip-off: the house lifts one empty glass and leaves it up
     if (G.buy.hint) {
@@ -769,6 +820,10 @@
     picks.forEach((c) => lift(cups[c], true));
     const livesBefore = G.lives; if (res.lives != null) G.lives = res.lives;
     G.chips = res.chips; G.best = res.best; G.won = res.won; G.safe = res.safe != null ? res.safe : G.safe;
+    const multBefore = G.mult; if (res.mult != null) G.mult = res.mult;
+    root.classList.remove("is-boss");
+    buzz(res.ok ? 28 : [70, 50, 110]);
+    if (res.ok && E.isBoss(R.r) && G.mult > multBefore) { paintMult(true); rain(4, T("Jefe vencido", "Boss beaten"), T(`Multiplicador ×2 → ${fmtMult(G.mult)}`, `Multiplier ×2 → ${fmtMult(G.mult)}`)); }
     G.shown = G.buy; G.buy = {};
     const s = snd();
     const diff = G.chips - before;
@@ -845,6 +900,51 @@
     toBet();
   }
 
+  /* ---------- share: a card in the site's style, and a link back to it ---------- */
+  function shareCard() {
+    const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    const hell = G.tier === 3, god = G.tier >= 4, accent = god ? "#ffd36b" : hell ? "#ff3b42" : "#ffffff";
+    const bg = g.createRadialGradient(W / 2, 260, 40, W / 2, 420, 1100);
+    bg.addColorStop(0, god ? "#3a2c10" : hell ? "#2a0607" : "#17171a"); bg.addColorStop(1, "#050506");
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.strokeStyle = "rgba(255,255,255,0.18)"; g.lineWidth = 2; g.strokeRect(48, 48, W - 96, H - 96);
+    const font = (w, px, fam) => `${w} ${px}px ${fam === "mono" ? '"Geist Mono", ui-monospace, monospace' : '"Inter Tight", "Helvetica Neue", Arial, sans-serif'}`;
+    g.textAlign = "left"; g.fillStyle = "rgba(255,255,255,0.55)"; g.font = font(400, 30, "mono");
+    g.fillText(T("LA CASA · ¿DÓNDE ESTÁ EL DADO?", "THE HOUSE · WHERE IS THE DIE?"), 110, 150);
+    g.fillStyle = accent; g.shadowColor = accent; g.shadowBlur = 40;
+    g.font = font(600, 250, "sans"); g.fillText(String(G.lastR || (G.round && G.round.r) || 1), 100, 470);
+    g.shadowBlur = 0; g.fillStyle = "#fff"; g.font = font(400, 34, "mono"); g.fillText(T("RONDA", "ROUND"), 110, 530);
+    const row = (y, label, value) => { g.fillStyle = "rgba(255,255,255,0.45)"; g.font = font(400, 28, "mono"); g.fillText(label, 110, y); g.fillStyle = "#fff"; g.font = font(600, 78, "sans"); g.fillText(value, 110, y + 84); };
+    row(660, T("FICHAS", "CHIPS"), fmt(Math.max(scoreNow(), G.cashed ? G.chips : 0) || G.best));
+    row(840, T("MULTIPLICADOR", "MULTIPLIER"), fmtMult(G.mult));
+    row(1020, T("RANGO", "RANK"), TIERS[G.tier].n());
+    g.fillStyle = "rgba(255,255,255,0.7)"; g.font = font(400, 32, "mono"); g.fillText("woblo.io", 110, 1235);
+    g.textAlign = "right"; g.fillStyle = accent; g.font = font(400, 32, "mono"); g.fillText(T("¿ME SUPERAS?", "CAN YOU BEAT IT?"), W - 110, 1235);
+    // a little die in the corner
+    g.save(); g.translate(W - 220, 330); g.rotate(-0.18); g.strokeStyle = accent; g.lineWidth = 6; g.shadowColor = accent; g.shadowBlur = 30;
+    g.beginPath(); g.roundRect ? g.roundRect(-70, -70, 140, 140, 22) : g.rect(-70, -70, 140, 140); g.stroke();
+    g.fillStyle = accent; [[-35, -35], [0, 0], [35, 35]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 11, 0, Math.PI * 2); g.fill(); }); g.restore();
+    return c;
+  }
+  async function share() {
+    const r = G.lastR || (G.round && G.round.r) || 1, sc = scoreNow();
+    const text = T(`He llegado a la ronda ${r} en «La casa» con ${fmt(sc || G.best)} fichas y un multiplicador ${fmtMult(G.mult)}. ¿Me superas?`,
+      `I reached round ${r} in "The house" with ${fmt(sc || G.best)} chips and a ${fmtMult(G.mult)} multiplier. Can you beat it?`);
+    const url = "https://www.woblo.io/";
+    (window.WOBLO_TRACK && window.WOBLO_TRACK("share", `«La casa»: comparte la ronda ${r}`));
+    try {
+      const blob = await new Promise((res) => shareCard().toBlob(res, "image/png"));
+      const fileObj = blob && new File([blob], "la-casa-woblo.png", { type: "image/png" });
+      if (fileObj && navigator.canShare && navigator.canShare({ files: [fileObj] })) { await navigator.share({ files: [fileObj], text: text + " " + url }); return; }
+      if (navigator.share) { await navigator.share({ text, url }); return; }
+      // no share sheet (desktop): the card is saved and the text copied
+      if (blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "la-casa-woblo.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+      await navigator.clipboard.writeText(text + " " + url).catch(() => {});
+      speak(T("Tarjeta guardada y texto copiado. A presumir.", "Card saved and text copied. Go show off."));
+    } catch (e) { /* the share sheet was closed */ }
+  }
+
   /* ---------- the wheel: every five rounds, free; it only multiplies ---------- */
   const wheel = document.createElement("section");
   wheel.className = "house-wheel"; wheel.hidden = true;
@@ -899,7 +999,7 @@
     await wait(reduce ? 200 : 4400);
     G.mult = w.mult; G.wheelBusy = false;
     paintMult(true);
-    if (sn && sn.burst && w.m >= 5) sn.burst();
+    if (sn && w.m >= 5) for (let i = 0; i < 6; i++) setTimeout(() => sn.chip(0.9), i * 70);
     wheel.querySelector(".hw-say").textContent = w.m >= 10 ? T(`¡La dorada! ${fmtMult(w.m)}. Su multiplicador: ${fmtMult(G.mult)}.`, `The golden one! ${fmtMult(w.m)}. Your multiplier: ${fmtMult(G.mult)}.`)
       : T(`${fmtMult(w.m)}. Su multiplicador ahora es ${fmtMult(G.mult)}.`, `${fmtMult(w.m)}. Your multiplier is now ${fmtMult(G.mult)}.`);
     go.disabled = false; go.dataset.state = "done"; go.textContent = T("Seguir jugando", "Keep playing") + " →";
@@ -926,6 +1026,7 @@
     return sc;
   }
   async function act(a) {
+    if (a === "share") { share(); return; }
     if (a === "resume" && G.phase === "over" && G.cp > 1) {
       actions.innerHTML = "";
       cups.forEach((c) => lift(c, false)); die.classList.remove("on");
@@ -1029,12 +1130,12 @@
     layer.insertAdjacentHTML("beforeend", `<div class="house-banner"><small>${sub || ""}</small><b>${title}</b></div>`);
     host.appendChild(layer);
     const s = snd();
-    if (s) { const ticks = 3 + level * 2; for (let i = 0; i < ticks; i++) setTimeout(() => s.chip(0.5 + Math.random() * 0.5), i * (110 - level * 10)); if (level >= 3) setTimeout(() => s.burst && s.burst(), 80); }
+    if (s) { const ticks = 3 + level * 2; for (let i = 0; i < ticks; i++) setTimeout(() => s.chip(0.5 + Math.random() * 0.5), i * (110 - level * 10)); if (level >= 3) setTimeout(() => s.thud(0.8), 80); }
     return new Promise((res) => setTimeout(() => { layer.classList.add("off"); setTimeout(() => { layer.remove(); }, 700); res(); }, reduce ? 1400 : cfg.ms));
   }
 
   // on a local server only: the rains can be called by hand, to look at them
-  if (/^(localhost|127.0.0.1)$/.test(location.hostname)) { window.__houseRain = rain; window.__house = { G, E, render, award, jump: (r) => { G.round = E.round(r, Math.random, G.add); toBet(); } }; }
+  if (/^(localhost|127.0.0.1)$/.test(location.hostname)) { window.__houseRain = rain; window.__house = { G, E, render, award, shareCard, jump: (r) => { G.round = E.round(r, Math.random, G.add); toBet(); } }; }
 
   /* ---------- the ranking ---------- */
   nameIn.value = store.get(NAME_KEY) || "";

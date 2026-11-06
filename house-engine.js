@@ -89,6 +89,10 @@
       }
     }
   }
+  // the least time a round takes to be shown (the server refuses faster picks): half the shuffle, plus the peek
+  const minPlayMs = (R) => Math.round(0.5 * R.moves.length * R.ms + 900);
+  // a boss round every ten rounds: tricks on the felt, and a hit doubles the game multiplier
+  const isBoss = (r) => r > 0 && r % 10 === 0;
   // kept for old clients; the stake is no longer chosen
   const minBet = (chips) => Math.max(1, Math.min(chips, Math.ceil(chips / 10)));
   // the stake is fixed: a quarter of the table (at least 10, or all of it when less is left)
@@ -199,7 +203,7 @@
     if (s.lives == null) s.lives = LIVES;
     const delta = ok ? gainFor(b, stake, R.pay, dm, s.mult) : -lossFor(b, stake, s.chips);
     s.chips += delta;
-    if (ok) s.won += 1;
+    if (ok) { s.won += 1; if (isBoss(R.r)) s.mult = round2((s.mult || 1) * 2); }
     else if (!b.insure) s.lives -= 1;
     s.r += 1; s.buy = {};
     if (s.lives <= 0) s.chips = 0;
@@ -208,5 +212,5 @@
     return { ok, delta, dm, stake, lives: s.lives };
   }
   const score = (s) => (s.cashed ? s.chips : 0);
-  return { MIN_CUPS, canRemoveGlass, removeGlass, readyAt, nameCheck, START, LIVES, round, msFor, cupsFor, cupsAt, MAX_CUPS, payFor, minBet, stakeFor, checkpoint, GLASS_MULT, DICE, COLORS, diceOk, canAddGlass, addGlass, WHEEL, wheelDue, spin, SHOP, price, canBuy, buy, canSave, save, judge, gainFor, lossFor, settle, score };
+  return { minPlayMs, isBoss, MIN_CUPS, canRemoveGlass, removeGlass, readyAt, nameCheck, START, LIVES, round, msFor, cupsFor, cupsAt, MAX_CUPS, payFor, minBet, stakeFor, checkpoint, GLASS_MULT, DICE, COLORS, diceOk, canAddGlass, addGlass, WHEEL, wheelDue, spin, SHOP, price, canBuy, buy, canSave, save, judge, gainFor, lossFor, settle, score };
 });

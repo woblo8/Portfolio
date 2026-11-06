@@ -33,6 +33,21 @@ function rng(seed) { let i = 0; return () => mac(`${seed}:${i++}`).readUInt32BE(
 const deal = (s) => E.round(s.r, rng(`${s.g}:${s.r}`), s.add);
 const pub = (R) => ({ r: R.r, n: R.n, d: R.d, x: R.x, moves: R.moves, ms: R.ms, pay: R.pay });
 
+// ---------- states already played ----------
+// Every move answers with a new sealed state; the old one is remembered here (by its signature) and
+// refused if it comes back. Kept in the memory of the running function: cheap, and enough to stop
+// the replay of a missed pick in the same session.
+const MOVES = new Set(["pick", "buy", "glass", "unglass", "spin", "cashout"]);
+const SPENT = new Map();
+const sigOf = (id) => String(id).split(".")[1] || String(id);
+const spent = (id) => SPENT.has(sigOf(id));
+function spend(id) {
+  const sig = sigOf(id), now = Date.now();
+  SPENT.set(sig, now + GAME_TTL);
+  if (SPENT.size > 20000) for (const [k, t] of SPENT) if (t < now || SPENT.size > 15000) SPENT.delete(k);
+  return true;
+}
+
 // ---------- the board ----------
 function weekKey(d = new Date()) {
   const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -134,35 +149,46 @@ module.exports = async (req, res) => {
         r = E.checkpoint(prev.r - 1);
         if (r < 2) { res.status(400).json({ error: "bad-checkpoint" }); return; }
       }
-      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, safe: 0, best: E.START, won: 0, over: false, mult: 1, add: 0, lives: E.LIVES };
+      const s = { g: crypto.randomBytes(4).toString("hex"), t: Date.now(), r, cp: r > 1 ? r : undefined, chips: E.START, safe: 0, best: E.START, won: 0, over: false, mult: 1, add: 0, lives: E.LIVES, dt: Date.now() };
       res.status(200).json({ id: seal(s), round: pub(deal(s)), chips: s.chips, best: s.best });
       return;
     }
     const s = unseal(body.id);
     if (!s || !/^[a-f0-9]{8}$/.test(s.g || "")) { res.status(400).json({ error: "bad-id" }); return; }
     if (Date.now() - (s.t || 0) > GAME_TTL) { res.status(404).json({ error: "no-game" }); return; }
+    // a state can be played once: sending an older one again (to retry a missed pick) is refused
+    if (MOVES.has(body.op)) {
+      if (spent(body.id)) { res.status(409).json({ error: "used" }); return; }
+      // only a move that went through spends the state (a refused one can be tried again)
+      let code = 200; const st = res.status.bind(res), js = res.json.bind(res);
+      res.status = (c) => { code = c; st(c); return res; };
+      res.json = (b) => { if (code === 200) spend(body.id); return js(b); };
+    }
 
     if (body.op === "pick") {
       if (s.over) { res.status(409).json({ error: "finished" }); return; }
       const R = deal(s), mode = String(body.mode || "one");
+      // nobody follows a shuffle faster than it can be shown
+      if (s.dt && Date.now() - s.dt < E.minPlayMs(R)) { res.status(400).json({ error: "too-fast" }); return; }
       const picks = Array.isArray(body.cups) ? body.cups.map(Number) : [Number(body.cup)];
       if (!picks.length || picks.length > 2 || picks.some((c) => !Number.isInteger(c) || c < 0 || c >= R.n)) { res.status(400).json({ error: "bad-cup" }); return; }
       if (!E.diceOk(mode, s, R)) { res.status(400).json({ error: "bad-mode" }); return; }
       const { ok, dm, delta } = E.settle(s, R, picks, mode);
+      s.dt = Date.now();
       res.status(200).json({ ok, dm, delta, lives: s.lives, d: R.d, x: R.x, chips: s.chips, safe: s.safe || 0, mult: s.mult, best: s.best, won: s.won, id: seal(s), round: s.over ? null : pub(deal(s)) });
       return;
     }
     // one more glass on the table, for good: the multiplier grows ×1.5 and the round is dealt again
     if (body.op === "glass") {
       if (!E.canAddGlass(s)) { res.status(400).json({ error: "cannot-add" }); return; }
-      E.addGlass(s);
+      E.addGlass(s); s.dt = Date.now();
       res.status(200).json({ id: seal(s), mult: s.mult, round: pub(deal(s)) });
       return;
     }
     // one glass less (down to three): the multiplier is divided by 1.5
     if (body.op === "unglass") {
       if (!E.canRemoveGlass(s)) { res.status(400).json({ error: "cannot-remove" }); return; }
-      E.removeGlass(s);
+      E.removeGlass(s); s.dt = Date.now();
       res.status(200).json({ id: seal(s), mult: s.mult, round: pub(deal(s)) });
       return;
     }
