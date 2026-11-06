@@ -10,6 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="house.css" />
+  <style>:root { --bone: #ecebe7; --neon-glow: 0 0 10px rgba(255, 255, 255, 0.55), 0 0 2px #fff; --gut: clamp(20px, 3.2vw, 48px); } .house-open { display: none !important; }
+  /* the game was made for the main site: give its buttons the same plain start (no weight, so its own styles win) */
+  :where(.house) :where(button) { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 0; } :where(.house) :where(input) { font: inherit; color: inherit; } :where(.house) { font-family: var(--sans); color: var(--ivory); }</style>
   <style>
     /* ============================================================
        EL DESPACHO — the private office of the house, in the
@@ -511,6 +515,11 @@
     </section>
 
     <section class="folio reveal">
+      <div class="folio-head"><h2>La casa · <em>mesa de pruebas</em></h2><button class="btn small" type="button" id="houseTest">Jugar en modo prueba →</button></div>
+      <p style="color:var(--smoke);font-size:13.5px;max-width:60ch">El minijuego tal cual, pero con los vasos de cristal siempre: ves el dado todo el rato. La partida es de verdad: si te apuntas, entra en el ranking (y desde aquí abajo la puedes borrar).</p>
+    </section>
+
+    <section class="folio reveal">
       <div class="folio-head"><h2>La casa · <em>ranking</em></h2><p>El minijuego. Cambia un nombre, bórralo o empieza el ranking de cero.</p></div>
       <ol class="board" id="board"><li class="empty">…</li></ol>
       <div class="board-foot"><button class="btn ghost small" type="button" id="boardReload">Actualizar</button><button class="btn small danger" type="button" id="boardReset">Resetear ranking</button></div>
@@ -544,6 +553,11 @@
 
   <script src="i18n.js"></script>
   <script src="projects.js"></script>
+  <script>window.HOUSE_TEST = true;</script>
+  <script src="house-engine.js"></script>
+  <script src="house-music.js"></script>
+  <script src="house.js"></script>
+  <script>document.getElementById("houseTest").addEventListener("click", () => { const b = document.querySelector(".house-open"); if (b) b.click(); });</script>
   <script>
   (() => {
     "use strict";

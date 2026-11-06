@@ -13,6 +13,9 @@
   "use strict";
   const E = window.HouseEngine;
   if (!E) return;
+  // the despacho's test table: the glasses are crystal for good, so the die is always in sight
+  const TEST = !!window.HOUSE_TEST;
+  const seeAll = () => TEST || !!G.buy.glass;
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
@@ -219,6 +222,7 @@
   { let x0 = null; guide.addEventListener("pointerdown", (e) => { x0 = e.clientX; }); guide.addEventListener("pointerup", (e) => { if (x0 == null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 40) showPlate(plate + (dx < 0 ? 1 : -1)); }); }
   root.addEventListener("click", (e) => { if (e.target.closest(".house-guide-open")) openGuide(); });
 
+  if (TEST) root.classList.add("is-test");
   document.body.append(btn, root);
 
   const $ = (q) => root.querySelector(q);
@@ -613,7 +617,7 @@
     k("lives").innerHTML = Array.from({ length: E.LIVES }, (_, i) => `<i class="${i < G.lives ? "on" : ""}">♥</i>`).join("");
     ["chips", "best"].forEach((x) => k(x).classList.toggle("is-long", k(x).textContent.length > 9));
     const fx = Object.assign({}, G.shown, G.buy); // what this round bought, until its reveal is over
-    root.classList.toggle("is-crystal", !!fx.glass);
+    root.classList.toggle("is-crystal", !!fx.glass || TEST);
     root.classList.toggle("is-lucky", !!fx.lucky);
     // with the coloured dice the white one stays white, whatever the mode (in god mode it would look gold)
     root.classList.toggle("is-colors", G.dice !== "one");
@@ -682,7 +686,7 @@
     const dur = Math.round(ms * Math.min(1.25, 1 + 0.05 * Math.max(0, crowd - 2)));
     const s = snd(); if (s) s.glass(0.35);
     // crystal glasses: every die travels with its glass
-    if (G.buy.glass && G.round) diceOn(G.round, G.dice).forEach(([el, cup]) => {
+    if (seeAll() && G.round) diceOn(G.round, G.dice).forEach(([el, cup]) => {
       if (next[cup] === slotOf[cup]) return;
       const x0 = xOf(slotOf[cup]), x1 = xOf(next[cup]);
       el.animate([{ transform: `translateX(${x0}px)` }, { transform: `translateX(${x1}px)` }], { duration: dur, easing: "cubic-bezier(0.45, 0, 0.25, 1)" })
@@ -770,7 +774,7 @@
     cups.forEach((c) => lift(c, false));
     { const s = snd(); if (s) s.thud(0.5); }
     await wait(420);
-    if (!G.buy.glass) diceShow(false);
+    if (!seeAll()) diceShow(false);
     G.phase = "shuffle"; render(); speak(G.dice === "dim" ? T("Luces fuera…", "Lights out…") : LINES.shuffle());
     $(".house-felt").classList.toggle("is-dim", G.dice === "dim");
     await wait(260);

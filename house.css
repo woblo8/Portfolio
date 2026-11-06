@@ -1049,3 +1049,6 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 .house .rk-n.rk-t3 + .rk-r .rk-rn, .rk-n.rk-t3 + .rk-r .rk-rn { color: #ff3b4a; text-shadow: 0 0 6px rgba(255, 59, 74, 0.6); }
 .house .rk-n.rk-t4 + .rk-r .rk-rn, .rk-n.rk-t4 + .rk-r .rk-rn { color: #ffd36b; text-shadow: 0 0 6px rgba(255, 211, 107, 0.6); }
 .house .rk-n.rk-t5 + .rk-r .rk-rn, .rk-n.rk-t5 + .rk-r .rk-rn { color: #c08cff; text-shadow: 0 0 6px rgba(192, 140, 255, 0.6); }
+
+/* the despacho's test table */
+.house.is-test .house-top .house-k::after { content: " · modo prueba: ves el dado"; color: #9fd6b0; }
