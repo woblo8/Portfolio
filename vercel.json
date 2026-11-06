@@ -12,5 +12,11 @@
       "destination": "/assets/cv/Carlos-Infanzon-Civantos-CV.pdf",
       "permanent": false
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/vip?cron=purge",
+      "schedule": "17 4 * * *"
+    }
   ]
 }

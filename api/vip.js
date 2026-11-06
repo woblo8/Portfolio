@@ -251,6 +251,27 @@ module.exports = async (req, res) => {
         const g = await readGuest(slugOf(q.get("guest")));
         return res.status(200).json(g ? { note: g.note, order: g.order, greet: g.greet || "p" } : {});
       }
+      // the daily clean-up (a Vercel cron): visit notes older than twelve months are deleted, as the
+      // privacy page promises. Only the cron (or the despacho key) can run it.
+      if (q.get("cron") === "purge") {
+        const cronOk = process.env.CRON_SECRET ? String(req.headers.authorization || "") === `Bearer ${process.env.CRON_SECRET}` : /vercel-cron/i.test(String(req.headers["user-agent"] || ""));
+        if (!cronOk && !isAdmin(req)) return res.status(401).json({ error: "no-key" });
+        if (!hasBlob) return res.status(200).json({ deleted: 0 });
+        const { list, del } = await blob();
+        const cutoff = Date.now() - 365 * 864e5;
+        let deleted = 0;
+        for (const prefix of ["visits/s/", "vip/visits/"]) {
+          let cursor;
+          do {
+            const page = await list({ prefix, cursor, limit: 1000 });
+            // the time of each note is the first number in its name
+            const old = page.blobs.filter((b) => { const t = +(b.pathname.slice(prefix.length).match(/^(\d{12,14})/) || [])[1]; return t && t < cutoff; });
+            if (old.length) { await del(old.map((b) => b.url)); deleted += old.length; }
+            cursor = page.hasMore ? page.cursor : undefined;
+          } while (cursor);
+        }
+        return res.status(200).json({ deleted, before: new Date(cutoff).toISOString().slice(0, 10) });
+      }
       if (!isAdmin(req)) return res.status(401).json({ error: "no-key", configured: !!process.env.VIP_ADMIN_KEY });
       const { list } = await blob();
       if (q.get("admin") === "guests") {
