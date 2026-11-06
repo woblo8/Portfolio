@@ -634,7 +634,10 @@
   const isWide = () => innerWidth > 860;
   let halfW = 4;
   function layout() {
-    const w = innerWidth, h = innerHeight;
+    // the size the canvas really has on screen: on a phone it changes when the browser's bar
+    // shows or hides, and if the drawing kept the old shape the die would look squashed
+    const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight;
+    if (!w || !h) return;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     baseZ = w / h < 1 ? Math.max(9, 6.6 / (w / h)) : 9;
@@ -644,6 +647,10 @@
     wallX = clamp(halfW - 1.3, 0.6, 3.4);
   }
   addEventListener("resize", layout);
+  // every change of the canvas's real size, whatever caused it (the phone's bar, a rotation, the keyboard)
+  if (window.ResizeObserver) new ResizeObserver(() => layout()).observe(canvas);
+  if (window.visualViewport) visualViewport.addEventListener("resize", layout);
+  addEventListener("orientationchange", () => setTimeout(layout, 300));
   PERF.on(() => {
     renderer.setPixelRatio(Math.min(PR, 1.25));
     renderer.shadowMap.type = THREE.PCFShadowMap; // VSM blurs every frame; PCF is cheaper

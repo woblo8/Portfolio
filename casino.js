@@ -351,7 +351,11 @@
       "Los invitados de casa tienen trato especial. En español.",
       "Diga «español» y la casa le entenderá.",
     ];
-    const LANG = () => pick(window.LANG === "es" ? LANG_EN : LANG_ES);
+    // each list in a random order, then in turn
+    const shuffle = (l) => l.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+    SOUND.splice(0, SOUND.length, ...shuffle(SOUND));
+    const LANGS = shuffle(window.LANG === "es" ? LANG_EN : LANG_ES), order = { s: 0, l: 0 };
+    const LANG = () => LANGS[order.l++ % LANGS.length];
     const el = document.createElement("button");
     el.type = "button"; el.className = "whisper"; el.setAttribute("aria-live", "polite");
     document.body.appendChild(el);
@@ -371,8 +375,9 @@
       if (done) return;
       // the sound line only while the sound is off
       if (kind === "sound" && SND.on) kind = "lang";
-      if (shown >= 6) return stop(false);
-      el.textContent = kind === "sound" ? pick(SOUND)() : LANG();
+      if (shown >= 8) return stop(false);
+      // one after the other: sound, language, sound, language… never the same line twice
+      el.textContent = kind === "sound" ? SOUND[order.s++ % SOUND.length]() : LANG();
       el.dataset.kind = kind;
       place();
       el.classList.remove("on", "blink"); void el.offsetWidth; el.classList.add("on", "blink");
@@ -380,7 +385,7 @@
       timer = setTimeout(() => {
         el.classList.remove("on");
         kind = kind === "sound" ? "lang" : "sound";
-        timer = setTimeout(next, 14000);
+        timer = setTimeout(next, 8000);
       }, 6000);
     }
     el.addEventListener("click", () => {

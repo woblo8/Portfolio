@@ -24,8 +24,8 @@
 
   // rnd(): a float in [0, 1). A move is a permutation: the glass in slot k goes to slot p[k].
   // add: glasses the player has added to the table (they stay for the rest of the game)
-  // the player can add glasses (up to seven) or take them away (down to three)
-  const MAX_CUPS = 7, MIN_CUPS = 3;
+  // the player can add glasses (up to five) or take them away (down to three)
+  const MAX_CUPS = 5, MIN_CUPS = 3;
   const cupsAt = (r, add) => Math.max(MIN_CUPS, Math.min(MAX_CUPS, cupsFor(r) + (add || 0)));
   function round(r, rnd, add) {
     const n = cupsAt(r, add), moves = [];
@@ -52,14 +52,14 @@
     let x1 = idx(); while (x1 === d || x1 === x0) x1 = idx();
     return { r, n, d, x: [x0, x1], moves, ms: Math.max(130, Math.round(msFor(r) * glassSpeed(n))), pay: payFor(cupsFor(r)) };
   }
-  /* four glasses or more. The eye can follow two crossings at a time, not more: so at most two
-     pairs cross at once (four glasses), never the whole row, and no glass jumps further than
-     three places. What every extra glass adds is time pressure: two more passes per glass, and
+  /* four or five glasses. Mostly one crossing at a time; now and then a second one (or a little
+     circle of three instead), so never more than four glasses move at once, and no glass jumps
+     further than three places. What every extra glass adds is time pressure: two more passes per glass, and
      each move 7% quicker (glassSpeed). Sometimes one swap becomes a little circle of three. */
   function stepMove(p, n, r, rnd) {
-    const swaps = n <= 4 ? (rnd() < 0.5 ? 1 : 2) : rnd() < 0.3 ? 1 : 2, reach = Math.min(3, n - 1);
+    let circle = r >= 3 && rnd() < 0.22;
+    const swaps = circle ? 1 : rnd() < (n <= 4 ? 0.2 : 0.35) ? 2 : 1, reach = Math.min(3, n - 1);
     const used = new Set();
-    let circle = r >= 3 && rnd() < 0.25;
     for (let tries = 0, done = 0; done < swaps && tries < 80; tries++) {
       const a = Math.floor(rnd() * n), b = a + 1 + Math.floor(rnd() * reach);
       if (b >= n || used.has(a) || used.has(b)) continue;
@@ -89,13 +89,13 @@
        one    · 1  · one white die                                     ×1
        dim    · 3  · Penumbra: the shuffle happens almost in the dark, only the rims glow ×3
        pair   · 6  · two white dice: you pick two glasses, both must hit ×6
-       trio   · 10 · three dice: you pick three glasses, all three must hit (6 glasses or more) ×15 */
+       trio   · 10 · three dice: you pick three glasses, all three must hit (5 glasses) ×15 */
   const GLASS_MULT = 1.3;
   const DICE = {
     one: { at: 1, mult: 1 },
     dim: { at: 3, mult: 3 },
     pair: { at: 6, mult: 6 },
-    trio: { at: 10, mult: 15, cups: 6 },
+    trio: { at: 10, mult: 15, cups: 5 },
   };
   const COLORS = [1, 2, 5]; // (the old coloured dice, kept for old clients)
   const diceOk = (mode, s, R) => !!DICE[mode] && s.r >= DICE[mode].at && R.n >= (DICE[mode].cups || 3);
