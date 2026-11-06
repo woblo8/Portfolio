@@ -326,11 +326,14 @@
     document.body.appendChild(el);
     let kind = "sound", shown = 0, timer = 0, done = false;
     const place = () => {
-      // under the sound button; on a phone (where it is hidden) under the language button
-      const anchor = soundBtn.offsetParent ? soundBtn : langBtn || soundBtn;
-      const r = anchor.getBoundingClientRect();
-      el.style.top = Math.round(r.bottom + 8) + "px";
-      el.style.right = Math.max(12, Math.round(innerWidth - r.right)) + "px";
+      // each line sits centred under its own button, the little arrow pointing at it; the sound
+      // button is hidden on a phone, so there the sound line hangs from the language button
+      const anchor = el.dataset.kind === "lang" || !soundBtn.offsetParent ? langBtn || soundBtn : soundBtn;
+      const r = anchor.getBoundingClientRect(), w = el.offsetWidth, cx = r.left + r.width / 2;
+      const left = Math.max(12, Math.min(innerWidth - w - 12, cx - w / 2));
+      el.style.top = Math.round(r.bottom + 10) + "px";
+      el.style.left = Math.round(left) + "px";
+      el.style.setProperty("--ax", Math.round(Math.max(12, Math.min(w - 12, cx - left))) + "px");
     };
     const stop = (forever) => { done = true; clearTimeout(timer); el.classList.remove("on"); if (forever) store.set(NUDGE_KEY, "1"); setTimeout(() => el.remove(), 800); };
     function next() {
