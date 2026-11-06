@@ -24,8 +24,8 @@
 
   // rnd(): a float in [0, 1). A move is a permutation: the glass in slot k goes to slot p[k].
   // add: glasses the player has added to the table (they stay for the rest of the game)
-  // the player can add glasses (up to ten) or take them away (down to three)
-  const MAX_CUPS = 10, MIN_CUPS = 3;
+  // the player can add glasses (up to seven) or take them away (down to three)
+  const MAX_CUPS = 7, MIN_CUPS = 3;
   const cupsAt = (r, add) => Math.max(MIN_CUPS, Math.min(MAX_CUPS, cupsFor(r) + (add || 0)));
   function round(r, rnd, add) {
     const n = cupsAt(r, add), moves = [];
@@ -86,7 +86,7 @@
 
   /* ---------- multipliers ----------
      The game multiplier starts at ×1 and only grows:
-       · every glass you add to the table: ×1.3, for good (up to ten glasses)
+       · every glass you add to the table: ×1.3, for good (up to seven glasses)
        · the wheel, every five rounds: ×1.2 to ×10, it never takes anything away
      The dice of each round (a choice before each round, unlocked as you go):
        one    · 1  · one white die                                     ×1
