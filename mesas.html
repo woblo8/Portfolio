@@ -233,6 +233,44 @@
     .board-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
     .btn.danger { background: linear-gradient(180deg, #b0313a, #6d1218) !important; color: #fff !important; }
     @media (max-width: 560px) { .board li.row { grid-template-columns: 26px 80px minmax(0, 1fr); } .board li.row .btn { grid-column: span 1; } }
+    /* ---------- statistics per visitor ---------- */
+    .people { position: fixed; inset: 0; z-index: 60; overflow: auto; padding: 34px clamp(16px, 4vw, 56px) 60px; background: radial-gradient(120% 80% at 50% 0%, #121214, #050506 70%); opacity: 0; transform: translateY(18px); transition: opacity 0.4s var(--ease), transform 0.5s var(--ease); }
+    .people.on { opacity: 1; transform: none; }
+    .people-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+    .people-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--smoke); }
+    .people-top h2 { margin-top: 8px; font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 5vw, 52px); letter-spacing: -0.04em; line-height: 0.95; }
+    .people-top h2 em { font-style: normal; color: var(--gold-hi); text-shadow: var(--glow); }
+    .people-sum { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 18px; }
+    .ps { padding: 14px 14px 12px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); background: rgba(255, 255, 255, 0.02); }
+    .ps b { display: block; font-family: var(--mono); font-size: 24px; font-weight: 500; color: #fff; }
+    .ps span { display: block; margin-top: 4px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--smoke); }
+    .ps small { display: block; margin-top: 6px; font-size: 12px; color: var(--mist); line-height: 1.35; }
+    .ps.wide { grid-column: span 2; }
+    .ps.wide b { font-family: var(--sans); font-size: 15px; font-weight: 500; line-height: 1.45; }
+    .ps b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ps.wide b { white-space: normal; }
+    .people-bar { display: flex; gap: 8px; margin: 22px 0 14px; flex-wrap: wrap; }
+    .people-bar input, .people-bar select { flex: 1; min-width: 180px; padding: 11px 13px; border-radius: 10px; border: 0; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--line); color: var(--ivory); font: 14px var(--sans); }
+    .people-bar select { flex: 0 0 auto; }
+    .people-list { display: flex; flex-direction: column; gap: 8px; }
+    .pv { border-radius: 16px; background: rgba(255, 255, 255, 0.02); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+    .pv[open] { background: rgba(255, 255, 255, 0.035); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
+    .pv summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(64px, auto)); gap: 16px; align-items: center; padding: 14px 16px; }
+    .pv summary::-webkit-details-marker { display: none; }
+    .pv h4 { font-family: var(--serif); font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+    .pv h4 .tag { margin-left: 8px; padding: 2px 7px; border-radius: 99px; font: 9px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: #0c0c0e; background: var(--ivory); vertical-align: middle; }
+    .pv .sub { display: block; margin-top: 3px; font-size: 12px; color: var(--smoke); }
+    .pv .num { text-align: right; } .pv .num b { display: block; font-family: var(--mono); font-size: 16px; font-weight: 500; } .pv .num span { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--smoke); }
+    .pv-body { padding: 4px 16px 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .pv-box { padding: 12px 14px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+    .pv-box h5 { font-family: var(--mono); font-size: 9.5px; font-weight: 400; letter-spacing: 0.2em; text-transform: uppercase; color: var(--smoke); margin-bottom: 10px; }
+    .pv-box dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: 13px; } .pv-box dt { color: var(--smoke); } .pv-box dd { color: var(--ivory); text-align: right; font-variant-numeric: tabular-nums; }
+    .bars { display: flex; flex-direction: column; gap: 7px; }
+    .bars div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; font-size: 13px; }
+    .bars div i { grid-column: 1 / -1; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); position: relative; overflow: hidden; }
+    .bars div i::after { content: ""; position: absolute; inset: 0; width: var(--w); background: #fff; box-shadow: var(--glow); }
+    .vlist { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+    .vlist li { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; color: var(--mist); } .vlist li span:first-child { color: var(--smoke); font-family: var(--mono); font-size: 11px; }
+    @media (max-width: 640px) { .pv summary { grid-template-columns: minmax(0, 1fr) auto auto; } .pv summary .num.opt { display: none; } .ps.wide { grid-column: auto; } }
     .empty { padding: 30px 12px; text-align: center; color: var(--smoke); font-family: var(--serif); font-style: italic; font-size: 17px; }
 
     /* the room log: a timeline */
@@ -459,7 +497,7 @@
     </section>
 
     <section class="folio reveal">
-      <div class="folio-head"><h2>Quién ha <em>entrado</em></h2><p id="sessCount">Cada visita a la web, con todo lo que hizo. Pulsa una para ver el detalle.</p></div>
+      <div class="folio-head"><h2>Quién ha <em>entrado</em></h2><button class="btn small" type="button" id="peopleOpen">Estadísticas por visitante →</button><p id="sessCount">Cada visita a la web, con todo lo que hizo. Pulsa una para ver el detalle.</p></div>
       <div class="sessions" id="sessions"><p class="empty">…</p></div>
     </section>
 
@@ -477,6 +515,21 @@
     <p class="foot">La casa siempre gana · Música: Pufino, «Absent» (freetouse.com)</p>
   </main>
   <div class="toast" id="toast" role="status"></div>
+  <section class="people" id="people" hidden aria-label="Estadísticas por visitante">
+    <header class="people-top">
+      <div><span class="people-k">El despacho · estadísticas</span><h2>Cada <em>visitante</em>, en números</h2></div>
+      <button class="btn ghost small" type="button" id="peopleClose">Cerrar ✕</button>
+    </header>
+    <div class="people-sum" id="peopleSum"></div>
+    <div class="people-bar">
+      <input id="peopleFind" type="search" placeholder="Buscar ciudad, país, nombre, dispositivo…" autocomplete="off">
+      <select id="peopleSort" aria-label="Ordenar">
+        <option value="last">Última visita</option><option value="time">Más tiempo</option><option value="visits">Más visitas</option>
+        <option value="projects">Más proyectos</option><option value="game">Mejor partida</option><option value="hot">Más interés (contacto)</option>
+      </select>
+    </div>
+    <div class="people-list" id="peopleList"><p class="empty">…</p></div>
+  </section>
   <audio id="jazz" src="assets/audio/despacho.mp3" loop preload="none"></audio>
 
   <script src="i18n.js"></script>
@@ -706,6 +759,121 @@
       await loadBoard({ action: "reset", confirm: "RESET" });
       toast("Ranking reseteado");
     });
+
+    /* ---------- statistics per visitor: every visit of the same browser, added up ---------- */
+    let people = [], peopleSessions = [];
+    const pmm = (s) => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return h ? `${h} h ${m} min` : m ? `${m} min ${String(x).padStart(2, "0")} s` : `${x} s`; };
+    const pct = (a, b) => (b ? Math.round((a / b) * 100) + "%" : "—");
+    const dayFmt = (t) => new Date(t).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    const count = (arr) => arr.reduce((m, k) => (k ? m.set(k, (m.get(k) || 0) + 1) : m), new Map());
+    const top = (m, n = 5) => [...m].sort((a, b) => b[1] - a[1]).slice(0, n);
+    // "«La casa»: 1.250 fichas (ronda 12)" → { chips, round }
+    const gameOf = (d) => {
+      const r = +((d.match(/ronda (\d+)/) || [])[1] || 0);
+      const m = d.match(/([\d.,]+)\s*(Billion|Trillion|Quadrillion)?\s*fichas/);
+      let chips = 0;
+      if (m) { const mult = { Billion: 1e9, Trillion: 1e12, Quadrillion: 1e15 }[m[2]] || 1; chips = m[2] ? parseFloat(m[1].replace(",", ".")) * mult : +m[1].replace(/[.,]/g, ""); }
+      return { chips, round: r };
+    };
+    function aggregate(sessions) {
+      const by = new Map();
+      sessions.forEach((x) => {
+        const id = x.vid || x.sid;
+        if (!by.has(id)) by.set(id, { id, visits: [], names: new Set() });
+        const p = by.get(id); p.visits.push(x); if (x.vip) p.names.add(x.vip);
+      });
+      return [...by.values()].map((p) => {
+        const v = p.visits.sort((a, b) => b.at - a.at), last = v[0], first = v[v.length - 1];
+        const ev = v.flatMap((x) => (x.ev || []).map((e) => ({ t: e[0], k: e[1], d: e[2] || "", at: x.at })));
+        const k = (key) => ev.filter((e) => e.k === key);
+        // projects: how many times opened, and seconds inside (from "Sale de X · Ns")
+        const proj = new Map();
+        k("open").forEach((e) => { const n = e.d.replace(/ \(desde la mesa\)$/, ""); const o = proj.get(n) || { n: 0, secs: 0 }; o.n++; proj.set(n, o); });
+        k("close").forEach((e) => { const m = e.d.match(/^(.+?) · (\d+)s/); if (m) { const o = proj.get(m[1]) || { n: 0, secs: 0 }; o.secs += +m[2]; proj.set(m[1], o); } });
+        const games = k("game").map((e) => gameOf(e.d));
+        const time = v.reduce((a, x) => a + (x.secs || 0), 0);
+        const g = last.geo || {}, a = last.agent || {}, d = last.dev || {};
+        const contact = k("call").length + k("mail").length + k("cv").length + k("link").filter((e) => /linkedin/i.test(e.d)).length;
+        return {
+          id: p.id, name: [...p.names][0] || "", visits: v.length, first: first.at, last: last.at, time, avg: time / v.length,
+          longest: Math.max(...v.map((x) => x.secs || 0)),
+          place: [g.city, g.region && g.region !== g.city ? g.region : "", g.country].filter(Boolean).join(", "), country: g.country || "",
+          device: [a.device, a.model].filter(Boolean).join(" · "), os: a.os || "", browser: a.browser || "", mobile: /m[oó]vil|phone|tablet/i.test(a.device || "") || !!d.touch,
+          screen: d.sw ? `${d.sw}×${d.sh}` : "", tz: d.tz || "", langs: d.langs || "", lang: last.lang || "",
+          refs: top(count(v.map((x) => x.ref || "Entrada directa")), 3),
+          proj, projOpens: k("open").length, projDistinct: proj.size,
+          rolls: v.reduce((s2, x) => s2 + (x.rolls || 0), 0), faces: k("face").length,
+          vip: k("vip").length, note: k("note").length, viproll: k("viproll").length,
+          call: k("call").length, mail: k("mail").length, cv: k("cv").length, linkedin: k("link").filter((e) => /linkedin/i.test(e.d)).length,
+          links: k("link").length, lang2: k("lang").length, away: k("away").length,
+          house: k("house").length, games: games.length, bestChips: Math.max(0, ...games.map((x) => x.chips)), bestRound: Math.max(0, ...games.map((x) => x.round)),
+          ranked: k("rank").map((e) => e.d), shared: k("share").length, contact, events: ev.length,
+          sessions: v,
+        };
+      });
+    }
+    function paintSummary(P, S) {
+      const T = (n, l, sm, wide) => `<div class="ps${wide ? " wide" : ""}"><b>${n}</b><span>${l}</span>${sm ? `<small>${sm}</small>` : ""}</div>`;
+      const time = S.reduce((a, x) => a + (x.secs || 0), 0), back = P.filter((p) => p.visits > 1).length;
+      const mob = P.filter((p) => p.mobile).length;
+      const countries = top(count(P.map((p) => p.country)), 4).map(([c, n]) => `${c} ${n}`).join(" · ");
+      const refs = top(count(S.map((x) => x.ref || "Directa")), 4).map(([c, n]) => `${c} ${n}`).join(" · ");
+      const projAll = new Map(); P.forEach((p) => p.proj.forEach((o, n) => projAll.set(n, (projAll.get(n) || 0) + o.n)));
+      const projTop = top(projAll, 4).map(([n, c]) => `${n} ${c}`).join(" · ");
+      const sum = (f) => P.reduce((a, p) => a + p[f], 0);
+      $("peopleSum").innerHTML = [
+        T(P.length, "Visitantes únicos"), T(S.length, "Visitas"), T(pct(back, P.length), "Vuelven", `${back} han venido más de una vez`),
+        T(pmm(time / Math.max(1, S.length)), "Tiempo medio / visita"), T(pmm(time), "Tiempo total"), T(pct(mob, P.length), "Desde el móvil"),
+        T(sum("projOpens"), "Proyectos abiertos"), T(sum("rolls"), "Tiradas de dado"), T(sum("games"), "Partidas de La casa"),
+        T(sum("call"), "Reservar llamada"), T(sum("mail"), "Correos"), T(sum("cv") + sum("linkedin"), "CV + LinkedIn"),
+        T(countries || "—", "Países", "", true), T(refs || "—", "De dónde vienen", "", true), T(projTop || "—", "Proyectos más vistos", "", true),
+      ].join("");
+    }
+    function paintPeople() {
+      const q = $("peopleFind").value.trim().toLowerCase(), sort = $("peopleSort").value;
+      const key = { last: (p) => p.last, time: (p) => p.time, visits: (p) => p.visits, projects: (p) => p.projOpens, game: (p) => p.bestChips, hot: (p) => p.contact * 1000 + p.note * 10 + p.projOpens }[sort];
+      const list = people.filter((p) => !q || [p.name, p.place, p.device, p.os, p.browser, p.id].join(" ").toLowerCase().includes(q)).sort((a, b) => key(b) - key(a));
+      const row = (k, v) => (v || v === 0 ? `<dt>${k}</dt><dd>${esc(String(v))}</dd>` : "");
+      $("peopleList").innerHTML = list.length ? list.map((p) => {
+        const maxP = Math.max(1, ...[...p.proj.values()].map((o) => o.secs || o.n));
+        const projBars = [...p.proj].sort((a, b) => b[1].secs - a[1].secs || b[1].n - a[1].n).map(([n, o]) => `<div><span>${esc(n)}</span><span>${o.n}× · ${pmm(o.secs)}</span><i style="--w:${Math.round(((o.secs || o.n) / maxP) * 100)}%"></i></div>`).join("") || `<p class="empty" style="padding:6px;font-size:13px">No abrió proyectos.</p>`;
+        return `<details class="pv"><summary>
+            <div><h4>${esc(p.name || p.place || "Visitante")}${p.name ? `<span class="tag">Mesa privada</span>` : ""}${p.contact ? `<span class="tag" style="background:#9fd6b0">Contacto</span>` : ""}</h4>
+              <span class="sub">${esc([p.name ? p.place : "", p.device, p.os, p.browser].filter(Boolean).join(" · "))} · última ${dayFmt(p.last)}</span></div>
+            <div class="num"><b>${p.visits}</b><span>visitas</span></div>
+            <div class="num"><b>${pmm(p.time)}</b><span>en total</span></div>
+            <div class="num opt"><b>${p.projOpens}</b><span>proyectos</span></div>
+            <div class="num opt"><b>${p.games ? p.bestRound || "✓" : "—"}</b><span>ronda máx.</span></div>
+          </summary>
+          <div class="pv-body">
+            <div class="pv-box"><h5>Tiempo</h5><dl>${row("Visitas", p.visits)}${row("Tiempo total", pmm(p.time))}${row("Media por visita", pmm(p.avg))}${row("Visita más larga", pmm(p.longest))}${row("Primera vez", dayFmt(p.first))}${row("Última vez", dayFmt(p.last))}${row("Se fue a otra pestaña", p.away + " veces")}${row("Acciones registradas", p.events)}</dl></div>
+            <div class="pv-box"><h5>Proyectos · veces y tiempo dentro</h5><div class="bars">${projBars}</div></div>
+            <div class="pv-box"><h5>El dado y la mesa</h5><dl>${row("Tiradas del dado", p.rolls)}${row("Caras vistas", p.faces)}${row("Abrió su mesa privada", p.vip)}${row("Abrió la carta", p.note)}${row("Tiradas en la mesa", p.viproll)}${row("Cambió de idioma", p.lang2)}</dl></div>
+            <div class="pv-box"><h5>La casa (minijuego)</h5><dl>${row("Veces que lo abrió", p.house)}${row("Partidas terminadas", p.games)}${row("Mejor ronda", p.bestRound || "—")}${row("Más fichas", p.bestChips ? p.bestChips.toLocaleString("es-ES") : "—")}${row("Ranking", p.ranked.join(" · ") || "No se apuntó")}${row("Compartió", p.shared)}</dl></div>
+            <div class="pv-box"><h5>Contacto</h5><dl>${row("Reservar llamada", p.call)}${row("Correo", p.mail)}${row("CV", p.cv)}${row("LinkedIn", p.linkedin)}${row("Otros enlaces", p.links - p.linkedin)}</dl></div>
+            <div class="pv-box"><h5>Quién</h5><dl>${row("Lugar", p.place)}${row("Dispositivo", p.device)}${row("Sistema", p.os)}${row("Navegador", p.browser)}${row("Pantalla", p.screen)}${row("Zona horaria", p.tz)}${row("Idiomas", p.langs)}${row("Web en", p.lang === "en" ? "Inglés" : "Español")}${row("Viene de", p.refs.map(([r, n]) => n > 1 ? `${r} (${n})` : r).join(", "))}${row("Id", p.id)}</dl></div>
+            <div class="pv-box" style="grid-column:1/-1"><h5>Sus visitas</h5><ol class="vlist">${p.sessions.map((x) => {
+              const e = x.ev || [], op = e.filter((y) => y[1] === "open").length;
+              return `<li><span>${dayFmt(x.at)}</span><span>${esc(x.ref || "Entrada directa")}${op ? ` · ${op} proyecto${op > 1 ? "s" : ""}` : ""}${x.rolls ? ` · dado ×${x.rolls}` : ""}${e.some((y) => y[1] === "game") ? " · La casa" : ""}</span><span>${pmm(x.secs || 0)}</span></li>`;
+            }).join("")}</ol></div>
+          </div></details>`;
+      }).join("") : `<p class="empty">${q ? "Nadie coincide con la búsqueda." : "Todavía no ha entrado nadie."}</p>`;
+    }
+    async function openPeople() {
+      const el = $("people"); el.hidden = false; requestAnimationFrame(() => el.classList.add("on")); document.body.style.overflow = "hidden";
+      $("peopleList").innerHTML = `<p class="empty">Sumando todas las visitas…</p>`;
+      try {
+        const { sessions } = await api("GET", null, "?admin=sessions&n=600");
+        peopleSessions = sessions; people = aggregate(sessions);
+        paintSummary(people, sessions); paintPeople();
+      } catch (e) { $("peopleList").innerHTML = `<p class="empty">Las visitas no responden ahora mismo.</p>`; }
+    }
+    function closePeople() { const el = $("people"); el.classList.remove("on"); document.body.style.overflow = ""; setTimeout(() => { el.hidden = true; }, 400); }
+    $("peopleOpen").addEventListener("click", openPeople);
+    $("peopleClose").addEventListener("click", closePeople);
+    addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("people").hidden) closePeople(); });
+    $("peopleFind").addEventListener("input", paintPeople);
+    $("peopleSort").addEventListener("change", paintPeople);
 
     /* ---------- the room log ---------- */
     async function loadVisits() {

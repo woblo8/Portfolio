@@ -211,7 +211,7 @@ const TL = {
   viproll: () => "Lanza el dado de la mesa", mail: (d) => `Pulsa para escribirte (${d})`, call: () => "Pulsa «Reservar llamada» (Calendly)",
   link: (d) => `Abre ${d}`, cv: () => "Abre tu CV", lang: (d) => `Cambia el idioma a ${d}`, house: () => "Abre «La casa»",
   game: (d) => `Termina una partida de ${d}`, rank: (d) => `Se apunta al ranking: ${d}`, click: (d) => `Pulsa «${d}»`,
-  away: () => "Se va a otra pestaña", back: (d) => `Vuelve (${d})`,
+  share: (d) => `Comparte su partida (${d})`, away: () => "Se va a otra pestaña", back: (d) => `Vuelve (${d})`,
 };
 const mm = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
