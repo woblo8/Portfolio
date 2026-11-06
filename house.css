@@ -972,3 +972,30 @@ body.ui-in .house-open { opacity: 1; transform: none; }
   .house-bet { gap: 9px; }
 }
 @media (max-width: 520px) { .house-print { display: none; } }
+
+/* the panels (how to play, a help's card, the wheel) on small screens: room to breathe, nothing cut */
+.house-machine.is-guide { min-height: min(660px, calc(100vh - 32px)); }
+.hg-text { grid-template-columns: auto minmax(0, 1fr); max-width: 100%; }
+.hg-text p, .hc-long, .hw-say { overflow-wrap: anywhere; }
+.house-guide footer, .house-card footer { min-width: 0; }
+.hg-dots { min-width: 0; }
+@media (max-width: 520px) {
+  .house-guide, .house-card, .house-wheel { padding: 16px 14px 14px; }
+  .hg-plate { gap: 16px; }
+  .hg-plate svg { max-height: 34vh; }
+  .hg-text { column-gap: 10px; }
+  .hg-text h3 { font-size: 24px; }
+  .hg-text p { font-size: 13px; }
+  .house-guide footer { gap: 8px; }
+  .hg-prev { width: 34px; height: 34px; flex: none; }
+  .hg-dots { gap: 4px; }
+  .hg-dots i { width: 9px; }
+  .hg-dots i.on { width: 18px; }
+  .hg-next { flex: none; padding: 10px 13px; font-size: 9.5px; letter-spacing: 0.1em; }
+  .hc-ico svg { width: 110px; height: 110px; }
+  .house-card h3 { font-size: 26px; }
+  .hc-long { font-size: 13px; }
+  .hc-price b { font-size: 20px; }
+  .hc-buy { padding: 11px 15px; font-size: 9.5px; letter-spacing: 0.1em; flex: none; }
+  .hw-stage svg { width: min(88%, 300px); }
+}
