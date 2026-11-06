@@ -250,17 +250,6 @@ window.PROJECTS = [
         { w: bi("Eventos", "Events"), t: bi("Crisis, auditorías y fiestas que afectan a todos.", "Crises, audits and parties that hit everyone.") },
       ],
       trap: bi("Una trampa activa el código de la máquina (aquí, 6-3-3). Para desactivarla hay que acertar cada dígito con el Dado de Riesgo: si fallas uno, se acaba tu turno. O te la juegas a una sola tirada: 1–2 pierdes, 5–6 la desactivas.", "A trap activates the machine’s code (here, 6-3-3). To disarm it you must hit every digit with the Risk Die: miss one and your turn is over. Or gamble on a single roll: 1–2 you lose, 5–6 you disarm it."),
-      parts: [
-        { img: "board.jpg", label: bi("Tablero modular", "Modular board"), text: bi("Hexágonos que crecen alrededor de la banca central.", "Hexagons that grow around the central bank.") },
-        { img: "stacks.jpg", label: bi("Stacks", "Stacks"), text: bi("Billetes de 1.000 a 1.000.000: la moneda del juego.", "Notes from 1,000 to 1,000,000: the game’s currency.") },
-        { img: "card-1.jpg", label: bi("Cartas", "Cards"), text: bi("Máquinas, personajes, mejoras y eventos.", "Machines, characters, upgrades and events.") },
-        { img: "magnate.jpg", label: bi("Personajes", "Characters"), text: bi("Cada jugador, una habilidad única.", "Every player, a unique ability.") },
-      ],
-      process: [
-        { label: bi("Investigación", "Research"), text: bi("Fatiga digital y una demanda creciente de juego analógico, en un mercado saturado de juegos de mesa. Había que destacar con un tema y un ritmo propios.", "Digital fatigue and a growing demand for analogue play, in a saturated board-game market. It had to stand out with its own theme and pace."), imgs: ["sketch-1.jpg", "sketch-2.jpg"] },
-        { label: bi("Prototipo digital", "Digital prototype"), text: bi("Las primeras partidas, en Tabletop Simulator: probar reglas rápido, antes de imprimir nada.", "The first games, in Tabletop Simulator: testing rules fast, before printing anything."), imgs: ["digital.jpg"] },
-        { label: bi("Prototipo de papel", "Paper prototype"), text: bi("Cartulina, dados y hexágonos recortados. Iterar con jugadores reales (MDA) para equilibrar ingresos, costes y riesgos.", "Card, dice and cut-out hexagons. Iterating with real players (MDA) to balance income, costs and risk."), imgs: ["paper-2.jpg", "paper-1.jpg", "paper-3.jpg"] },
-      ],
       outro: bi("De Don Nadie\na Magnate Supremo.", "From Nobody\nto Supreme Magnate."),
     },
   },
