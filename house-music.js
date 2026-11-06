@@ -1,8 +1,9 @@
 /* ============================================================
-   LA CASA — the music. A lo-fi casino beat played live by the
-   browser (Web Audio, no files): a dusty boom-bap kit, warm
-   piano chords through a tape wobble, a round sub bass, vinyl
-   crackle, and now and then a few notes on top.
+   LA CASA — the music. A slow, smoky mafia-lounge beat played
+   live by the browser (Web Audio, no files): soft lo-fi drums,
+   minor piano chords through a tape wobble, a plucked upright
+   bass (no sub: nothing that rumbles), vinyl crackle, and a
+   muted trumpet that drifts in now and then.
    It follows the table: mellow at first, a little faster when
    the table burns, dark and slow in devil mode, dreamy with
    bells in god mode; busier while the croupier shuffles.
@@ -15,10 +16,10 @@
 
   // [bass root, chord voicing] per bar, four bars per mood
   const MOODS = [
-    { bpm: 80, swing: 0.62, tone: 2400, chords: [[41, [57, 60, 64, 67]], [40, [55, 59, 62, 67]], [38, [53, 57, 60, 64]], [36, [52, 55, 59, 62]]], lead: [72, 74, 76, 79, 81, 84] },                 // tourist: Fmaj9 Em7 Dm9 Cmaj9
-    { bpm: 82, swing: 0.62, tone: 2600, chords: [[45, [55, 60, 64, 67]], [41, [57, 60, 64, 67]], [43, [53, 59, 62, 65]], [36, [52, 55, 59, 62]]], lead: [72, 74, 76, 79, 81] },                     // gambler: Am9 Fmaj9 G13 Cmaj9
-    { bpm: 88, swing: 0.6, tone: 2900, chords: [[38, [53, 57, 60, 64]], [43, [53, 59, 64, 68]], [36, [52, 55, 59, 62]], [44, [55, 60, 63, 67]]], lead: [72, 75, 77, 79, 82, 84], extraKick: true },   // shark: the table burns
-    { bpm: 70, swing: 0.6, tone: 1500, chords: [[36, [51, 55, 58, 62]], [44, [55, 60, 63, 67]], [41, [56, 60, 63, 67]], [43, [53, 59, 62, 68]]], lead: [60, 62, 63, 66, 67, 68, 71], sub: 24, dark: true }, // devil: Cm9 Abmaj7 Fm9 G7b9
+    { bpm: 76, swing: 0.62, tone: 2200, chords: [[48, [55, 60, 63, 71]], [44, [55, 60, 63, 67]], [41, [56, 60, 63, 67]], [43, [53, 59, 62, 68]]], lead: [67, 68, 71, 72, 74, 75, 79] },              // tourist: Cm(maj7) Abmaj7 Fm9 G7b9 (harmonic minor)
+    { bpm: 78, swing: 0.62, tone: 2400, chords: [[45, [55, 60, 64, 67]], [38, [53, 57, 60, 65]], [40, [56, 59, 62, 65]], [45, [55, 60, 64, 71]]], lead: [69, 71, 72, 74, 76, 77, 80] },                // gambler: Am7 Dm7 E7b9 Am(maj7)
+    { bpm: 84, swing: 0.6, tone: 2600, chords: [[38, [53, 56, 60, 65]], [43, [53, 59, 62, 68]], [48, [55, 60, 63, 70]], [44, [55, 60, 63, 67]]], lead: [67, 68, 71, 72, 74, 75, 79], extraKick: true }, // shark: Dm7b5 G7b9 Cm7 Abmaj7, a touch faster
+    { bpm: 68, swing: 0.6, tone: 1500, chords: [[48, [54, 60, 63, 66]], [44, [55, 60, 62, 67]], [41, [56, 59, 62, 68]], [43, [53, 59, 62, 68]]], lead: [60, 61, 63, 66, 67, 68, 71], sub: 36, dark: true }, // devil: Cdim Abmaj7#11 Fm(maj7) G7b9
     { bpm: 68, swing: 0.58, tone: 3400, chords: [[37, [53, 56, 60, 63]], [39, [55, 58, 62, 65]], [41, [56, 60, 63, 67]], [42, [58, 61, 65, 68]]], lead: [80, 82, 84, 85, 87, 89], pad: true, bells: true }, // god: dreamy, bright
   ];
 
@@ -28,8 +29,10 @@
     const out = ctx.createGain(); out.gain.value = 0;
     // the whole mix a little dull at the top, like an old record
     const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 9000;
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 75; hp.Q.value = 0.7;
+    const shelf = ctx.createBiquadFilter(); shelf.type = "lowshelf"; shelf.frequency.value = 160; shelf.gain.value = -6;
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.2;
-    out.connect(lp); lp.connect(comp); comp.connect(ctx.destination);
+    out.connect(hp); hp.connect(shelf); shelf.connect(lp); lp.connect(comp); comp.connect(ctx.destination);
     // a room
     const rev = ctx.createConvolver(), len = ctx.sampleRate * 1.8, ir = ctx.createBuffer(2, len, ctx.sampleRate);
     for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
@@ -58,16 +61,20 @@
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vel, t + 0.015); g.gain.exponentialRampToValueAtTime(vel * 0.35, t + 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     g.connect(M.keys);
   }
+  // an upright bass, plucked: the body of the note sits in the mids, nothing to rumble
   function subBass(m, t, dur) {
-    const c = M.ctx, o = c.createOscillator(), g = c.createGain();
-    o.type = "sine"; o.frequency.setValueAtTime(hz(m) * 1.02, t); o.frequency.exponentialRampToValueAtTime(hz(m), t + 0.06);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.42, t + 0.03); g.gain.setTargetAtTime(0.0001, t + dur * 0.7, 0.08);
-    o.connect(g); send(g, 1, 0); o.start(t); o.stop(t + dur + 0.4);
+    const c = M.ctx, o = c.createOscillator(), o2 = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+    o.type = "triangle"; o.frequency.value = hz(m); o2.type = "sine"; o2.frequency.value = hz(m) * 2;
+    f.type = "lowpass"; f.frequency.setValueAtTime(1400, t); f.frequency.exponentialRampToValueAtTime(420, t + 0.25);
+    const g2 = c.createGain(); g2.gain.value = 0.35;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2, t + 0.012); g.gain.exponentialRampToValueAtTime(0.06, t + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur, 1.1));
+    o.connect(f); o2.connect(g2); g2.connect(f); f.connect(g); send(g, 1, 0.08);
+    o.start(t); o2.start(t); o.stop(t + 1.2); o2.stop(t + 1.2);
   }
   function kick(t, vel) {
     const c = M.ctx, o = c.createOscillator(), g = c.createGain();
-    o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.16);
-    g.gain.setValueAtTime(0.55 * vel, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+    o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(68, t + 0.09);
+    g.gain.setValueAtTime(0.26 * vel, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
     o.connect(g); send(g, 1, 0); o.start(t); o.stop(t + 0.4);
   }
   function snare(t, vel) {
@@ -85,11 +92,15 @@
     g.gain.setValueAtTime(0.045 * vel, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
     s.connect(f); f.connect(g); send(g, 1, 0); s.start(t, Math.random() * 0.5); s.stop(t + 0.06);
   }
-  function lead(m, t, vel) {
-    const c = M.ctx, o = c.createOscillator(), g = c.createGain();
-    o.type = "sine"; o.frequency.value = hz(m);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05 * vel, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
-    o.connect(g); g.connect(M.keys); o.start(t); o.stop(t + 1.3);
+  // a muted trumpet: a soft reedy tone that swells in, with a late vibrato
+  function lead(m, t, vel, dur = 1.1) {
+    const c = M.ctx, o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain(), vib = c.createOscillator(), vg = c.createGain();
+    o.type = "sawtooth"; o.frequency.value = hz(m);
+    vib.frequency.value = 5.2; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(hz(m) * 0.012, t + 0.35); vib.connect(vg); vg.connect(o.frequency);
+    f.type = "bandpass"; f.frequency.value = 1150; f.Q.value = 2.2;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06 * vel, t + 0.12); g.gain.setValueAtTime(0.06 * vel, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g); send(g, 0.8, 0.55);
+    o.start(t); vib.start(t); o.stop(t + dur + 0.05); vib.stop(t + dur + 0.05);
   }
   function bell(m, t) {
     const c = M.ctx, g = c.createGain();
@@ -112,9 +123,9 @@
     if (M.sub) { const d = M.sub; d.g.gain.setTargetAtTime(0.0001, c.currentTime, 0.6); setTimeout(() => { try { d.o.stop(); d.lfo.stop(); } catch (e) {} }, 3000); M.sub = null; }
     if (m == null) return;
     const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
-    o.type = "sawtooth"; o.frequency.value = hz(m); f.type = "lowpass"; f.frequency.value = 160; f.Q.value = 5;
-    lfo.frequency.value = 0.1; lg.gain.value = 90; lfo.connect(lg); lg.connect(f.frequency);
-    g.gain.value = 0.0001; g.gain.setTargetAtTime(0.08, c.currentTime, 1.2);
+    o.type = "sawtooth"; o.frequency.value = hz(m); f.type = "lowpass"; f.frequency.value = 420; f.Q.value = 3;
+    lfo.frequency.value = 0.1; lg.gain.value = 160; lfo.connect(lg); lg.connect(f.frequency);
+    g.gain.value = 0.0001; g.gain.setTargetAtTime(0.03, c.currentTime, 1.2);
     o.connect(f); f.connect(g); send(g, 1, 0.2); o.start(); lfo.start();
     M.sub = { o, g, lfo };
   }
@@ -144,11 +155,17 @@
     // the chord on one, held; a small stab before three
     if (st === 0) chord.forEach((m, i) => piano(m, at + i * 0.018, 60 / mood.bpm * 3.6, 0.13));
     if (st === 7 && Math.random() < 0.6) chord.slice(1).forEach((m) => piano(m + 12, at, 60 / mood.bpm * 0.8, 0.06));
-    // the sub: the root on one, again on the kick
-    if (st === 0) subBass(root, at, 60 / mood.bpm * 2.2);
-    if (st === 10) subBass(root + (Math.random() < 0.4 ? 7 : 0), at, 60 / mood.bpm * 1.2);
-    // a few notes on top, sometimes
-    if ((st === 6 || st === 14) && Math.random() < (M.busy ? 0.5 : 0.3)) lead(mood.lead[Math.floor(Math.random() * mood.lead.length)], at, 1);
+    // the upright walks on the quarters: root, fifth, a note of the chord, a step into the next bar
+    if (st % 4 === 0) {
+      const next = mood.chords[(M.bar + 1) % 4][0], q = st / 4;
+      const walk = [root, root + 7, root + (Math.random() < 0.5 ? 3 : 10), next + (next > root ? -1 : 1)];
+      subBass(walk[q] < 40 ? walk[q] + 12 : walk[q], at, 60 / mood.bpm);
+    }
+    // the muted trumpet: a short phrase every other bar, a held note to end it
+    if (M.bar % 2 === 1 && (st === 2 || st === 6 || st === 10) && Math.random() < (M.busy ? 0.7 : 0.55)) {
+      const L = mood.lead, n = L[Math.floor(Math.random() * L.length)];
+      lead(n, at, 1, st === 10 ? 60 / mood.bpm * 2.4 : 60 / mood.bpm * 0.9);
+    }
     if (mood.bells && st === 8 && Math.random() < 0.5) bell(mood.lead[Math.floor(Math.random() * mood.lead.length)], at);
     M.step = (st + 1) % 16; if (M.step === 0) M.bar++;
     return s16;
@@ -164,7 +181,7 @@
     if (M.ctx !== ctx) build(ctx);
     M.on = true; M.bar = 0; M.step = 0; M.next = ctx.currentTime + 0.1;
     M.out.gain.cancelScheduledValues(ctx.currentTime);
-    M.out.gain.setTargetAtTime(0.55, ctx.currentTime, 0.8);
+    M.out.gain.setTargetAtTime(0.8, ctx.currentTime, 0.8);
     if (!M.crackle) startCrackle();
     applyMood();
     M.timer = setInterval(tick, 50);
