@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>La letra pequeña — Carlos Infanzón Civantos</title>
+  <meta name="description" content="Privacidad de woblo.io: qué recuerda la casa, qué apunta y qué no hace nunca." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bone: #ecebe7; --mist: #c4c3bf; --smoke: #8c8c92; --line: rgba(255, 255, 255, 0.1);
+      --sans: "Neue Haas Grotesk", "Inter Tight", "Helvetica Neue", Arial, sans-serif; --mono: "Geist Mono", ui-monospace, monospace; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #050506; color: var(--bone); font-family: var(--sans); -webkit-font-smoothing: antialiased; line-height: 1.55; }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.06), transparent 60%); }
+    main { position: relative; max-width: 760px; margin: 0 auto; padding: 64px 20px 80px; }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 56px; }
+    .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--smoke); }
+    a { color: #fff; }
+    .back { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 99px; padding: 10px 16px; transition: box-shadow 0.4s, border-color 0.4s; }
+    .back:hover { border-color: #fff; box-shadow: 0 0 16px rgba(255, 255, 255, 0.3); }
+    h1 { font-size: clamp(40px, 8vw, 84px); font-weight: 600; letter-spacing: -0.05em; line-height: 0.9; text-transform: uppercase; }
+    .lead { margin-top: 22px; max-width: 46ch; font-size: clamp(16px, 2vw, 19px); color: var(--mist); }
+    section { margin-top: 44px; padding-top: 26px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 54px 1fr; gap: 6px 18px; }
+    section > b { font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--smoke); padding-top: 5px; }
+    h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.15; }
+    section p, section li { color: var(--mist); font-size: 15px; }
+    section p { margin-top: 10px; } section > div > p:first-of-type { margin-top: 10px; }
+    ul { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    li { padding-left: 18px; position: relative; } li::before { content: "·"; position: absolute; left: 4px; color: #fff; }
+    li strong, p strong { color: #fff; font-weight: 500; }
+    .aside { font-style: italic; color: var(--smoke) !important; }
+    .id { display: inline-block; margin-top: 12px; font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em; color: #fff; padding: 6px 10px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line); }
+    .out { margin-top: 16px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #0c0c0e; background: var(--bone); border: 0; border-radius: 99px; padding: 12px 18px; cursor: pointer; transition: box-shadow 0.3s; }
+    .out:hover { box-shadow: 0 0 20px rgba(255, 255, 255, 0.35); }
+    .out.is-done { background: none; color: var(--bone); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4); }
+    .foot { margin-top: 64px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--smoke); }
+    @media (max-width: 520px) { section { grid-template-columns: 1fr; } section > b { padding: 0; } }
+  </style>
+</head>
+<body>
+  <main id="m"></main>
+  <script>
+  (() => {
+    "use strict";
+    const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: (k) => { try { localStorage.removeItem(k); } catch (e) {} } };
+    const en = (store.get("woblo:lang") || (navigator.language || "es")).slice(0, 2) === "en";
+    const T = (es, e) => (en ? e : es);
+    document.documentElement.lang = en ? "en" : "es";
+    const vid = store.get("woblo:vid");
+    const off = store.get("woblo:notrack") === "1";
+    const mail = "woblo.original@gmail.com";
+    document.title = T("La letra pequeña — Carlos Infanzón Civantos", "The fine print — Carlos Infanzón Civantos");
+
+    document.getElementById("m").innerHTML = `
+      <div class="top"><span class="k">woblo.io · ${T("privacidad", "privacy")}</span><a class="back" href="/">${T("← Volver a la mesa", "← Back to the table")}</a></div>
+      <h1>${T("La letra<br>pequeña", "The fine<br>print")}</h1>
+      <p class="lead">${T("En esta casa no hay secretos. Bueno, alguno hay: estos son todos. Sin cookies, sin chivatos de fuera y sin vender a nadie.", "There are no secrets in this house. Well, a few: here they all are. No cookies, no outside snitches, and nobody gets sold out.")}</p>
+
+      <section><b>01</b><div>
+        <h2>${T("Quién lleva la casa", "Who runs the house")}</h2>
+        <p>${T(`Carlos Infanzón Civantos, el dueño de la mesa. Para cualquier asunto de familia: <a href="mailto:${mail}">${mail}</a>.`, `Carlos Infanzón Civantos, owner of the table. For any family business: <a href="mailto:${mail}">${mail}</a>.`)}</p>
+      </div></section>
+
+      <section><b>02</b><div>
+        <h2>${T("Lo que la casa recuerda (en tu navegador)", "What the house remembers (in your browser)")}</h2>
+        <p>${T("Se queda en tu propio dispositivo, no viaja a ningún sitio. Solo para que no tengas que repetirte:", "It stays on your own device and goes nowhere. Just so you don't have to repeat yourself:")}</p>
+        <ul>
+          <li>${T("El idioma y si el sonido está encendido.", "Your language, and whether the sound is on.")}</li>
+          <li>${T("Si ya viste la entrada y qué objetos de la mesa ya miraste.", "Whether you've seen the intro, and which objects on the table you've looked at.")}</li>
+          <li>${T("En «La casa»: tu récord, tus logros y tus iniciales del ranking.", "In “The house”: your best score, your awards and your ranking initials.")}</li>
+        </ul>
+        <p class="aside">${T("Lo que pasa en tu navegador, se queda en tu navegador.", "What happens in your browser stays in your browser.")}</p>
+      </div></section>
+
+      <section><b>03</b><div>
+        <h2>${T("Lo que la casa apunta en su libreta", "What the house writes in its little book")}</h2>
+        <p>${T("Cuando visitas la web, la casa toma nota de la visita. Sin nombre ni apellidos: como en las buenas familias, solo un número.", "When you visit, the house takes note. No name, no surname: like in the best families, just a number.")}</p>
+        <ul>
+          <li><strong>${T("Un número anónimo", "An anonymous number")}</strong> ${T("que tu navegador inventa al azar, para saber si vuelves.", "your browser makes up at random, to know if you come back.")}</li>
+          <li><strong>${T("Ciudad y país aproximados", "Approximate city and country")}</strong>, ${T("deducidos de tu conexión. Tu IP no se guarda.", "worked out from your connection. Your IP is not stored.")}</li>
+          <li><strong>${T("Con qué entras", "What you come in with")}</strong>: ${T("tipo de dispositivo, sistema, navegador, tamaño de pantalla, idioma y zona horaria.", "device type, system, browser, screen size, language and time zone.")}</li>
+          <li><strong>${T("De dónde vienes", "Where you came from")}</strong> ${T("(por ejemplo, LinkedIn o Google) y qué haces aquí: proyectos que abres y cuánto rato, el dado, la mesa privada, el minijuego y si pulsas para escribir o llamar.", "(for example, LinkedIn or Google) and what you do here: projects you open and for how long, the die, the private table, the minigame, and whether you click to write or call.")}</li>
+        </ul>
+        <p>${T("¿Para qué? Para saber qué proyectos interesan y no perderse a quien quiere hablar. Carlos recibe un aviso por correo con el resumen de la visita.", "What for? To know which projects people care about and not miss anyone who wants to talk. Carlos gets an email with a summary of the visit.")}</p>
+        <p class="aside">${T("Base: el interés legítimo de saber cómo se usa un portfolio. Si no te convence, abajo puedes decir que no.", "Basis: the legitimate interest in knowing how a portfolio is used. If you don't like it, you can say no below.")}</p>
+      </div></section>
+
+      <section><b>04</b><div>
+        <h2>${T("Lo que la casa no hace nunca", "What the house never does")}</h2>
+        <ul>
+          <li>${T("No usa cookies.", "No cookies.")}</li>
+          <li>${T("No habla con Google, ni con Meta, ni con nadie que venda anuncios.", "Doesn't talk to Google, Meta or anyone who sells ads.")}</li>
+          <li>${T("No te sigue por otras webs.", "Doesn't follow you around other websites.")}</li>
+          <li>${T("No vende ni cede tus datos. Aquí nadie se chiva.", "Doesn't sell or hand over your data. Nobody snitches here.")}</li>
+        </ul>
+      </div></section>
+
+      <section><b>05</b><div>
+        <h2>${T("Dónde se guarda y cuánto tiempo", "Where it's kept, and for how long")}</h2>
+        <p>${T("La web y sus notas viven en <strong>Vercel</strong> (alojamiento y almacenamiento). Los avisos a Carlos salen por <strong>Resend</strong> (correo). Las notas se guardan como mucho 12 meses.", "The site and its notes live on <strong>Vercel</strong> (hosting and storage). Carlos's notices go out through <strong>Resend</strong> (email). Notes are kept for at most 12 months.")}</p>
+        <p>${T("Si juegas a «La casa» y te apuntas, tus <strong>iniciales, tu puntuación y tu ronda</strong> se ven en el ranking público.", "If you play “The house” and sign the board, your <strong>initials, score and round</strong> are shown on the public ranking.")}</p>
+      </div></section>
+
+      <section><b>06</b><div>
+        <h2>${T("Tus derechos, sin abogados de por medio", "Your rights, no lawyers needed")}</h2>
+        <p>${T(`Puedes pedir ver, corregir o borrar lo apuntado sobre ti, u oponerte. Escribe a <a href="mailto:${mail}">${mail}</a> con tu número:`, `You can ask to see, fix or delete what's been noted about you, or object to it. Write to <a href="mailto:${mail}">${mail}</a> with your number:`)}</p>
+        <span class="id">${vid ? vid : T("todavía no tienes número", "you don't have a number yet")}</span>
+        <p>${T("Y si prefieres que la casa haga como que no te conoce:", "And if you'd rather the house pretended it never met you:")}</p>
+        <button class="out${off ? " is-done" : ""}" id="out" type="button">${off ? T("Hecho: la casa no te conoce ✓", "Done: the house doesn't know you ✓") : T("Yo no estuve aquí", "I was never here")}</button>
+        <p class="aside" id="outNote">${off ? T("Desde este navegador ya no se apunta nada. Para volver a contar contigo, pulsa otra vez.", "Nothing is noted from this browser any more. To be counted again, press it once more.") : T("Deja de apuntar tus visitas desde este navegador. Lo que te recuerda en tu dispositivo sigue igual.", "Stops noting your visits from this browser. What your device remembers stays as it is.")}</p>
+        <p class="aside">${T("Si crees que la casa se ha pasado, también puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).", "If you think the house went too far, you can also complain to the Spanish Data Protection Agency (aepd.es).")}</p>
+      </div></section>
+
+      <p class="foot">${T("La casa siempre gana. Tus datos, no.", "The house always wins. Your data doesn't.")}</p>`;
+
+    // "I was never here": no more notes from this browser (and the anonymous number goes)
+    document.getElementById("out").addEventListener("click", (e) => {
+      const now = store.get("woblo:notrack") === "1";
+      if (now) { store.del("woblo:notrack"); } else { store.set("woblo:notrack", "1"); store.del("woblo:vid"); store.del("woblo:visits"); }
+      location.reload();
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -11,7 +11,8 @@
   "use strict";
   const store = (s) => ({ get: (k) => { try { return s.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { s.setItem(k, v); } catch (e) {} } });
   const local = store(window.localStorage), session = store(window.sessionStorage);
-  if (local.get("woblo:admin") === "1" || navigator.webdriver) return;
+  // never for Carlos, never for robots, never for whoever said no on the privacy page
+  if (local.get("woblo:admin") === "1" || local.get("woblo:notrack") === "1" || navigator.webdriver) return;
   const hex = (n) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, "0")).join("");
   const API = "/api/vip";
 
