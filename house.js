@@ -373,6 +373,7 @@
     k("heat").classList.toggle("is-max", G.streak >= 5);
     k("acc").textContent = G.played ? Math.round((G.won / G.played) * 100) + "%" : "—";
     k("awards").textContent = `${everGot.size}/${Object.keys(AWARDS).length}`;
+    { const mu = music(); if (mu) mu.mood(G.tier); }
     root.classList.toggle("is-warm", G.tier === 2);
     root.classList.toggle("is-hell", G.tier === 3);
     root.classList.toggle("is-god", G.tier >= 4);
@@ -599,7 +600,10 @@
     };
     heartT = setTimeout(go, 400);
   }
+  const music = () => window.HOUSE_MUSIC;
   function render() {
+    // the band plays while the table is open and the sound is on (it starts as soon as the sound is turned on)
+    { const mu = music(); if (mu && root.classList.contains("on") && !mu.on) mu.start(); }
     const R = G.round;
     k("chips").textContent = fmt(G.chips);
     k("round").textContent = R ? R.r : 1;
@@ -776,11 +780,13 @@
       const kinds = ["dark", "feint", "shake"].sort(() => Math.random() - 0.5).slice(0, 2 + (R.r >= 20 ? 1 : 0));
       kinds.forEach((kd, i) => tricks.set(Math.floor((R.moves.length * (i + 1)) / (kinds.length + 1)), kd));
     }
+    { const mu = music(); if (mu) mu.busy(boss ? 2 : 1); }
     for (let i = 0; i < R.moves.length; i++) {
       const sn = snd(); if (sn && sn.tick) sn.tick(0.35 + (i / R.moves.length) * 0.65);
       if (tricks.has(i)) await trick(tricks.get(i));
       await move(R.moves[i], G.buy.slow ? R.ms * 2 : R.ms);
     }
+    { const mu = music(); if (mu) mu.busy(0); }
     G.phase = "pick"; render();
     // the tip-off: the house lifts one empty glass and leaves it up
     if (G.buy.hint) {
@@ -1249,6 +1255,7 @@
     setTimeout(() => { const m = actions.querySelector(".is-main"); if (m) m.focus({ preventScroll: true }); $(".house-machine").scrollTop = 0; }, 450);
   }
   function close() {
+    { const mu = music(); if (mu) mu.stop(); }
     root.classList.remove("on"); root.setAttribute("aria-hidden", "true");
     document.documentElement.classList.remove("house-open-now");
     if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
