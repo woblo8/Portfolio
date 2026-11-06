@@ -318,9 +318,40 @@
       () => T("Psst… esta casa tiene música. Suba el volumen, se lo recomiendo.", "Psst… this house has music. Turn it up, I insist."),
       () => T("La casa suena mejor con sonido. Hágame caso.", "The house sounds better with the sound on. Trust me."),
       () => T("Un consejo de amigo: active el sonido.", "A friendly piece of advice: turn the sound on."),
+      () => T("Aquí nadie juega en silencio. Bueno, usted sí. De momento.", "Nobody plays in silence here. Well, you do. For now."),
+      () => T("La banda lleva toda la noche tocando para nadie. Dele una alegría.", "The band's been playing all night for nobody. Make their night."),
+      () => T("Con todo respeto: sin sonido, esta casa es una tumba.", "With all due respect: without sound, this house is a tomb."),
+      () => T("El jefe pidió música. Y al jefe no se le dice que no.", "The boss asked for music. And nobody says no to the boss."),
+      () => T("Un favor por otro: usted sube el sonido, yo me olvido de que entró sin llamar.", "A favour for a favour: you turn the sound on, I forget you came in without knocking."),
+      () => T("Las fichas suenan mejor de lo que se ven. Compruébelo.", "The chips sound better than they look. See for yourself."),
+      () => T("En esta familia se escucha. Active el sonido.", "In this family, we listen. Turn the sound on."),
     ];
     // the language line is written in the other language, so whoever needs it can read it
-    const LANG = () => (window.LANG === "es" ? "Psst… we speak English here too. Just say the word." : "Psst… en esta casa también se habla español.");
+    const LANG_EN = [
+      "Psst… we speak English here too. Just say the word.",
+      "The house speaks English too. Discreetly, of course.",
+      "Not from around here? The family speaks English. Click.",
+      "A word in English, friend? Right this way.",
+      "Lost in translation? The house takes care of its guests.",
+      "We do business in English too. Just ask.",
+      "English, sir? The croupier is fluent.",
+      "One click and the whole house speaks your language.",
+      "Foreign guests get the full treatment. In English.",
+      "Say «English» and the house will understand.",
+    ];
+    const LANG_ES = [
+      "Psst… en esta casa también se habla español.",
+      "La casa también habla español. Con discreción, claro.",
+      "¿No es de por aquí? La familia también habla español.",
+      "¿Una palabra en español, amigo? Por aquí.",
+      "¿Perdido en la traducción? La casa cuida de sus invitados.",
+      "Aquí también se hacen negocios en español.",
+      "¿Español, señor? El crupier lo habla de maravilla.",
+      "Un clic y toda la casa habla su idioma.",
+      "Los invitados de casa tienen trato especial. En español.",
+      "Diga «español» y la casa le entenderá.",
+    ];
+    const LANG = () => pick(window.LANG === "es" ? LANG_EN : LANG_ES);
     const el = document.createElement("button");
     el.type = "button"; el.className = "whisper"; el.setAttribute("aria-live", "polite");
     document.body.appendChild(el);
@@ -349,8 +380,8 @@
       timer = setTimeout(() => {
         el.classList.remove("on");
         kind = kind === "sound" ? "lang" : "sound";
-        timer = setTimeout(next, 2600);
-      }, 5200);
+        timer = setTimeout(next, 14000);
+      }, 6000);
     }
     el.addEventListener("click", () => {
       if (el.dataset.kind === "sound") { if (!SND.on) { setSound(true); chip(0.8); } }
