@@ -1016,12 +1016,12 @@ body.ui-in .house-open { opacity: 1; transform: none; }
 /* ---------- the board: the name in the colour of its rank, with the round and the rank ---------- */
 .rk-n { font-weight: 600; letter-spacing: 0.12em; }
 .rk-r { display: block; margin-top: 2px; font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--smoke); white-space: nowrap; }
-.house .rk-n.rk-t0, .rk-n.rk-t0 { color: #c4c3bf; }
-.house .rk-n.rk-t1, .rk-n.rk-t1 { color: #8fd3ff; }
-.house .rk-n.rk-t2, .rk-n.rk-t2 { color: #ff9a4d; }
-.house .rk-n.rk-t3, .rk-n.rk-t3 { color: #ff3b4a; }
-.house .rk-n.rk-t4, .rk-n.rk-t4 { color: #ffd36b; }
-.house .rk-n.rk-t5, .rk-n.rk-t5 { color: #c08cff; }
+.house .rk-n.rk-t0, .rk-n.rk-t0 { color: #c4c3bf; text-shadow: 0 0 6px rgba(196, 195, 191, 0.75), 0 0 16px rgba(196, 195, 191, 0.45); }
+.house .rk-n.rk-t1, .rk-n.rk-t1 { color: #8fd3ff; text-shadow: 0 0 6px rgba(143, 211, 255, 0.75), 0 0 16px rgba(143, 211, 255, 0.45); }
+.house .rk-n.rk-t2, .rk-n.rk-t2 { color: #ff9a4d; text-shadow: 0 0 6px rgba(255, 154, 77, 0.75), 0 0 16px rgba(255, 154, 77, 0.45); }
+.house .rk-n.rk-t3, .rk-n.rk-t3 { color: #ff3b4a; text-shadow: 0 0 6px rgba(255, 59, 74, 0.75), 0 0 16px rgba(255, 59, 74, 0.45); }
+.house .rk-n.rk-t4, .rk-n.rk-t4 { color: #ffd36b; text-shadow: 0 0 6px rgba(255, 211, 107, 0.75), 0 0 16px rgba(255, 211, 107, 0.45); }
+.house .rk-n.rk-t5, .rk-n.rk-t5 { color: #c08cff; text-shadow: 0 0 6px rgba(192, 140, 255, 0.75), 0 0 16px rgba(192, 140, 255, 0.45); }
 @keyframes rkPrism { to { filter: hue-rotate(360deg); } }
 .house-mini li, .house-board li { align-items: center; }
 .house-mini li .rk-r, .house-board li .rk-r { display: inline-block; margin: 0 0 0 8px; }
