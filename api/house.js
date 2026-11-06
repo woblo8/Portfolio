@@ -119,6 +119,8 @@ function blobStore() {
   };
 }
 // rows only say whether they are yours; the player id itself never goes back out
+// names that are not allowed any more never show, even if they were signed before the rule
+const clean = (l) => l.filter((r) => E.nameCheck(r.name).ok);
 const strip = (l, p) => l.slice(0, 10).map((r) => (p && r.p === p ? { name: r.name, score: r.score, me: true } : { name: r.name, score: r.score }));
 function mine(l, p) { const i = l.findIndex((r) => r.p === p); return i < 0 ? null : { name: l[i].name, score: l[i].score, rank: i + 1 }; }
 const query = (req) => new URL(req.url || "/", "http://x").searchParams;
@@ -130,7 +132,7 @@ module.exports = async (req, res) => {
   try {
     if (req.method === "GET") {
       const q = query(req), p = /^[a-f0-9]{12}$/.test(q.get("p") || "") ? q.get("p") : "";
-      const { week, all } = await store.read(q.get("fresh") === "1");
+      const read = await store.read(q.get("fresh") === "1"), week = clean(read.week), all = clean(read.all);
       res.status(200).json({ week: strip(week, p), all: strip(all, p), me: p ? { week: mine(week, p), all: mine(all, p) } : null, weekKey: weekKey() });
       return;
     }
@@ -231,7 +233,7 @@ module.exports = async (req, res) => {
       const p = /^[a-f0-9]{12}$/.test(String(body.p || "")) ? body.p : "";
       await store.add({ name, g: s.g, p, score });
       // the place on the board that never resets
-      const { all } = await store.read(true);
+      const all = clean((await store.read(true)).all);
       const i = all.findIndex((r) => r.g === s.g);
       res.status(200).json({ rank: i < 0 ? null : i + 1, score });
       return;

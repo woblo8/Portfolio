@@ -168,7 +168,8 @@
   const BAD = new Set(("ASS ARS FUK FUC FCK FUQ FUX SEX SXX XXX PUT PTA PTO CUL CLO ANL NAZ NZI KKK HTL ISI " +
     "POL POY PNE PEN PNS VRG VGA VRA CAC CCA MRD HDP HJP FAG NIG NGR NGA NGG MNG RAC " +
     "DIK DIC DCK COK COC CUM CUN CNT TIT TET TTA VAG VAJ CHT CNO CNY JOD JDR " +
-    "WTF STF KYS KMS BBC BJS SUK SUC SCK PIJ PJA CPN SLT TWT HOE CAG CGO CBR PRN").trim().split(" "));
+    "WTF STF KYS KMS BBC BJS SUK SUC SCK PIJ PJA CPN SLT TWT HOE CAG CGO CBR PRN " +
+    "GAY GEI GAI GAE HMO MRC MRK MKN TRL SXY BCH BTC WHR").trim().split(" "));
   const LEET = { 0: "O", 1: "I", 3: "E", 4: "A", 5: "S", 7: "T", 8: "B", "@": "A", $: "S", "!": "I", "|": "I" };
   function nameCheck(raw) {
     const up = String(raw || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
