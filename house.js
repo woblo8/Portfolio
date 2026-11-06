@@ -1187,7 +1187,7 @@
     return j;
   }
   // the short version on the table: three rows, and yours if you are further down
-  const who = (x) => { const t = tierOf(x.round || 1); return `<b class="rk-n rk-t${t}">${x.name}</b><small class="rk-r">${x.round ? `R${x.round} · ` : ""}${TIERS[t].n()}</small>`; };
+  const who = (x) => { const t = tierOf(x.round || 1); return `<b class="rk-n rk-t${t}">${x.name}</b><small class="rk-r">${x.round ? `R${x.round} · ` : ""}<span class="rk-rn">${TIERS[t].n()}</span></small>`; };
   function paintMini(j) {
     const box = $(".house-mini"), list = k("mini"), rows = (j && j.all) || [], me = j && j.me && j.me.all;
     box.hidden = false;
