@@ -197,6 +197,11 @@ module.exports = async (req, res) => {
       } else if (body.action === "remove") {
         if (!/^[a-f0-9]{8}$/.test(g)) { res.status(400).json({ error: "bad-id" }); return; }
         await store.edit(g, "");
+      } else if (body.action === "seed") {
+        // the house record: an entry placed by hand from the despacho (a score to beat)
+        const nc = E.nameCheck(body.name), score = Math.round(Number(body.score)), round = Math.round(Number(body.round));
+        if (!nc.ok || !(score > 0 && score < 1e30) || !(round >= 1 && round <= 200)) { res.status(400).json({ error: "bad-seed" }); return; }
+        await store.add({ name: nc.name, g: crypto.randomBytes(4).toString("hex"), p: "", score, round });
       } else if (body.action === "reset") {
         if (body.confirm !== "RESET") { res.status(400).json({ error: "confirm" }); return; }
         await store.reset();
