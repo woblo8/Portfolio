@@ -1167,7 +1167,8 @@
       G.signed = true; store.set(NAME_KEY, name);
       (window.WOBLO_TRACK && window.WOBLO_TRACK("rank", `firma como ${name} · puesto ${j.rank || "?"}`));
       signNote.textContent = "";
-      speak(j.rank ? T(`${name}: ${fmt(j.score)} fichas. Puesto ${j.rank} del ranking.`, `${name}: ${fmt(j.score)} chips. Number ${j.rank} on the board.`) : T("Apuntado.", "Signed."));
+      const tn = TIERS[tierOf(j.round || 1)].n();
+      speak(j.rank ? T(`${name}, ${tn} · ronda ${j.round}: ${fmt(j.score)} fichas. Puesto ${j.rank} del ranking.`, `${name}, ${tn} · round ${j.round}: ${fmt(j.score)} chips. Number ${j.rank} on the board.`) : T("Apuntado.", "Signed."));
       render();
       openBoard(true);
     } catch (err) {
@@ -1182,10 +1183,11 @@
     return j;
   }
   // the short version on the table: three rows, and yours if you are further down
+  const who = (x) => { const t = tierOf(x.round || 1); return `<b class="rk-n rk-t${t}">${x.name}</b><small class="rk-r">${x.round ? `R${x.round} · ` : ""}${TIERS[t].n()}</small>`; };
   function paintMini(j) {
     const box = $(".house-mini"), list = k("mini"), rows = (j && j.all) || [], me = j && j.me && j.me.all;
     box.hidden = false;
-    const row = (x, rank, isMe) => `<li class="${isMe ? "is-me" : ""}"><span>${String(rank).padStart(2, "0")}</span><b>${x.name}</b>${isMe ? `<i>${T("tú", "you")}</i>` : ""}<em>${fmt(x.score)}</em></li>`;
+    const row = (x, rank, isMe) => `<li class="${isMe ? "is-me" : ""}"><span>${String(rank).padStart(2, "0")}</span>${who(x)}${isMe ? `<i>${T("tú", "you")}</i>` : ""}<em>${fmt(x.score)}</em></li>`;
     let html = rows.slice(0, 3).map((x, i) => row(x, i + 1, me && i + 1 === me.rank)).join("");
     if (me && me.rank > 3) html += row(me, me.rank, true);
     list.innerHTML = html || `<li class="is-empty">${T("Nadie todavía. El primer puesto es tuyo.", "Nobody yet. First place is yours.")}</li>`;
@@ -1198,7 +1200,7 @@
     try {
       const j = await fetchBoard(fresh);
       const rows = j.all || [], me = (j.me && j.me.all) || null;
-      const row = (x, rank, cls) => `<li class="${cls}"><span>${String(rank).padStart(2, "0")}</span><b>${x.name}</b>${cls.includes("is-me") ? `<i>${T("tú", "you")}</i>` : ""}<em>${fmt(x.score)}</em></li>`;
+      const row = (x, rank, cls) => `<li class="${cls}"><span>${String(rank).padStart(2, "0")}</span>${who(x)}${cls.includes("is-me") ? `<i>${T("tú", "you")}</i>` : ""}<em>${fmt(x.score)}</em></li>`;
       let html = rows.map((x, i) => row(x, i + 1, x.me && me && i + 1 === me.rank ? "is-me" : x.me ? "is-mine" : "")).join("");
       // outside the top ten, your row still shows, under a gap
       if (me && me.rank > rows.length) html += `<li class="is-gap" aria-hidden="true">· · ·</li>` + row(me, me.rank, "is-me");
@@ -1219,8 +1221,9 @@
       el.innerHTML = `<span class="house-k">${T("Tú", "You")}</span><b>${name || "———"}</b><small>${T("Aún sin marca. Gana fichas y apúntate.", "No score yet. Win chips and sign.")}</small>`;
       G.meTab = "";
     } else {
-      el.innerHTML = `<span class="house-k">${T("Tú", "You")}</span><b>${name}</b>
+      el.innerHTML = `<span class="house-k">${T("Tú", "You")}</span><div class="rk-who">${who(a)}</div>
         <div><small>${T("Puesto", "Place")}</small><em>#${a.rank}</em></div>
+        <div><small>${T("Ronda", "Round")}</small><em>${a.round || "—"}</em></div>
         <div><small>${T("Tu récord", "Your best")}</small><em>${fmt(a.score)} ${T("fichas", "chips")}</em></div>`;
       G.meTab = `${name} #${a.rank}`;
     }

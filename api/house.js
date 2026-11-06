@@ -73,15 +73,15 @@ function redisStore() {
     if (!r.ok) throw new Error(`redis ${r.status}`);
     return (await r.json()).result;
   };
-  const parse = (flat) => { const out = []; for (let i = 0; i < (flat || []).length; i += 2) { const [name, g, p] = String(flat[i]).split("·"); out.push({ name, g, p: p || "", score: Number(flat[i + 1]) }); } return out; };
+  const parse = (flat) => { const out = []; for (let i = 0; i < (flat || []).length; i += 2) { const [name, g, p, rd] = String(flat[i]).split("·"); out.push({ name, g, p: p || "", round: +rd || 0, score: Number(flat[i + 1]) }); } return out; };
   return {
     async read() {
       const [w, a] = await Promise.all([R("ZREVRANGE", `shell4:week:${weekKey()}`, 0, 999, "WITHSCORES"), R("ZREVRANGE", "shell4:all", 0, 999, "WITHSCORES")]);
       return { week: parse(w), all: parse(a) };
     },
     async claim(g) { return (await R("SET", `shell4:sub:${g}`, "1", "NX", "EX", 60 * 60 * 24 * 30)) === "OK"; },
-    async add({ name, g, p, score }) {
-      const member = `${name}·${g}·${p}`, wk = `shell4:week:${weekKey()}`;
+    async add({ name, g, p, score, round }) {
+      const member = `${name}·${g}·${p}·${round || 0}`, wk = `shell4:week:${weekKey()}`;
       await Promise.all([R("ZADD", wk, score, member), R("ZADD", "shell4:all", score, member), R("EXPIRE", wk, 60 * 60 * 24 * 21)]);
     },
     // admin: every board where this game appears, its member renamed or removed
@@ -92,7 +92,7 @@ function redisStore() {
           const m = String(flat[i]), [, mg, mp] = m.split("·");
           if (mg !== g) continue;
           await R("ZREM", key, m);
-          if (name) await R("ZADD", key, flat[i + 1], `${name}·${mg}·${mp || ""}`);
+          if (name) { const [, , , rd] = m.split("·"); await R("ZADD", key, flat[i + 1], `${name}·${mg}·${mp || ""}·${rd || 0}`); }
         }
       }
     },
@@ -114,8 +114,8 @@ function blobStore() {
       do {
         const page = await list({ prefix, cursor, limit: 1000 });
         for (const b of page.blobs) {
-          const m = b.pathname.slice(prefix.length).match(/^(\d{9,41})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
-          if (m) out.push({ score: Number(m[1]), name: m[2], g: m[3], p: m[4] || "", path: b.pathname });
+          const m = b.pathname.slice(prefix.length).match(/^(\d{9,41})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?(?:-r(\d+))?/);
+          if (m) out.push({ score: Number(m[1]), name: m[2], g: m[3], p: m[4] || "", round: +m[5] || 0, path: b.pathname });
         }
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
@@ -134,9 +134,9 @@ function blobStore() {
       await put(`shell4/g/${g}.txt`, "1", opts);
       return true;
     },
-    async add({ name, g, p, score }) {
+    async add({ name, g, p, score, round }) {
       const { put } = await import("@vercel/blob");
-      const file = `${BigInt(Math.round(Math.min(score, 1e40))).toString().padStart(16, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
+      const file = `${BigInt(Math.round(Math.min(score, 1e40))).toString().padStart(16, "0")}-${name}-${g}${p ? "-" + p : ""}-r${round || 0}.txt`;
       await Promise.all([put(`shell4/w/${weekKey()}/${file}`, "1", opts), put(`shell4/a/${file}`, "1", opts)]);
       blobCache.at = 0;
     },
@@ -166,8 +166,8 @@ function blobStore() {
 // rows only say whether they are yours; the player id itself never goes back out
 // a name that is not allowed (signed before the rule) keeps its place but shows as another name
 const clean = (l) => l.map((r) => (E.nameCheck(r.name).ok ? r : Object.assign({}, r, { name: "???" })));
-const strip = (l, p) => l.slice(0, 10).map((r) => (p && r.p === p ? { name: r.name, score: r.score, me: true } : { name: r.name, score: r.score }));
-function mine(l, p) { const i = l.findIndex((r) => r.p === p); return i < 0 ? null : { name: l[i].name, score: l[i].score, rank: i + 1 }; }
+const strip = (l, p) => l.slice(0, 10).map((r) => (p && r.p === p ? { name: r.name, score: r.score, round: r.round, me: true } : { name: r.name, score: r.score, round: r.round }));
+function mine(l, p) { const i = l.findIndex((r) => r.p === p); return i < 0 ? null : { name: l[i].name, score: l[i].score, round: l[i].round, rank: i + 1 }; }
 const query = (req) => new URL(req.url || "/", "http://x").searchParams;
 
 module.exports = async (req, res) => {
@@ -202,7 +202,7 @@ module.exports = async (req, res) => {
         await store.reset();
       }
       const { all } = await store.read(true);
-      res.status(200).json({ all: all.map((r) => ({ name: r.name, score: r.score, g: r.g, ok: E.nameCheck(r.name).ok })) });
+      res.status(200).json({ all: all.map((r) => ({ name: r.name, score: r.score, round: r.round, g: r.g, ok: E.nameCheck(r.name).ok })) });
       return;
     }
     if (body.op === "start") {
@@ -295,11 +295,13 @@ module.exports = async (req, res) => {
       if (!s.over || !(s.won >= 1) || !(score > E.START)) { res.status(400).json({ error: "too-short" }); return; }
       if (!(await store.claim(s.g))) { res.status(409).json({ error: "already" }); return; }
       const p = /^[a-f0-9]{12}$/.test(String(body.p || "")) ? body.p : "";
-      await store.add({ name, g: s.g, p, score });
+      // the round the game reached (the last one played)
+      const round = Math.max(1, (s.r || 1) - 1);
+      await store.add({ name, g: s.g, p, score, round });
       // the place on the board that never resets
       const all = clean((await store.read(true)).all);
       const i = all.findIndex((r) => r.g === s.g);
-      res.status(200).json({ rank: i < 0 ? null : i + 1, score });
+      res.status(200).json({ rank: i < 0 ? null : i + 1, score, round });
       return;
     }
     res.status(400).json({ error: "bad-op" });
