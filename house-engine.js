@@ -90,13 +90,13 @@
        · the wheel, every five rounds: ×1.2 to ×10, it never takes anything away
      The dice of each round (a choice before each round, unlocked as you go):
        one    · 1  · one white die                                     ×1
-       decoy  · 3  · two identical dice: the real one glints for a moment, remember it ×3
+       dim    · 3  · Penumbra: the shuffle happens almost in the dark, only the rims glow ×3
        pair   · 6  · two white dice: you pick two glasses, both must hit ×6
        trio   · 10 · three dice: you pick three glasses, all three must hit (6 glasses or more) ×15 */
   const GLASS_MULT = 1.3;
   const DICE = {
     one: { at: 1, mult: 1 },
-    decoy: { at: 3, mult: 3 },
+    dim: { at: 3, mult: 3 },
     pair: { at: 6, mult: 6 },
     trio: { at: 10, mult: 15, cups: 6 },
   };

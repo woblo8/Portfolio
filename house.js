@@ -156,8 +156,8 @@
       svg: `${glassAt(70, 40)}${glassAt(170, 40)}<g class="g-lift">${glassAt(120, 16)}</g>${dieAt(120, 68)}<path class="g-ok" d="M146 70 L152 76 L164 62"/>` },
     { k: T("Más vasos, más premio", "More glasses, bigger pay"), t: T("Cada 10 rondas entra un vaso más y la mesa paga más.", "Every 10 rounds one more glass comes in and the table pays more."),
       svg: [[3, 30, "×1", "1"], [4, 62, "×2", "10"], [5, 94, "×3", "20"]].map(([n, y, p, r]) => Array.from({ length: n }, (_, i) => glassAt(70 + i * 18, y - 10, 13, 17)).join("") + `<text x="196" y="${y + 6}" class="g-t g-big">${p}</text><text x="40" y="${y + 6}" class="g-t">R${r}</text>`).join("") },
-    { k: T("Dados", "Dice"), t: T("Antes de cada ronda eliges los dados: uno (×1), señuelo: dos iguales y solo uno brilla un instante (×3), una pareja que hay que acertar entera (×6) o un trío: los tres (×15).", "Before each round you pick the dice: one (×1), decoy: two alike and only one glints for a moment (×3), a pair you must find both of (×6) or a trio: all three (×15)."),
-      svg: `${dieAt(40, 60, 16)}<text x="40" y="92" class="g-t">×1</text>${dieAt(88, 60, 16)}${dieAt(108, 60, 16)}<text x="98" y="92" class="g-t">×3</text>${dieAt(150, 60, 16)}${dieAt(170, 60, 16)}<text x="160" y="92" class="g-t">×6</text>${dieAt(204, 46, 12)}${dieAt(204, 62, 12)}${dieAt(204, 78, 12)}<text x="204" y="100" class="g-t">×15</text>` },
+    { k: T("Dados", "Dice"), t: T("Antes de cada ronda eliges los dados: uno (×1), penumbra: se baraja casi a oscuras (×3), una pareja que hay que acertar entera (×6) o un trío: los tres (×15).", "Before each round you pick the dice: one (×1), penumbra: shuffled almost in the dark (×3), a pair you must find both of (×6) or a trio: all three (×15)."),
+      svg: `${dieAt(40, 60, 16)}<text x="40" y="92" class="g-t">×1</text>${dieAt(98, 60, 16, "g-die g-faint")}<text x="98" y="92" class="g-t">×3</text>${dieAt(150, 60, 16)}${dieAt(170, 60, 16)}<text x="160" y="92" class="g-t">×6</text>${dieAt(204, 46, 12)}${dieAt(204, 62, 12)}${dieAt(204, 78, 12)}<text x="204" y="100" class="g-t">×15</text>` },
     { k: T("El multiplicador", "The multiplier"), t: T("Todo lo que ganas pasa por él. Súbelo añadiendo vasos (×1,3 cada uno, hasta 10) o quítalos si se pone imposible (÷1,3, mínimo 3). La ruleta sale cada 5 rondas y nunca resta.", "Everything you win goes through it. Raise it by adding glasses (×1.3 each, up to 10) or take them away if it gets impossible (÷1.3, at least 3). The wheel comes every 5 rounds and never takes away."),
       svg: `${glassAt(40, 40, 22, 30)}${glassAt(66, 40, 22, 30)}<path class="g-arrow" d="M84 50 H96 M90 44 V56"/>${glassAt(114, 40, 22, 30, "g-glow")}<circle cx="186" cy="58" r="34"/>${Array.from({ length: 10 }, (_, i) => { const a = (i * 36 * Math.PI) / 180; return `<path d="M186 58 L${(186 + Math.cos(a) * 34).toFixed(1)} ${(58 + Math.sin(a) * 34).toFixed(1)}" class="g-dash"/>`; }).join("")}<circle cx="186" cy="58" r="6"/><path d="M186 18 L182 10 H190 Z" class="g-glow"/><text x="78" y="100" class="g-t g-big">×1,3</text><text x="186" y="106" class="g-t g-big">×1,2 – ×10</text>` },
     { k: T("Tres vidas", "Three lives"), t: T("Cada fallo te quita una vida y la mitad de la mesa. Al tercero, la partida vale 0: retírate a tiempo, tu marca son las fichas con las que te vas.", "Each miss takes a life and half the table. At the third, the game is worth 0: cash out in time, your score is the chips you leave with."),
@@ -528,14 +528,13 @@
   /* ---------- the dice of the round ---------- */
   const DICE_UI = {
     one: { n: () => T("Un dado", "One die"), t: () => T("El de siempre", "The usual"), m: "×1" },
-    decoy: { n: () => T("Señuelo", "Decoy"), t: () => T("Dos iguales: recuerda el que brilla", "Two alike: remember the one that glints"), m: "×3" },
+    dim: { n: () => T("Penumbra", "Penumbra"), t: () => T("Se baraja casi a oscuras", "Shuffled almost in the dark"), m: "×3" },
     pair: { n: () => T("Pareja", "Pair"), t: () => T("Dos dados: acierta los dos", "Two dice: find both"), m: "×6" },
     trio: { n: () => T("Trío", "Trio"), t: () => T("Tres dados: acierta los tres", "Three dice: find all three"), m: "×15" },
   };
   // which dice are on the felt this round: [element, glass, look]
   function diceOn(R, mode) {
     const l = [[die, R.d, ""]];
-    if (mode === "decoy") l.push([xDice[0], R.x[0], ""]);
     if (mode === "pair") l.push([xDice[0], R.x[0], ""]);
     if (mode === "trio") l.push([xDice[0], R.x[0], ""], [xDice[1], R.x[1], ""]);
     return l;
@@ -547,7 +546,7 @@
       const d = E.DICE[id], ui = DICE_UI[id], ok = E.diceOk(id, st, R), on = G.dice === id;
       const why = R.r < d.at ? T(`Ronda ${d.at}`, `Round ${d.at}`) : !ok ? T(`${d.cups} vasos`, `${d.cups} glasses`) : ui.m;
       return `<button type="button" role="radio" aria-checked="${on}" class="hd-${id}${on ? " is-on" : ""}${ok ? "" : " is-locked"}" data-dice="${id}" ${ok ? "" : "disabled"}>
-        <span class="hd-ico" aria-hidden="true">${id === "trio" ? "<i></i><i></i><i></i>" : id === "pair" || id === "decoy" ? "<i></i><i></i>" : "<i></i>"}</span>
+        <span class="hd-ico" aria-hidden="true">${id === "trio" ? "<i></i><i></i><i></i>" : id === "pair" ? "<i></i><i></i>" : "<i></i>"}</span>
         <b>${ui.n()}</b><small>${ok ? ui.t() : T("Se desbloquea", "Unlocks")}</small><em>${why}</em></button>`;
     }).join("");
     const n = R.n, can = E.canAddGlass({ r: R.r, add: G.add, over: false });
@@ -766,19 +765,14 @@
     slotOf = cups.map((_, i) => i); place(); placeDice(R, G.dice);
     diceShow(true);
     cups.forEach((c) => lift(c, true));
-    if (G.dice === "decoy") {
-      speak(T("Dos dados iguales. Solo uno es de verdad: el que brilla.", "Two dice alike. Only one is real: the one that glints."));
-      await wait(250); die.classList.add("is-glint"); await wait(reduce ? 500 : 380); die.classList.remove("is-glint");
-      await wait(R.r === 1 ? 700 : 420);
-    } else {
-      speak(LINES.watch());
-      await wait(R.r === 1 ? 1300 : 950);
-    }
+    speak(G.dice === "dim" ? T("Mírelo bien. La casa va a bajar las luces.", "Look closely. The house is dimming the lights.") : LINES.watch());
+    await wait(R.r === 1 ? 1300 : 950);
     cups.forEach((c) => lift(c, false));
     { const s = snd(); if (s) s.thud(0.5); }
     await wait(420);
     if (!G.buy.glass) diceShow(false);
-    G.phase = "shuffle"; render(); speak(LINES.shuffle());
+    G.phase = "shuffle"; render(); speak(G.dice === "dim" ? T("Luces fuera…", "Lights out…") : LINES.shuffle());
+    $(".house-felt").classList.toggle("is-dim", G.dice === "dim");
     await wait(260);
     // the boss round: two or three tricks dropped between passes (a blackout, a feint, a tremor)
     const boss = E.isBoss(R.r), tricks = new Map();
@@ -793,6 +787,7 @@
       await move(R.moves[i], G.buy.slow ? R.ms * 2 : R.ms);
     }
     { const mu = music(); if (mu) mu.busy(0); }
+    $(".house-felt").classList.remove("is-dim");
     G.phase = "pick"; render();
     // the tip-off: the house lifts one empty glass and leaves it up
     if (G.buy.hint) {
@@ -801,7 +796,7 @@
       const out = empty[Math.floor(Math.random() * empty.length)];
       lift(cups[out], true); cups[out].disabled = true; cups[out].classList.add("is-out");
       speak(T("El Tercer Ojo lo ha visto: ese no es.", "The Third Eye saw it: not that one."));
-    } else speak(G.dice === "pair" ? T("Dos vasos. Los dos con dado.", "Two glasses. Both with a die.") : G.dice === "trio" ? T("Tres vasos. Los tres con dado.", "Three glasses. All three with a die.") : G.dice === "decoy" ? T("El blanco. No el negro.", "The white one. Not the black.") : LINES.ask());
+    } else speak(G.dice === "pair" ? T("Dos vasos. Los dos con dado.", "Two glasses. Both with a die.") : G.dice === "trio" ? T("Tres vasos. Los tres con dado.", "Three glasses. All three with a die.") : G.dice === "dim" ? T("Se encienden las luces. ¿Dónde estaba?", "Lights on. Where was it?") : LINES.ask());
   }
 
   async function choose(cup) {
@@ -859,7 +854,7 @@
         : st >= 10 && st % 2 === 0 ? T(`${st} seguidas. ¿Ha hecho usted un pacto? +${fmt(diff)}.`, `${st} in a row. Did you make a pact? +${fmt(diff)}.`)
         : G.low < 20 && before < 100 && G.chips >= 100 ? T(`De las cenizas. Vuelve a las ${fmt(G.chips)}.`, `From the ashes. Back to ${fmt(G.chips)}.`)
         : mode === "trio" ? T(`Los tres. ×${E.DICE.trio.mult}. +${fmt(diff)}.`, `All three. ×${E.DICE.trio.mult}. +${fmt(diff)}.`)
-        : mode === "decoy" ? T(`El de verdad. ×${E.DICE.decoy.mult}. +${fmt(diff)}.`, `The real one. ×${E.DICE.decoy.mult}. +${fmt(diff)}.`)
+        : mode === "dim" ? T(`A oscuras y lo encontró. ×${E.DICE.dim.mult}. +${fmt(diff)}.`, `Found it in the dark. ×${E.DICE.dim.mult}. +${fmt(diff)}.`)
         : mode === "pair" ? T(`Los dos. ×${E.DICE.pair.mult}. +${fmt(diff)}.`, `Both of them. ×${E.DICE.pair.mult}. +${fmt(diff)}.`)
         : LINES.right(fmt(diff)));
     } else {
