@@ -100,6 +100,7 @@
           <div class="house-mult" aria-label="${T("Multiplicador", "Multiplier")}"><small>${T("Multi", "Multi")}</small><b data-k="mult">×1</b></div>
         </div>
         <p class="house-say" aria-live="polite"></p>
+        <div class="house-actions"></div>
         <!-- before each round: which dice, a glass more, the shop -->
         <div class="house-bet" hidden>
           <div class="hb-dice" data-k="dice" role="radiogroup" aria-label="${T("Dados", "Dice")}"></div>
@@ -114,7 +115,6 @@
           <small class="hb-info" id="betInfo" data-k="betInfo"></small>
           <div class="house-shop" data-k="shop" role="group" aria-label="${T("Ayudas", "Helps")}"></div>
         </div>
-        <div class="house-actions"></div>
         <section class="house-mini" hidden>
           <header><span class="house-k">${T("Ranking · de siempre", "Ranking · all time")}</span><button type="button" class="house-more">${T("Ver todo", "See all")} →</button></header>
           <ol data-k="mini"></ol>
@@ -644,9 +644,9 @@
   function dieUnder(cup, el = die) { el.style.transform = `translateX(${xOf(slotOf[cup])}px)`; }
   function placeDice(R, mode) {
     xDice.forEach((x) => { x.className = "shell-die is-x"; });
-    diceOn(R, mode).forEach(([el, cup, look]) => { if (look) el.classList.add(look); dieUnder(cup, el); });
+    diceOn(R, mode).forEach(([el, cup, look]) => { if (el !== die) el.classList.add("is-in"); if (look) el.classList.add(look); dieUnder(cup, el); });
   }
-  const diceShow = (on) => { die.classList.toggle("on", on); xDice.forEach((x) => x.classList.toggle("on", on && x.classList.length > 2)); };
+  const diceShow = (on) => { die.classList.toggle("on", on); xDice.forEach((x) => x.classList.toggle("on", on && x.classList.contains("is-in"))); };
   addEventListener("resize", () => { place(); if (G.round) placeDice(G.round, G.dice); });
 
   // one move of the croupier: the glasses that change slot travel in an arc, one in front, one behind
