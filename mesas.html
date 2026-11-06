@@ -224,6 +224,15 @@
     .guest small { display: block; margin-top: 3px; font-family: var(--mono); font-size: 11px; color: var(--smoke); word-break: break-all; }
     .tag { display: inline-block; margin-left: 8px; vertical-align: middle; font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; padding: 3px 8px; border-radius: 99px; color: #1d1006; background: var(--gold); }
     .guest .row { justify-content: flex-end; }
+    .board { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .board li.row { display: grid; grid-template-columns: 34px 92px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+    .board li.row.bad { box-shadow: inset 0 0 0 1px rgba(255, 90, 100, 0.6); }
+    .board .pos { font-family: var(--mono, monospace); font-size: 12px; color: var(--smoke); }
+    .board input { width: 80px; padding: 7px 9px; border-radius: 8px; border: 0; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px var(--line); color: inherit; font: 600 15px var(--mono, monospace); letter-spacing: 0.2em; text-transform: uppercase; }
+    .board .sc { text-align: right; font-family: var(--mono, monospace); font-size: 13px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .board-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .btn.danger { background: linear-gradient(180deg, #b0313a, #6d1218) !important; color: #fff !important; }
+    @media (max-width: 560px) { .board li.row { grid-template-columns: 26px 80px minmax(0, 1fr); } .board li.row .btn { grid-column: span 1; } }
     .empty { padding: 30px 12px; text-align: center; color: var(--smoke); font-family: var(--serif); font-style: italic; font-size: 17px; }
 
     /* the room log: a timeline */
@@ -455,6 +464,12 @@
     </section>
 
     <section class="folio reveal">
+      <div class="folio-head"><h2>La casa · <em>ranking</em></h2><p>El minijuego. Cambia un nombre, bórralo o empieza el ranking de cero.</p></div>
+      <ol class="board" id="board"><li class="empty">…</li></ol>
+      <div class="board-foot"><button class="btn ghost small" type="button" id="boardReload">Actualizar</button><button class="btn small danger" type="button" id="boardReset">Resetear ranking</button></div>
+    </section>
+
+    <section class="folio reveal">
       <div class="folio-head"><h2>Registro <em>de las mesas</em></h2><p>Solo las mesas privadas: quién se ha sentado, cuánto ha durado y qué ha tocado.</p></div>
       <ol class="log" id="visits"><li class="empty">…</li></ol>
     </section>
@@ -524,7 +539,7 @@
         $("door").classList.add("open");
         $("office").hidden = false;
         requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add("in")));
-        paintGuests(); paintPreview(); loadVisits(); loadSessions();
+        paintGuests(); paintPreview(); loadVisits(); loadSessions(); loadBoard();
         // the hand that opened the door can start the music; on a return visit the record waits for a click
         if (store.get("woblo:office-music") !== "0") { if (byHand) music(true); else musicBtn.classList.add("hint"); }
       } catch (e) {
@@ -649,6 +664,48 @@
         const more = $("sessMore"); if (more) more.addEventListener("click", () => { sessLimit += 40; loadSessions(); });
       } catch (e) { $("sessions").innerHTML = `<p class="empty">Las visitas no responden ahora mismo.</p>`; }
     }
+
+    /* ---------- the minigame's board: rename, remove, reset ---------- */
+    const house = async (body) => {
+      const r = await fetch("/api/house", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": key }, body: JSON.stringify(Object.assign({ op: "admin" }, body)) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { const e = new Error(j.error || r.status); e.j = j; throw e; }
+      return j;
+    };
+    const big = (n) => { const B = [[1e15, "Quadrillion"], [1e12, "Trillion"], [1e9, "Billion"]].find(([a]) => n >= a); return B ? `${(n / B[0]).toLocaleString("es-ES", { maximumFractionDigits: 2 })} ${B[1]}` : Math.round(n).toLocaleString("es-ES"); };
+    function paintBoard(all) {
+      $("board").innerHTML = all.length ? all.map((r, i) => `
+        <li class="row${r.ok ? "" : " bad"}" data-g="${esc(r.g)}">
+          <span class="pos">${String(i + 1).padStart(2, "0")}</span>
+          <input maxlength="3" value="${esc(r.name)}" aria-label="Nombre" spellcheck="false" autocomplete="off">
+          <span class="sc">${big(r.score)}</span>
+          <button class="btn small" type="button" data-act="rename">Guardar</button>
+          <button class="btn ghost small" type="button" data-act="remove">Borrar</button>
+        </li>`).join("") : `<li class="empty">Nadie en el ranking todavía.</li>`;
+    }
+    async function loadBoard(body) {
+      try { const { all } = await house(body || { action: "list" }); paintBoard(all); }
+      catch (e) {
+        const why = e.j && e.j.why;
+        toast(why === "blocked" ? "Ese nombre no está permitido" : why ? "Tres letras, solo A–Z" : e.message === "no-key" ? "Falta la clave" : "El ranking no responde");
+        if (!body) $("board").innerHTML = `<li class="empty">El ranking no responde ahora mismo.</li>`;
+      }
+    }
+    $("board").addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-act]"); if (!b) return;
+      const li = b.closest("[data-g]"), g = li.dataset.g;
+      if (b.dataset.act === "remove" && !confirm("¿Borrar esta puntuación del ranking?")) return;
+      b.disabled = true;
+      await loadBoard(b.dataset.act === "rename" ? { action: "rename", g, name: li.querySelector("input").value.trim().toUpperCase() } : { action: "remove", g });
+      toast(b.dataset.act === "rename" ? "Nombre cambiado" : "Puntuación borrada");
+    });
+    $("boardReload").addEventListener("click", () => loadBoard());
+    $("boardReset").addEventListener("click", async () => {
+      const w = prompt("Esto borra todo el ranking del minijuego. Escribe RESET para confirmar.");
+      if (w !== "RESET") return;
+      await loadBoard({ action: "reset", confirm: "RESET" });
+      toast("Ranking reseteado");
+    });
 
     /* ---------- the room log ---------- */
     async function loadVisits() {

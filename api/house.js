@@ -33,6 +33,14 @@ function rng(seed) { let i = 0; return () => mac(`${seed}:${i++}`).readUInt32BE(
 const deal = (s) => E.round(s.r, rng(`${s.g}:${s.r}`), s.add);
 const pub = (R) => ({ r: R.r, n: R.n, d: R.d, x: R.x, moves: R.moves, ms: R.ms, pay: R.pay });
 
+// ---------- the despacho: the board can be looked after with the admin key ----------
+function isAdmin(req) {
+  const want = process.env.VIP_ADMIN_KEY || "";
+  const got = String((req.headers && req.headers["x-admin-key"]) || "");
+  if (!want || got.length !== want.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
+}
+
 // ---------- states already played ----------
 // Every move answers with a new sealed state; the old one is remembered here (by its signature) and
 // refused if it comes back. Kept in the memory of the running function: cheap, and enough to stop
@@ -76,6 +84,22 @@ function redisStore() {
       const member = `${name}·${g}·${p}`, wk = `shell4:week:${weekKey()}`;
       await Promise.all([R("ZADD", wk, score, member), R("ZADD", "shell4:all", score, member), R("EXPIRE", wk, 60 * 60 * 24 * 21)]);
     },
+    // admin: every board where this game appears, its member renamed or removed
+    async edit(g, name) {
+      for (const key of ["shell4:all", `shell4:week:${weekKey()}`]) {
+        const flat = await R("ZRANGE", key, 0, -1, "WITHSCORES");
+        for (let i = 0; i < (flat || []).length; i += 2) {
+          const m = String(flat[i]), [, mg, mp] = m.split("·");
+          if (mg !== g) continue;
+          await R("ZREM", key, m);
+          if (name) await R("ZADD", key, flat[i + 1], `${name}·${mg}·${mp || ""}`);
+        }
+      }
+    },
+    async reset() {
+      const keys = (await R("KEYS", "shell4:*")) || [];
+      if (keys.length) await R("DEL", ...keys);
+    },
   };
 }
 let blobCache = { at: 0, data: null };
@@ -91,7 +115,7 @@ function blobStore() {
         const page = await list({ prefix, cursor, limit: 1000 });
         for (const b of page.blobs) {
           const m = b.pathname.slice(prefix.length).match(/^(\d{9,41})-([A-Z]{3})-([a-f0-9]{8})(?:-([a-f0-9]{12}))?/);
-          if (m) out.push({ score: Number(m[1]), name: m[2], g: m[3], p: m[4] || "" });
+          if (m) out.push({ score: Number(m[1]), name: m[2], g: m[3], p: m[4] || "", path: b.pathname });
         }
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
@@ -114,6 +138,27 @@ function blobStore() {
       const { put } = await import("@vercel/blob");
       const file = `${BigInt(Math.round(Math.min(score, 1e40))).toString().padStart(16, "0")}-${name}-${g}${p ? "-" + p : ""}.txt`;
       await Promise.all([put(`shell4/w/${weekKey()}/${file}`, "1", opts), put(`shell4/a/${file}`, "1", opts)]);
+      blobCache.at = 0;
+    },
+    // admin: rename (a new file with the new name, the old one deleted) or remove (name empty)
+    async edit(g, name) {
+      const { put, del } = await import("@vercel/blob");
+      const { week, all } = await read(true);
+      const hits = [...week, ...all].filter((r) => r.g === g);
+      for (const r of hits) {
+        if (name) await put(r.path.replace(`-${r.name}-${g}`, `-${name}-${g}`), "1", opts);
+        await del(r.path);
+      }
+      blobCache.at = 0;
+    },
+    async reset() {
+      const { list, del } = await import("@vercel/blob");
+      let cursor;
+      do {
+        const page = await list({ prefix: "shell4/", cursor, limit: 1000 });
+        if (page.blobs.length) await del(page.blobs.map((b) => b.url));
+        cursor = page.hasMore ? page.cursor : undefined;
+      } while (cursor);
       blobCache.at = 0;
     },
   };
@@ -141,6 +186,25 @@ module.exports = async (req, res) => {
     if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
     body = body || {};
 
+    // the despacho: list the whole board, rename or remove a name, or reset everything
+    if (body.op === "admin") {
+      if (!isAdmin(req)) { res.status(401).json({ error: "no-key" }); return; }
+      const g = String(body.g || "");
+      if (body.action === "rename") {
+        const nc = E.nameCheck(body.name);
+        if (!/^[a-f0-9]{8}$/.test(g) || !nc.ok) { res.status(400).json({ error: "bad-name", why: nc.why }); return; }
+        await store.edit(g, nc.name);
+      } else if (body.action === "remove") {
+        if (!/^[a-f0-9]{8}$/.test(g)) { res.status(400).json({ error: "bad-id" }); return; }
+        await store.edit(g, "");
+      } else if (body.action === "reset") {
+        if (body.confirm !== "RESET") { res.status(400).json({ error: "confirm" }); return; }
+        await store.reset();
+      }
+      const { all } = await store.read(true);
+      res.status(200).json({ all: all.map((r) => ({ name: r.name, score: r.score, g: r.g, ok: E.nameCheck(r.name).ok })) });
+      return;
+    }
     if (body.op === "start") {
       // a checkpoint: a game that just ended lets you sit back down five rounds before where it ended,
       // with a fresh 100 chips. Only from a finished game, sealed by us, within its six hours.
